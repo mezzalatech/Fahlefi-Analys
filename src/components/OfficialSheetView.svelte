@@ -2,7 +2,7 @@
   import { matchStore } from '../lib/store.svelte';
   import { api } from '../lib/api';
   import MatchConfigModal from './MatchConfigModal.svelte';
-  import { Printer, Download, Plus, Minus, RotateCcw, Maximize2, LayoutGrid, Columns, X, Edit3, Trash2, ListOrdered, Check, AlertTriangle, Search, Filter, Folder, Trophy, Settings, Clock, Sparkles } from 'lucide-svelte';
+  import { Printer, Download, Plus, Minus, RotateCcw, Maximize2, LayoutGrid, Columns, X, Edit3, Trash2, ListOrdered, Check, AlertTriangle, Search, Filter, Folder, Trophy, Settings, Clock, Sparkles, Users } from 'lucide-svelte';
 
   // Sheet and Pitch Layout State
   let sheetWidth = $state<'standard' | 'wide' | 'ultrawide' | 'full'>('ultrawide');
