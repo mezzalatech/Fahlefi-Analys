@@ -116,8 +116,29 @@ export interface MatchData {
 
 const API_BASE = '/api';
 
+// Check if running on static host (Vercel, Netlify, GitHub Pages, or offline mode)
+function isStaticHostOrOffline(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  if (
+    host.includes('vercel.app') || 
+    host.includes('pages.dev') || 
+    host.includes('netlify.app') || 
+    host.includes('github.io') ||
+    (typeof navigator !== 'undefined' && !navigator.onLine)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 // Helper to determine if we should fallback to LocalDB
 async function tryFetchOrFallback<T>(fetchFn: () => Promise<Response>, fallbackFn: () => Promise<T>): Promise<T> {
+  // If hosted on static cloud (Vercel) or offline, immediately use LocalDB (Prevents 405 console logs)
+  if (isStaticHostOrOffline()) {
+    return await fallbackFn();
+  }
+
   try {
     const res = await fetchFn();
     const contentType = res.headers.get('content-type') || '';

@@ -250,12 +250,12 @@
     <div class="footer-left">
       <span class="status-indicator">
         <span class="live-pulse"></span>
-        <span>Elysia API & Drizzle SQLite (Bun 1.4.2)</span>
+        <span>Tactical Offline-First Engine (Resilient & Arena Ready)</span>
       </span>
       <span class="shortcut-tip">Pintasan: <code>Spasi</code> (Start/Pause Timer)</span>
     </div>
     <div class="footer-right">
-      <span>Auto-Saved to SQLite • Futsal Match Analytics Pro</span>
+      <span>Auto-Saved • FAHLEFI Futsal Tactical Analytics Pro</span>
     </div>
   </footer>
 </div>
