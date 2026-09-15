@@ -91,6 +91,9 @@
   let activeLostTeam = $state<'home' | 'away'>('home');
   let activeShotTimOutcome = $state<'ontarget' | 'out' | 'rejected' | 'post' | 'goal'>('ontarget');
   let activeShotLawanOutcome = $state<'ontarget' | 'out' | 'rejected' | 'post' | 'goal'>('ontarget');
+  let selectedTagPlayerNo = $state<number | null>(null);
+  let activeRecPlayerNo = $state<number | null>(null);
+  let activeLostPlayerNo = $state<number | null>(null);
   let activeShotShooterNo = $state<number | null>(null);
 
   // Filtered Events for Event Manager
@@ -120,7 +123,7 @@
     }).slice().reverse(); // newest first
   });
 
-  // Pitch click helper for the 4 mini pitches (INSTANT 1-CLICK RECORDING)
+  // Pitch click helper for the 4 mini pitches (INSTANT 1-CLICK RECORDING WITH PLAYER STATS SYNC)
   async function handleMiniPitchClick(
     category: 'rec' | 'lost' | 'shot_tim' | 'shot_lawan', 
     e: MouseEvent,
@@ -137,6 +140,7 @@
     const team: 'home' | 'away' = overrideTeam || (isRightClick ? 'away' : (category === 'rec' ? activeRecTeam : activeLostTeam));
 
     if (category === 'rec') {
+      const pNo = team === 'home' ? (activeRecPlayerNo !== null ? activeRecPlayerNo : selectedTagPlayerNo) : null;
       await matchStore.addPitchEvent({
         id: `rec_${Date.now()}`,
         type: 'recovery',
@@ -146,10 +150,11 @@
         timeStr: matchStore.formattedTime,
         x,
         y,
-        playerNo: null,
-        note: `Recovery (${team === 'home' ? 'Tim Kita' : 'Lawan'})`
+        playerNo: pNo,
+        note: `Recovery (${team === 'home' ? 'Tim Kita' : 'Lawan'})${pNo ? ` #${pNo}` : ''}`
       });
     } else if (category === 'lost') {
+      const pNo = team === 'home' ? (activeLostPlayerNo !== null ? activeLostPlayerNo : selectedTagPlayerNo) : null;
       await matchStore.addPitchEvent({
         id: `loss_${Date.now()}`,
         type: 'turnover',
@@ -159,10 +164,11 @@
         timeStr: matchStore.formattedTime,
         x,
         y,
-        playerNo: null,
-        note: `Lost Ball (${team === 'home' ? 'Tim Kita' : 'Lawan'})`
+        playerNo: pNo,
+        note: `Lost Ball (${team === 'home' ? 'Tim Kita' : 'Lawan'})${pNo ? ` #${pNo}` : ''}`
       });
     } else if (category === 'shot_tim') {
+      const pNo = activeShotShooterNo !== null ? activeShotShooterNo : selectedTagPlayerNo;
       await matchStore.addPitchEvent({
         id: `sh_t_${Date.now()}`,
         type: 'shot',
@@ -172,8 +178,8 @@
         timeStr: matchStore.formattedTime,
         x,
         y,
-        playerNo: activeShotShooterNo,
-        note: `Shot Tim (${activeShotTimOutcome})${activeShotShooterNo ? ` oleh #${activeShotShooterNo}` : ''}`
+        playerNo: pNo,
+        note: `Shot Tim (${activeShotTimOutcome})${pNo ? ` oleh #${pNo}` : ''}`
       });
     } else if (category === 'shot_lawan') {
       await matchStore.addPitchEvent({
@@ -772,6 +778,54 @@
         </div>
       </div>
 
+      <!-- Quick Tagger Player Strip (Tautkan aksi lapangan langsung ke statistik pemain) -->
+      <div class="active-player-tagger-bar no-print">
+        <div class="tagger-label-group">
+          <Users size={14} class="text-cyan" />
+          <span class="tagger-heading">TAUTKAN AKSI KE PEMAIN (SINKRON MATRIX):</span>
+        </div>
+        <div class="tagger-player-chips">
+          <button 
+            type="button" 
+            class="chip-tagger {selectedTagPlayerNo === null ? 'chip-tagger-active' : ''}" 
+            onclick={() => (selectedTagPlayerNo = null)}
+            title="Klik untuk mode tanpa pemain / netral">
+            <span>Tanpa Pemain Spesifik</span>
+          </button>
+          
+          {#if matchStore.onPitchPlayers.length > 0}
+            {#each matchStore.onPitchPlayers as pNo}
+              {@const pObj = players.find(x => x.no === pNo)}
+              <button 
+                type="button" 
+                class="chip-tagger chip-tagger-court {selectedTagPlayerNo === pNo ? 'chip-tagger-active' : ''}" 
+                onclick={() => (selectedTagPlayerNo = pNo)}
+                title="Klik untuk menautkan tag aksi ke #{pNo} {pObj ? pObj.name : ''}">
+                <span class="chip-court-dot">●</span>
+                <span class="chip-pno">#{pNo}</span>
+                <span class="chip-pname">{pObj ? pObj.name.split(' ')[0] : ''}</span>
+              </button>
+            {/each}
+          {/if}
+
+          <div class="tagger-dropdown-wrap">
+            <select bind:value={selectedTagPlayerNo} class="select-tagger-player">
+              <option value={null}>-- Pilih Dari 25 Pemain --</option>
+              {#each players as p}
+                <option value={p.no}>#{p.no} - {p.name}</option>
+              {/each}
+            </select>
+          </div>
+
+          {#if selectedTagPlayerNo}
+            {@const activeP = players.find(x => x.no === selectedTagPlayerNo)}
+            <span class="tagger-active-badge">
+              ✓ Terpilih: <strong>#{selectedTagPlayerNo} {activeP ? activeP.name : ''}</strong> (Setiap klik lapangan langsung update Matrix)
+            </span>
+          {/if}
+        </div>
+      </div>
+
       <div class="doc-pitches-grid pitch-layout-{pitchSize}">
         
         <!-- PITCH 1: RECOVERED BALLS -->
@@ -784,9 +838,19 @@
                 <button type="button" class="toggle-pill {activeRecTeam === 'away' ? 'active-away' : ''}" onclick={(e) => { e.stopPropagation(); activeRecTeam = 'away'; }}>🟣 Lawan</button>
               </div>
             </div>
-            <button type="button" class="btn-expand-pitch no-print" onclick={() => (expandedPitch = 'rec')} title="Perbesar Layar Penuh">
-              <Maximize2 size={13} />
-            </button>
+            <div class="pitch-bar-right no-print">
+              {#if activeRecTeam === 'home'}
+                <select bind:value={activeRecPlayerNo} class="select-mini-player" title="Pilih Pemain Pelaksana Recovery (Sinkron ke Matrix REC)">
+                  <option value={null}>{selectedTagPlayerNo ? `Pemain: #${selectedTagPlayerNo}` : 'Pilih Pemain'}</option>
+                  {#each players as p}
+                    <option value={p.no}>#{p.no} {p.name.split(' ')[0]}</option>
+                  {/each}
+                </select>
+              {/if}
+              <button type="button" class="btn-expand-pitch" onclick={() => (expandedPitch = 'rec')} title="Perbesar Layar Penuh">
+                <Maximize2 size={13} />
+              </button>
+            </div>
           </div>
           <div 
             class="mini-futsal-pitch" 
@@ -804,8 +868,12 @@
                 class="mini-pitch-dot {evt.team === 'home' ? 'dot-rec' : 'dot-rec-lawan'}" 
                 style="left: {(evt.x / 800) * 100}%; top: {(evt.y / 480) * 100}%;"
                 onclick={(e) => openEditTag(evt, e)}
-                title="Recovery ({evt.team === 'home' ? 'Tim Kita' : 'Lawan'}) @ {evt.x < 400 ? 'OWN' : 'OPP'} [{evt.half === 1 ? '1ºH' : '2ºH'}] - Klik untuk Edit/Hapus">
-                R
+                title="Recovery ({evt.team === 'home' ? 'Tim Kita' : 'Lawan'}) {evt.playerNo ? `oleh #${evt.playerNo}` : ''} @ {evt.x < 400 ? 'OWN' : 'OPP'} [{evt.half === 1 ? '1ºH' : '2ºH'}] - Klik untuk Edit/Hapus">
+                {#if evt.playerNo}
+                  <span class="dot-pno">{evt.playerNo}</span>
+                {:else}
+                  R
+                {/if}
               </div>
             {/each}
           </div>
@@ -848,9 +916,19 @@
                 <button type="button" class="toggle-pill {activeLostTeam === 'away' ? 'active-away' : ''}" onclick={(e) => { e.stopPropagation(); activeLostTeam = 'away'; }}>🟠 Lawan</button>
               </div>
             </div>
-            <button type="button" class="btn-expand-pitch no-print" onclick={() => (expandedPitch = 'lost')} title="Perbesar Layar Penuh">
-              <Maximize2 size={13} />
-            </button>
+            <div class="pitch-bar-right no-print">
+              {#if activeLostTeam === 'home'}
+                <select bind:value={activeLostPlayerNo} class="select-mini-player" title="Pilih Pemain Lost Ball (Sinkron ke Matrix LOSS)">
+                  <option value={null}>{selectedTagPlayerNo ? `Pemain: #${selectedTagPlayerNo}` : 'Pilih Pemain'}</option>
+                  {#each players as p}
+                    <option value={p.no}>#{p.no} {p.name.split(' ')[0]}</option>
+                  {/each}
+                </select>
+              {/if}
+              <button type="button" class="btn-expand-pitch" onclick={() => (expandedPitch = 'lost')} title="Perbesar Layar Penuh">
+                <Maximize2 size={13} />
+              </button>
+            </div>
           </div>
           <div 
             class="mini-futsal-pitch" 
@@ -868,8 +946,12 @@
                 class="mini-pitch-dot {evt.team === 'home' ? 'dot-lost' : 'dot-lost-lawan'}" 
                 style="left: {(evt.x / 800) * 100}%; top: {(evt.y / 480) * 100}%;"
                 onclick={(e) => openEditTag(evt, e)}
-                title="Lost Ball ({evt.team === 'home' ? 'Tim Kita' : 'Lawan'}) @ {evt.x < 400 ? 'OWN' : 'OPP'} [{evt.half === 1 ? '1ºH' : '2ºH'}] - Klik untuk Edit/Hapus">
-                L
+                title="Lost Ball ({evt.team === 'home' ? 'Tim Kita' : 'Lawan'}) {evt.playerNo ? `oleh #${evt.playerNo}` : ''} @ {evt.x < 400 ? 'OWN' : 'OPP'} [{evt.half === 1 ? '1ºH' : '2ºH'}] - Klik untuk Edit/Hapus">
+                {#if evt.playerNo}
+                  <span class="dot-pno">{evt.playerNo}</span>
+                {:else}
+                  L
+                {/if}
               </div>
             {/each}
           </div>
@@ -915,9 +997,17 @@
                 <button type="button" class="chip-outcome chip-goal {activeShotTimOutcome === 'goal' ? 'chip-active' : ''}" onclick={(e) => { e.stopPropagation(); activeShotTimOutcome = 'goal'; }}>⚽ Goal</button>
               </div>
             </div>
-            <button type="button" class="btn-expand-pitch no-print" onclick={() => (expandedPitch = 'shot_tim')} title="Perbesar Layar Penuh">
-              <Maximize2 size={13} />
-            </button>
+            <div class="pitch-bar-right no-print">
+              <select bind:value={activeShotShooterNo} class="select-mini-player" title="Pilih Penembak (Sinkron ke Matrix SH & GL)">
+                <option value={null}>{selectedTagPlayerNo ? `Penembak: #${selectedTagPlayerNo}` : 'Pilih Penembak'}</option>
+                {#each players as p}
+                  <option value={p.no}>#{p.no} {p.name.split(' ')[0]}</option>
+                {/each}
+              </select>
+              <button type="button" class="btn-expand-pitch" onclick={() => (expandedPitch = 'shot_tim')} title="Perbesar Layar Penuh">
+                <Maximize2 size={13} />
+              </button>
+            </div>
           </div>
           <div 
             class="mini-futsal-pitch" 
@@ -934,8 +1024,20 @@
                 class="mini-pitch-dot dot-shot-tim" 
                 style="left: {(evt.x / 800) * 100}%; top: {(evt.y / 480) * 100}%;"
                 onclick={(e) => openEditTag(evt, e)}
-                title="Shot Tim ({evt.outcome?.toUpperCase()}) [{evt.half === 1 ? '1ºH' : '2ºH'}] - Klik untuk Edit/Hapus">
-                {#if evt.outcome === 'goal'}⚽{:else if evt.outcome === 'ontarget'}T{:else if evt.outcome === 'rejected'}R{:else if evt.outcome === 'post'}P{:else}O{/if}
+                title="Shot Tim ({evt.outcome?.toUpperCase()}) {evt.playerNo ? `oleh #${evt.playerNo}` : ''} [{evt.half === 1 ? '1ºH' : '2ºH'}] - Klik untuk Edit/Hapus">
+                {#if evt.outcome === 'goal'}
+                  ⚽{#if evt.playerNo}<span class="dot-sub-no">{evt.playerNo}</span>{/if}
+                {:else if evt.playerNo}
+                  <span class="dot-pno">{evt.playerNo}</span>
+                {:else if evt.outcome === 'ontarget'}
+                  T
+                {:else if evt.outcome === 'rejected'}
+                  R
+                {:else if evt.outcome === 'post'}
+                  P
+                {:else}
+                  O
+                {/if}
               </div>
             {/each}
           </div>
@@ -2202,6 +2304,129 @@
     cursor: pointer;
     transition: all 0.15s;
     white-space: nowrap;
+  }
+
+  /* Active Player Tagger Bar */
+  .active-player-tagger-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    background: #0b1526;
+    border-left: 1.5px solid #000000;
+    border-right: 1.5px solid #000000;
+    border-bottom: 1.5px solid #000000;
+    padding: 6px 14px;
+    color: #ffffff;
+    flex-wrap: wrap;
+  }
+
+  .tagger-label-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: #38bdf8;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .tagger-heading {
+    color: #38bdf8;
+  }
+
+  .tagger-player-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .chip-tagger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .chip-tagger:hover {
+    background: rgba(51, 65, 85, 0.9);
+    border-color: #38bdf8;
+    color: #ffffff;
+  }
+
+  .chip-tagger.chip-tagger-active {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  }
+
+  .chip-court-dot {
+    color: #34d399;
+    font-size: 8px;
+  }
+
+  .chip-pno {
+    color: #facc15;
+    font-weight: 800;
+  }
+
+  .select-tagger-player {
+    background: #0f172a;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #f8fafc;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .tagger-active-badge {
+    font-size: 0.72rem;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+
+  .pitch-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .select-mini-player {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #f8fafc;
+    font-size: 7.5px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 4px;
+    max-width: 105px;
+  }
+
+  .dot-pno {
+    font-size: 8px;
+    font-weight: 900;
+  }
+
+  .dot-sub-no {
+    font-size: 7px;
+    font-weight: 900;
+    margin-left: 1px;
   }
 
   .doc-pitches-grid {
