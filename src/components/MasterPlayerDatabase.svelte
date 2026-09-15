@@ -373,14 +373,14 @@
 
     <!-- Excel & Player Actions -->
     <div class="toolbar-actions-group">
-      <a 
-        href={api.getPlayerImportTemplateUrl()} 
-        download="Template_Import_Pemain_FAHLEFI.xlsx"
+      <button 
+        type="button"
+        onclick={() => api.downloadMasterPlayerTemplate()}
         class="btn-excel-tool btn-template"
         title="Unduh Format Template Excel untuk Mengisi Data Pemain">
         <FileSpreadsheet size={15} class="text-emerald" />
         <span>Unduh Template</span>
-      </a>
+      </button>
 
       {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
         <label class="btn-excel-tool btn-upload {isImporting ? 'disabled' : ''}" title="Impor Data Pemain dari File Excel (.xlsx)">

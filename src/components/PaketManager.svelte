@@ -255,14 +255,14 @@
     <!-- Action Buttons -->
     <div class="actions-toolbar">
       <!-- Download Template Excel -->
-      <a 
-        href={api.getPaketTemplateUrl()} 
-        download="Template_Paket_Rotasi_FAHLEFI.xlsx" 
+      <button 
+        type="button"
+        onclick={() => api.downloadPaketTemplate()}
         class="tool-btn btn-template"
         title="Unduh Template Excel Resmi untuk Paket 5-Man">
         <Download size={15} />
         <span>Download Template</span>
-      </a>
+      </button>
 
       <!-- Import Excel -->
       <button 
