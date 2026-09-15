@@ -237,6 +237,28 @@ class MatchStore {
       } else {
         this.loadSubstitutions(mId);
       }
+      // Auto-populate 5 players on pitch if empty for ultra-fast futsal tagging
+      if (this.onPitchPlayers.length === 0) {
+        const firstPaket = res.pakets?.[0];
+        if (firstPaket) {
+          try {
+            const parsed = JSON.parse(firstPaket.playerNumbers);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              this.onPitchPlayers = parsed;
+              this.activePaketIndex = firstPaket.paketIndex;
+            }
+          } catch {
+            const parsed = firstPaket.code.split('-').map((n: string) => parseInt(n.trim())).filter((n: number) => !isNaN(n));
+            if (parsed.length > 0) {
+              this.onPitchPlayers = parsed;
+              this.activePaketIndex = firstPaket.paketIndex;
+            }
+          }
+        }
+        if (this.onPitchPlayers.length === 0 && res.players && res.players.length > 0) {
+          this.onPitchPlayers = res.players.slice(0, 5).map((p: any) => p.no);
+        }
+      }
       this.loadMasterPlayers();
       this.loadMatchesList();
     } catch (err: any) {
@@ -519,6 +541,7 @@ class MatchStore {
       const team = event.team === 'home' ? 'home' : 'away';
       await this.updateScore(team, half, 1);
     }
+    return newEvent;
   }
 
   async updatePitchEvent(eventId: string, partial: Partial<MatchData['events'][0]>) {

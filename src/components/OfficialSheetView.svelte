@@ -2,7 +2,7 @@
   import { matchStore } from '../lib/store.svelte';
   import { api } from '../lib/api';
   import MatchConfigModal from './MatchConfigModal.svelte';
-  import { Printer, Download, Plus, Minus, RotateCcw, Maximize2, LayoutGrid, Columns, X, Edit3, Trash2, ListOrdered, Check, AlertTriangle, Search, Filter, Folder, Trophy, Settings, Clock, Sparkles, Users } from 'lucide-svelte';
+  import { Printer, Download, Plus, Minus, RotateCcw, Maximize2, LayoutGrid, Columns, X, Edit3, Trash2, ListOrdered, Check, AlertTriangle, Search, Filter, Folder, Trophy, Settings, Clock, Sparkles, Users, Undo2, Zap, CheckCircle2 } from 'lucide-svelte';
 
   // Sheet and Pitch Layout State
   let sheetWidth = $state<'standard' | 'wide' | 'ultrawide' | 'full'>('ultrawide');
@@ -96,6 +96,36 @@
   let activeLostPlayerNo = $state<number | null>(null);
   let activeShotShooterNo = $state<number | null>(null);
 
+  // Floating Toast Notification for Fast Futsal Tagging
+  let tagNotification = $state<{
+    id: string;
+    title: string;
+    playerText: string;
+    matrixText: string;
+    type: 'rec' | 'loss' | 'shot' | 'goal';
+    eventId: string;
+    timeStr: string;
+  } | null>(null);
+  let notifTimeout: any = null;
+
+  // Visual pulse highlight on player table row
+  let recentlyUpdatedPlayerNo = $state<number | null>(null);
+  let pulseTimeout: any = null;
+
+  // Quick 1-Tap Player Selector Popover (Futsal Fast Tagging Mode)
+  let quickTagState = $state<{
+    visible: boolean;
+    category: 'rec' | 'lost' | 'shot_tim';
+    x: number;
+    y: number;
+    screenX: number;
+    screenY: number;
+    outcome?: 'ontarget' | 'out' | 'rejected' | 'post' | 'goal';
+  } | null>(null);
+
+  // Auto-Sticky toggle: when true, choosing a player in quick popover locks them as active player
+  let autoLockPlayerOnTag = $state<boolean>(false);
+
   // Filtered Events for Event Manager
   let filteredEvents = $derived.by(() => {
     return events.filter(e => {
@@ -123,6 +153,184 @@
     }).slice().reverse(); // newest first
   });
 
+  // Trigger floating visual feedback notification
+  function showFeedbackNotification(params: {
+    title: string;
+    playerText: string;
+    matrixText: string;
+    type: 'rec' | 'loss' | 'shot' | 'goal';
+    eventId: string;
+    playerNo?: number | null;
+  }) {
+    if (notifTimeout) clearTimeout(notifTimeout);
+    tagNotification = {
+      id: `notif_${Date.now()}`,
+      title: params.title,
+      playerText: params.playerText,
+      matrixText: params.matrixText,
+      type: params.type,
+      eventId: params.eventId,
+      timeStr: `${matchStore.activeHalf === 1 ? '1ºH' : '2ºH'} ${matchStore.formattedTime}`
+    };
+
+    if (params.playerNo) {
+      recentlyUpdatedPlayerNo = params.playerNo;
+      if (pulseTimeout) clearTimeout(pulseTimeout);
+      pulseTimeout = setTimeout(() => {
+        recentlyUpdatedPlayerNo = null;
+      }, 2500);
+    }
+
+    notifTimeout = setTimeout(() => {
+      tagNotification = null;
+    }, 4500);
+  }
+
+  // Instant Undo button handler
+  async function undoLastTag() {
+    if (!tagNotification?.eventId) return;
+    const evtId = tagNotification.eventId;
+    tagNotification = null;
+    await matchStore.deletePitchEvent(evtId);
+  }
+
+  // Core execution helper for recording pitch events with player attribution & instant notification
+  async function recordPitchEventNow(
+    category: 'rec' | 'lost' | 'shot_tim' | 'shot_lawan',
+    x: number,
+    y: number,
+    team: 'home' | 'away',
+    playerNo: number | null,
+    shotOutcome?: 'ontarget' | 'out' | 'rejected' | 'post' | 'goal'
+  ) {
+    if (!match) return;
+    const playerObj = playerNo ? players.find(p => p.no === playerNo) : null;
+    const playerName = playerObj ? playerObj.name : `Pemain #${playerNo}`;
+    const half = matchStore.activeHalf;
+    const halfLabel = half === 1 ? '1st Half' : '2nd Half';
+
+    if (category === 'rec') {
+      const evt = await matchStore.addPitchEvent({
+        id: `rec_${Date.now()}`,
+        type: 'recovery',
+        outcome: 'success',
+        team,
+        half,
+        timeStr: matchStore.formattedTime,
+        x,
+        y,
+        playerNo,
+        note: `Recovery (${team === 'home' ? 'Tim Kita' : 'Lawan'})${playerNo ? ` #${playerNo}` : ''}`
+      });
+
+      if (team === 'home') {
+        showFeedbackNotification({
+          title: 'RECOVERED BALL BERHASIL',
+          playerText: playerNo ? `#${playerNo} ${playerName}` : 'Tim Kita (Umum)',
+          matrixText: playerNo ? `Matrix REC ${halfLabel} (+1)` : 'Data Lapangan Diperbarui',
+          type: 'rec',
+          eventId: evt ? evt.id : `rec_${Date.now()}`,
+          playerNo
+        });
+      } else {
+        showFeedbackNotification({
+          title: 'RECOVERY LAWAN DICATAT',
+          playerText: 'Tim Lawan',
+          matrixText: 'Opposite Field Lawan Bertambah',
+          type: 'rec',
+          eventId: evt ? evt.id : `rec_${Date.now()}`
+        });
+      }
+    } else if (category === 'lost') {
+      const evt = await matchStore.addPitchEvent({
+        id: `loss_${Date.now()}`,
+        type: 'turnover',
+        outcome: 'fail',
+        team,
+        half,
+        timeStr: matchStore.formattedTime,
+        x,
+        y,
+        playerNo,
+        note: `Lost Ball (${team === 'home' ? 'Tim Kita' : 'Lawan'})${playerNo ? ` #${playerNo}` : ''}`
+      });
+
+      if (team === 'home') {
+        showFeedbackNotification({
+          title: 'LOST BALL / TURNOVER',
+          playerText: playerNo ? `#${playerNo} ${playerName}` : 'Tim Kita (Umum)',
+          matrixText: playerNo ? `Matrix LOSS ${halfLabel} (+1)` : 'Data Lapangan Diperbarui',
+          type: 'loss',
+          eventId: evt ? evt.id : `loss_${Date.now()}`,
+          playerNo
+        });
+      } else {
+        showFeedbackNotification({
+          title: 'LOST BALL LAWAN DICATAT',
+          playerText: 'Tim Lawan',
+          matrixText: 'Turnover Lawan Bertambah',
+          type: 'loss',
+          eventId: evt ? evt.id : `loss_${Date.now()}`
+        });
+      }
+    } else if (category === 'shot_tim') {
+      const outcome = shotOutcome || activeShotTimOutcome;
+      const evt = await matchStore.addPitchEvent({
+        id: `sh_t_${Date.now()}`,
+        type: 'shot',
+        outcome,
+        team: 'home',
+        half,
+        timeStr: matchStore.formattedTime,
+        x,
+        y,
+        playerNo,
+        note: `Shot Tim (${outcome})${playerNo ? ` oleh #${playerNo}` : ''}`
+      });
+
+      const outcomeLabels: Record<string, string> = {
+        goal: '⚽ GOAL KITA!',
+        ontarget: '🎯 SHOT ON TARGET',
+        out: '⚪ SHOT OFF TARGET',
+        rejected: '🛡️ SHOT BLOCKED / REJECTED',
+        post: '🥅 SHOT KENA TIANG'
+      };
+
+      showFeedbackNotification({
+        title: outcomeLabels[outcome] || 'SHOT TIM KITA',
+        playerText: playerNo ? `#${playerNo} ${playerName}` : 'Tim Kita (Umum)',
+        matrixText: outcome === 'goal' 
+          ? `Skor Tim +1 & Matrix SH +1, GL +1 (${halfLabel})` 
+          : (playerNo ? `Matrix SH ${halfLabel} (+1)` : 'Data Shot Map Bertambah'),
+        type: outcome === 'goal' ? 'goal' : 'shot',
+        eventId: evt ? evt.id : `sh_t_${Date.now()}`,
+        playerNo
+      });
+    } else if (category === 'shot_lawan') {
+      const outcome = activeShotLawanOutcome;
+      const evt = await matchStore.addPitchEvent({
+        id: `sh_l_${Date.now()}`,
+        type: 'shot',
+        outcome,
+        team: 'away',
+        half,
+        timeStr: matchStore.formattedTime,
+        x,
+        y,
+        playerNo: null,
+        note: `Shot Lawan (${outcome})`
+      });
+
+      showFeedbackNotification({
+        title: outcome === 'goal' ? '⚠️ GOAL LAWAN' : `SHOT LAWAN (${outcome.toUpperCase()})`,
+        playerText: 'Tim Lawan',
+        matrixText: outcome === 'goal' ? 'Skor Lawan Bertambah (+1)' : 'Shot Map Lawan Diperbarui',
+        type: outcome === 'goal' ? 'goal' : 'shot',
+        eventId: evt ? evt.id : `sh_l_${Date.now()}`
+      });
+    }
+  }
+
   // Pitch click helper for the 4 mini pitches (INSTANT 1-CLICK RECORDING WITH PLAYER STATS SYNC)
   async function handleMiniPitchClick(
     category: 'rec' | 'lost' | 'shot_tim' | 'shot_lawan', 
@@ -139,62 +347,51 @@
     const isRightClick = e.button === 2;
     const team: 'home' | 'away' = overrideTeam || (isRightClick ? 'away' : (category === 'rec' ? activeRecTeam : activeLostTeam));
 
-    if (category === 'rec') {
-      const pNo = team === 'home' ? (activeRecPlayerNo !== null ? activeRecPlayerNo : selectedTagPlayerNo) : null;
-      await matchStore.addPitchEvent({
-        id: `rec_${Date.now()}`,
-        type: 'recovery',
-        outcome: 'success',
-        team,
-        half: matchStore.activeHalf,
-        timeStr: matchStore.formattedTime,
-        x,
-        y,
-        playerNo: pNo,
-        note: `Recovery (${team === 'home' ? 'Tim Kita' : 'Lawan'})${pNo ? ` #${pNo}` : ''}`
-      });
-    } else if (category === 'lost') {
-      const pNo = team === 'home' ? (activeLostPlayerNo !== null ? activeLostPlayerNo : selectedTagPlayerNo) : null;
-      await matchStore.addPitchEvent({
-        id: `loss_${Date.now()}`,
-        type: 'turnover',
-        outcome: 'fail',
-        team,
-        half: matchStore.activeHalf,
-        timeStr: matchStore.formattedTime,
-        x,
-        y,
-        playerNo: pNo,
-        note: `Lost Ball (${team === 'home' ? 'Tim Kita' : 'Lawan'})${pNo ? ` #${pNo}` : ''}`
-      });
-    } else if (category === 'shot_tim') {
-      const pNo = activeShotShooterNo !== null ? activeShotShooterNo : selectedTagPlayerNo;
-      await matchStore.addPitchEvent({
-        id: `sh_t_${Date.now()}`,
-        type: 'shot',
-        outcome: activeShotTimOutcome,
-        team: 'home',
-        half: matchStore.activeHalf,
-        timeStr: matchStore.formattedTime,
-        x,
-        y,
-        playerNo: pNo,
-        note: `Shot Tim (${activeShotTimOutcome})${pNo ? ` oleh #${pNo}` : ''}`
-      });
-    } else if (category === 'shot_lawan') {
-      await matchStore.addPitchEvent({
-        id: `sh_l_${Date.now()}`,
-        type: 'shot',
-        outcome: activeShotLawanOutcome,
-        team: 'away',
-        half: matchStore.activeHalf,
-        timeStr: matchStore.formattedTime,
-        x,
-        y,
-        playerNo: null,
-        note: `Shot Lawan (${activeShotLawanOutcome})`
-      });
+    // Away team events are recorded immediately without player attribution
+    if (team === 'away' || category === 'shot_lawan') {
+      await recordPitchEventNow(category, x, y, 'away', null);
+      return;
     }
+
+    // Check if player is already specified (Sticky toolbar or card selector)
+    let activePlayer: number | null = null;
+    if (category === 'rec') {
+      activePlayer = activeRecPlayerNo !== null ? activeRecPlayerNo : selectedTagPlayerNo;
+    } else if (category === 'lost') {
+      activePlayer = activeLostPlayerNo !== null ? activeLostPlayerNo : selectedTagPlayerNo;
+    } else if (category === 'shot_tim') {
+      activePlayer = activeShotShooterNo !== null ? activeShotShooterNo : selectedTagPlayerNo;
+    }
+
+    // If active player is chosen, record IMMEDIATELY (0ms delay!)
+    if (activePlayer !== null) {
+      await recordPitchEventNow(category, x, y, 'home', activePlayer);
+      return;
+    }
+
+    // If no player is active, open the 1-Tap Quick Selector Popover at click position
+    quickTagState = {
+      visible: true,
+      category: category as 'rec' | 'lost' | 'shot_tim',
+      x,
+      y,
+      screenX: Math.min(window.innerWidth - 320, Math.max(20, e.clientX - 140)),
+      screenY: Math.min(window.innerHeight - 260, Math.max(70, e.clientY - 70)),
+      outcome: category === 'shot_tim' ? activeShotTimOutcome : undefined
+    };
+  }
+
+  // Quick Popover player selection handler (1 single tap!)
+  async function selectQuickPlayerAndTag(pNo: number | null) {
+    if (!quickTagState) return;
+    const { category, x, y, outcome } = quickTagState;
+    quickTagState = null;
+
+    if (autoLockPlayerOnTag && pNo !== null) {
+      selectedTagPlayerNo = pNo;
+    }
+
+    await recordPitchEventNow(category, x, y, 'home', pNo, outcome);
   }
 
   // Open Edit Dialog for a tag
@@ -587,7 +784,7 @@
           {#each allRows as item}
             {@const p = item.player}
             {@const isOnCourt = matchStore.onPitchPlayers.includes(item.no)}
-            <tr class="tr-player-data {isOnCourt ? 'row-on-court' : ''}">
+            <tr class="tr-player-data {isOnCourt ? 'row-on-court' : ''} {recentlyUpdatedPlayerNo === item.no ? 'row-just-tagged' : ''}">
               <!-- NO (Click to toggle on-pitch active status) -->
               <td 
                 class="td-row-no {isOnCourt ? 'td-no-on-court' : ''}" 
@@ -778,49 +975,192 @@
         </div>
       </div>
 
+      <!-- Floating HUD Notification for Fast Futsal Tagging Feedback -->
+      {#if tagNotification}
+        <div class="futsal-hud-notification notif-{tagNotification.type} no-print" role="alert">
+          <div class="hud-notif-main">
+            <div class="hud-notif-badge-icon">
+              {#if tagNotification.type === 'goal'}
+                ⚽
+              {:else if tagNotification.type === 'rec'}
+                🔵
+              {:else if tagNotification.type === 'loss'}
+                🟠
+              {:else}
+                🎯
+              {/if}
+            </div>
+            <div class="hud-notif-text">
+              <div class="hud-notif-title-row">
+                <span class="hud-notif-title">{tagNotification.title}</span>
+                <span class="hud-notif-time">{tagNotification.timeStr}</span>
+              </div>
+              <div class="hud-notif-player-row">
+                <span class="hud-notif-player">{tagNotification.playerText}</span>
+                <span class="hud-notif-matrix-badge">{tagNotification.matrixText}</span>
+              </div>
+            </div>
+          </div>
+          <div class="hud-notif-actions">
+            <button type="button" class="btn-hud-undo" onclick={undoLastTag} title="Batalkan aksi ini (revert statistik Matrix & Skor)">
+              <Undo2 size={13} />
+              <span>Batalkan</span>
+            </button>
+            <button type="button" class="btn-hud-close" onclick={() => (tagNotification = null)} title="Tutup">
+              <X size={14} />
+            </button>
+          </div>
+          <div class="hud-notif-progress-bar"></div>
+        </div>
+      {/if}
+
+      <!-- Quick 1-Tap Player Selector Popover (Futsal Fast Tagging) -->
+      {#if quickTagState}
+        <div class="quick-tag-overlay no-print" onclick={() => (quickTagState = null)} role="presentation">
+          <div 
+            class="quick-tag-popover" 
+            style="left: {quickTagState.screenX}px; top: {quickTagState.screenY}px;"
+            onclick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Pilih Pemain Futsal Cepat">
+            
+            <div class="quick-tag-header">
+              <div class="qth-title-group">
+                <Zap size={14} class="text-amber" />
+                <span class="qth-title">
+                  {#if quickTagState.category === 'rec'}
+                    🔵 RECOVERY: KETUK PEMAIN
+                  {:else if quickTagState.category === 'lost'}
+                    🟠 LOST BALL: KETUK PEMAIN
+                  {:else}
+                    🎯 SHOT ({quickTagState.outcome?.toUpperCase()}): KETUK PEMAIN
+                  {/if}
+                </span>
+              </div>
+              <button type="button" class="btn-close-quick-pop" onclick={() => (quickTagState = null)} title="Batal">
+                <X size={13} />
+              </button>
+            </div>
+
+            <div class="quick-tag-body">
+              <div class="quick-tag-section-label">5 PEMAIN LAPANGAN (1 KETUK LANGSUNG CATAT):</div>
+              
+              <div class="quick-pitch-players-grid">
+                {#each (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5]) as pNo}
+                  {@const pObj = players.find(x => x.no === pNo)}
+                  <button 
+                    type="button" 
+                    class="btn-quick-court-player" 
+                    onclick={() => selectQuickPlayerAndTag(pNo)}
+                    title="Ketuk untuk langsung catat ke #{pNo}">
+                    <span class="bqp-no">#{pNo}</span>
+                    <span class="bqp-name">{pObj ? (pObj.name ? pObj.name.split(' ')[0] : `P#${pNo}`) : `P#${pNo}`}</span>
+                  </button>
+                {/each}
+              </div>
+
+              <div class="quick-tag-divider"></div>
+
+              <div class="quick-tag-bottom-row">
+                <button 
+                  type="button" 
+                  class="btn-quick-neutral" 
+                  onclick={() => selectQuickPlayerAndTag(null)}
+                  title="Catat untuk Tim Kita tanpa menghubungkan ke nomor pemain tertentu">
+                  ⚪ Tim Kita (Anonim)
+                </button>
+
+                <select 
+                  class="select-quick-cadangan" 
+                  onchange={(e) => {
+                    const val = e.currentTarget.value;
+                    if (val) selectQuickPlayerAndTag(Number(val));
+                  }}>
+                  <option value="">Pemain Cadangan (25)...</option>
+                  {#each players as p}
+                    {#if !matchStore.onPitchPlayers.includes(p.no)}
+                      <option value={p.no}>#{p.no} - {p.name}</option>
+                    {/if}
+                  {/each}
+                </select>
+              </div>
+
+              <div class="quick-tag-autolock-row">
+                <label class="autolock-label">
+                  <input type="checkbox" bind:checked={autoLockPlayerOnTag} />
+                  <span>Kunci pemain ini untuk klik berikutnya (Sticky Mode 0-Detik)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      {/if}
+
       <!-- Quick Tagger Player Strip (Tautkan aksi lapangan langsung ke statistik pemain) -->
       <div class="active-player-tagger-bar no-print">
         <div class="tagger-label-group">
-          <Users size={14} class="text-cyan" />
-          <span class="tagger-heading">TAUTKAN AKSI KE PEMAIN (SINKRON MATRIX):</span>
+          <Zap size={14} class="text-amber" />
+          <span class="tagger-heading">FUTSAL FAST-TAG:</span>
         </div>
+
         <div class="tagger-player-chips">
+          <!-- Tombol Netral / Mode Tanya Cepat -->
           <button 
             type="button" 
             class="chip-tagger {selectedTagPlayerNo === null ? 'chip-tagger-active' : ''}" 
             onclick={() => (selectedTagPlayerNo = null)}
-            title="Klik untuk mode tanpa pemain / netral">
-            <span>Tanpa Pemain Spesifik</span>
+            title="Klik untuk mode tanya 5 pemain lapangan setiap klik">
+            <span class="chip-mode-icon">⚡</span>
+            <span>Tanya 5 Pemain (1-Tap Popover)</span>
           </button>
           
-          {#if matchStore.onPitchPlayers.length > 0}
-            {#each matchStore.onPitchPlayers as pNo}
-              {@const pObj = players.find(x => x.no === pNo)}
-              <button 
-                type="button" 
-                class="chip-tagger chip-tagger-court {selectedTagPlayerNo === pNo ? 'chip-tagger-active' : ''}" 
-                onclick={() => (selectedTagPlayerNo = pNo)}
-                title="Klik untuk menautkan tag aksi ke #{pNo} {pObj ? pObj.name : ''}">
-                <span class="chip-court-dot">●</span>
-                <span class="chip-pno">#{pNo}</span>
-                <span class="chip-pname">{pObj ? pObj.name.split(' ')[0] : ''}</span>
-              </button>
-            {/each}
+          <!-- 5 Pemain di Lapangan -->
+          {#if (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5]).length > 0}
+            <div class="tagger-oncourt-group">
+              <span class="court-label-mini">5 ON PITCH:</span>
+              {#each (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5]) as pNo}
+                {@const pObj = players.find(x => x.no === pNo)}
+                <button 
+                  type="button" 
+                  class="chip-tagger chip-tagger-court {selectedTagPlayerNo === pNo ? 'chip-tagger-active' : ''}" 
+                  onclick={() => (selectedTagPlayerNo = pNo)}
+                  title="Klik untuk KUNCI tag langsung ke #{pNo} (0-Detik)">
+                  <span class="chip-court-dot">●</span>
+                  <span class="chip-pno">#{pNo}</span>
+                  <span class="chip-pname">{pObj ? (pObj.name ? pObj.name.split(' ')[0] : `P#${pNo}`) : `P#${pNo}`}</span>
+                </button>
+              {/each}
+            </div>
           {/if}
 
+          <!-- Dropdown 25 Pemain -->
           <div class="tagger-dropdown-wrap">
-            <select bind:value={selectedTagPlayerNo} class="select-tagger-player">
-              <option value={null}>-- Pilih Dari 25 Pemain --</option>
+            <select bind:value={selectedTagPlayerNo} class="select-tagger-player" title="Pilih dari seluruh 25 pemain roster">
+              <option value={null}>-- Cari dari 25 Pemain --</option>
               {#each players as p}
                 <option value={p.no}>#{p.no} - {p.name}</option>
               {/each}
             </select>
           </div>
 
+          <!-- Status Terpilih / Kunci Aktif -->
           {#if selectedTagPlayerNo}
             {@const activeP = players.find(x => x.no === selectedTagPlayerNo)}
-            <span class="tagger-active-badge">
-              ✓ Terpilih: <strong>#{selectedTagPlayerNo} {activeP ? activeP.name : ''}</strong> (Setiap klik lapangan langsung update Matrix)
+            <div class="tagger-active-badge-group">
+              <span class="tagger-active-badge">
+                🔒 <strong>#{selectedTagPlayerNo} {activeP ? activeP.name : ''}</strong> (Terkunci: Klik lapangan langsung update Matrix)
+              </span>
+              <button 
+                type="button" 
+                class="btn-clear-tagger-lock" 
+                onclick={() => (selectedTagPlayerNo = null)}
+                title="Lepas kunci pemain agar kembali ke mode popover 1-tap">
+                ✕ Lepas Kunci
+              </button>
+            </div>
+          {:else}
+            <span class="tagger-hint-badge">
+              💡 Tip: Klik lapangan untuk popover 1-tap, atau klik nomor di atas untuk kunci pemain 0-detik.
             </span>
           {/if}
         </div>
@@ -2316,7 +2656,7 @@
     border-left: 1.5px solid #000000;
     border-right: 1.5px solid #000000;
     border-bottom: 1.5px solid #000000;
-    padding: 6px 14px;
+    padding: 7px 14px;
     color: #ffffff;
     flex-wrap: wrap;
   }
@@ -2327,19 +2667,19 @@
     gap: 6px;
     font-size: 0.74rem;
     font-weight: 800;
-    color: #38bdf8;
+    color: #f59e0b;
     letter-spacing: 0.04em;
     white-space: nowrap;
   }
 
   .tagger-heading {
-    color: #38bdf8;
+    color: #f59e0b;
   }
 
   .tagger-player-chips {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
   }
 
@@ -2347,12 +2687,12 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    background: rgba(30, 41, 59, 0.8);
+    background: rgba(30, 41, 59, 0.85);
     border: 1px solid rgba(148, 163, 184, 0.3);
     color: #cbd5e1;
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 4px 9px;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
@@ -2360,16 +2700,40 @@
   }
 
   .chip-tagger:hover {
-    background: rgba(51, 65, 85, 0.9);
+    background: rgba(51, 65, 85, 0.95);
     border-color: #38bdf8;
     color: #ffffff;
+    transform: translateY(-1px);
   }
 
   .chip-tagger.chip-tagger-active {
     background: #0284c7;
     border-color: #38bdf8;
     color: #ffffff;
-    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  }
+
+  .chip-mode-icon {
+    font-size: 11px;
+    color: #facc15;
+  }
+
+  .tagger-oncourt-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(15, 23, 42, 0.7);
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px dashed rgba(56, 189, 248, 0.3);
+  }
+
+  .court-label-mini {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #38bdf8;
+    letter-spacing: 0.05em;
+    padding-right: 2px;
   }
 
   .chip-court-dot {
@@ -2392,13 +2756,411 @@
     border-radius: 6px;
   }
 
+  .tagger-active-badge-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .tagger-active-badge {
     font-size: 0.72rem;
     color: #34d399;
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    padding: 2px 8px;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    padding: 3px 8px;
     border-radius: 6px;
+  }
+
+  .btn-clear-tagger-lock {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-clear-tagger-lock:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .tagger-hint-badge {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  /* Row pulse animation when tagged */
+  :global(.row-just-tagged) {
+    background: rgba(251, 191, 36, 0.3) !important;
+    animation: tagPulseAnim 2s ease-out;
+  }
+
+  @keyframes tagPulseAnim {
+    0% {
+      background: rgba(251, 191, 36, 0.7) !important;
+      transform: scale(1.005);
+    }
+    100% {
+      background: rgba(251, 191, 36, 0.1) !important;
+      transform: scale(1);
+    }
+  }
+
+  /* Floating HUD Notification */
+  .futsal-hud-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    border-radius: 10px;
+    padding: 10px 16px;
+    min-width: 380px;
+    max-width: 90vw;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.3);
+    border: 1.5px solid rgba(56, 189, 248, 0.5);
+    animation: slideDownFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+
+  .futsal-hud-notification.notif-goal {
+    border-color: #22c55e;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(34, 197, 94, 0.4);
+  }
+
+  .futsal-hud-notification.notif-rec {
+    border-color: #0284c7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(2, 132, 199, 0.4);
+  }
+
+  .futsal-hud-notification.notif-loss {
+    border-color: #f97316;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(249, 115, 22, 0.4);
+  }
+
+  @keyframes slideDownFade {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -15px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1);
+    }
+  }
+
+  .hud-notif-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hud-notif-badge-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .hud-notif-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hud-notif-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hud-notif-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: 0.03em;
+  }
+
+  .hud-notif-time {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    background: rgba(30, 41, 59, 0.7);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .hud-notif-player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hud-notif-player {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #facc15;
+  }
+
+  .hud-notif-matrix-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .hud-notif-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-hud-undo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-hud-undo:hover {
+    background: #ef4444;
+    color: #ffffff;
+    transform: scale(1.03);
+  }
+
+  .btn-hud-close {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-hud-close:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .hud-notif-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: #38bdf8;
+    width: 100%;
+    animation: progressBarAnim 4.5s linear forwards;
+  }
+
+  @keyframes progressBarAnim {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+
+  /* Quick Tag Overlay & Popover */
+  .quick-tag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+  }
+
+  .quick-tag-popover {
+    position: absolute;
+    width: 290px;
+    background: #0f172a;
+    border: 1.5px solid #38bdf8;
+    border-radius: 10px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.4);
+    overflow: hidden;
+    animation: popIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes popIn {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .quick-tag-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1e293b;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+  }
+
+  .qth-title-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .qth-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: 0.03em;
+  }
+
+  .btn-close-quick-pop {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-close-quick-pop:hover {
+    color: #ffffff;
+  }
+
+  .quick-tag-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .quick-tag-section-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #38bdf8;
+    letter-spacing: 0.04em;
+  }
+
+  .quick-pitch-players-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+
+  .btn-quick-court-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1.5px solid rgba(56, 189, 248, 0.4);
+    border-radius: 6px;
+    padding: 6px 2px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .btn-quick-court-player:hover {
+    background: #0284c7;
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.5);
+  }
+
+  .bqp-no {
+    font-size: 0.88rem;
+    font-weight: 900;
+    color: #facc15;
+    line-height: 1.1;
+  }
+
+  .btn-quick-court-player:hover .bqp-no {
+    color: #ffffff;
+  }
+
+  .bqp-name {
+    font-size: 0.62rem;
+    color: #cbd5e1;
+    font-weight: 700;
+    max-width: 48px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quick-tag-divider {
+    height: 1px;
+    background: rgba(148, 163, 184, 0.15);
+    margin: 2px 0;
+  }
+
+  .quick-tag-bottom-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn-quick-neutral {
+    flex: 1;
+    background: rgba(51, 65, 85, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #e2e8f0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 5px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+
+  .btn-quick-neutral:hover {
+    background: #475569;
+    color: #ffffff;
+  }
+
+  .select-quick-cadangan {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
+    font-size: 0.68rem;
+    padding: 4px;
+    border-radius: 6px;
+  }
+
+  .quick-tag-autolock-row {
+    font-size: 0.66rem;
+    color: #94a3b8;
+  }
+
+  .autolock-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
   }
 
   .pitch-bar-right {
