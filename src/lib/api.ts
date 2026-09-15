@@ -120,22 +120,49 @@ const API_BASE = '/api';
 async function tryFetchOrFallback<T>(fetchFn: () => Promise<Response>, fallbackFn: () => Promise<T>): Promise<T> {
   try {
     const res = await fetchFn();
-    // If running on Vercel static or server returns 404/405/502/503
-    if (res.status === 404 || res.status === 405 || res.status === 502 || res.status === 503) {
+    const contentType = res.headers.get('content-type') || '';
+
+    // If server returned 404/405/502/503 OR returned HTML (SPA rewrite to index.html on Vercel)
+    if (
+      res.status === 404 || 
+      res.status === 405 || 
+      res.status === 502 || 
+      res.status === 503 ||
+      contentType.includes('text/html')
+    ) {
       return await fallbackFn();
     }
+
+    const text = await res.text();
+    if (!text || text.trim().startsWith('<') || !contentType.includes('application/json')) {
+      return await fallbackFn();
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return await fallbackFn();
+    }
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      // If error message is provided by backend, throw it, unless server is unavailable
-      if (err.message && res.status !== 500) {
-        throw new Error(err.message);
+      if (parsed && parsed.message && res.status !== 500) {
+        throw new Error(parsed.message);
       }
       return await fallbackFn();
     }
-    return await res.json();
+
+    return parsed;
   } catch (error: any) {
-    if (error.message && !error.message.includes('fetch') && !error.message.includes('NetworkError') && !error.message.includes('Failed to fetch')) {
-      // Re-throw genuine backend validation error
+    if (
+      error.message && 
+      !error.message.includes('fetch') && 
+      !error.message.includes('NetworkError') && 
+      !error.message.includes('Failed to fetch') &&
+      !error.message.includes('JSON') &&
+      !error.message.includes('Unexpected token')
+    ) {
+      // Re-throw genuine business validation error
       throw error;
     }
     return await fallbackFn();

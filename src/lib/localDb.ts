@@ -107,7 +107,7 @@ function createDefaultMatch(): MatchData {
 
 class LocalDatabase {
   private initStorage() {
-    if (typeof window === 'undefined') return;
+    if (typeof localStorage === 'undefined') return;
 
     if (!localStorage.getItem(USERS_KEY)) {
       localStorage.setItem(USERS_KEY, JSON.stringify(INITIAL_USERS));
@@ -509,7 +509,11 @@ class LocalDatabase {
     const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
     const match = matches.find(m => m.match.id === matchId);
     if (match) {
-      const newEvent = { ...event, matchId };
+      const newEvent = {
+        ...event,
+        id: (event as any).id || `evt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        matchId
+      };
       match.events.push(newEvent);
       localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
       return newEvent;
