@@ -1,6 +1,6 @@
 <script lang="ts">
   import { matchStore } from '../lib/store.svelte';
-  import { Shield, UserCheck, Lock, X, Check, Eye, User, Sparkles } from 'lucide-svelte';
+  import { Shield, UserCheck, Lock, X, Eye, EyeOff, User, AlertCircle } from 'lucide-svelte';
 
   interface Props {
     onClose?: () => void;
@@ -8,64 +8,30 @@
 
   let { onClose } = $props<Props>();
 
-  let username = $state<string>('coach');
-  let password = $state<string>('coach123');
+  let username = $state<string>('');
+  let password = $state<string>('');
+  let showPassword = $state<boolean>(false);
   let loading = $state<boolean>(false);
   let errorMessage = $state<string | null>(null);
 
-  const demoAccounts = [
-    {
-      role: 'coach' as const,
-      title: 'Head Coach',
-      desc: 'Akses penuh strategi, formasi paket 5-man, & konfigurasi match',
-      badge: 'Admin / Coach',
-      badgeClass: 'badge-coach',
-      user: 'coach',
-      pass: 'coach123',
-      icon: '👑'
-    },
-    {
-      role: 'analyst' as const,
-      title: 'Match Analyst & Scorer',
-      desc: 'Pencatatan real-time tag lapangan, shot mapping, fouls & loss',
-      badge: 'Operator / Scorer',
-      badgeClass: 'badge-analyst',
-      user: 'analyst',
-      pass: 'analyst123',
-      icon: '📊'
-    },
-    {
-      role: 'player' as const,
-      title: 'Squad Player / Viewer',
-      desc: 'Melihat lembar rekap statistik, papan taktik, & histori rotasi',
-      badge: 'Read-Only / Viewer',
-      badgeClass: 'badge-player',
-      user: 'player',
-      pass: 'player123',
-      icon: '⚽'
-    }
-  ];
-
   async function handleLogin(e?: Event) {
     if (e) e.preventDefault();
+    if (!username.trim() || !password) {
+      errorMessage = 'Mohon masukkan username dan password.';
+      return;
+    }
+
     loading = true;
     errorMessage = null;
 
     try {
-      await matchStore.login(username, password);
+      await matchStore.login(username.trim(), password);
       if (onClose) onClose();
     } catch (err: any) {
-      errorMessage = err.message || 'Login gagal. Periksa username dan password.';
+      errorMessage = err.message || 'Login gagal. Periksa username dan password Anda.';
     } finally {
       loading = false;
     }
-  }
-
-  function selectDemoAccount(acc: typeof demoAccounts[0]) {
-    username = acc.user;
-    password = acc.pass;
-    matchStore.switchRole(acc.role);
-    if (onClose) onClose();
   }
 </script>
 
@@ -77,7 +43,7 @@
         <img src="/icon.png" alt="FAHLEFI FFTA" class="modal-emblem" />
         <div>
           <h2 class="modal-title">FAHLEFI FUTSAL TACTICAL</h2>
-          <span class="modal-subtitle">Sistem Autentikasi & Hak Akses Tim (RBAC)</span>
+          <span class="modal-subtitle">Sistem Autentikasi & Hak Akses Tim</span>
         </div>
       </div>
       {#if onClose && matchStore.currentUser}
@@ -87,40 +53,16 @@
       {/if}
     </div>
 
-    <!-- Quick Role Switcher (One-Click) -->
-    <div class="quick-roles-section">
-      <div class="section-label">
-        <Sparkles size={14} class="text-cyan" />
-        <span>PILIH PROFIL CEPAT (DEMO 1-KLIK)</span>
-      </div>
-      <div class="role-grid">
-        {#each demoAccounts as acc}
-          <button 
-            type="button" 
-            class="role-card {matchStore.currentUser?.role === acc.role ? 'active-role' : ''}" 
-            onclick={() => selectDemoAccount(acc)}>
-            <div class="role-card-header">
-              <span class="role-icon">{acc.icon}</span>
-              <span class="role-badge {acc.badgeClass}">{acc.badge}</span>
-            </div>
-            <div class="role-card-name">{acc.title}</div>
-            <div class="role-card-desc">{acc.desc}</div>
-            <div class="role-card-creds">
-              <code>{acc.user}</code> • <code>{acc.pass}</code>
-            </div>
-          </button>
-        {/each}
-      </div>
-    </div>
-
-    <div class="divider">
-      <span>atau Masuk dengan Kredensial Khusus</span>
-    </div>
-
     <!-- Login Form -->
     <form class="login-form" onsubmit={handleLogin}>
+      <div class="form-header-intro">
+        <h3 class="form-heading">Masuk ke Sistem</h3>
+        <p class="form-subheading">Silakan masukkan username dan kata sandi akun Anda untuk melanjutkan.</p>
+      </div>
+
       {#if errorMessage}
         <div class="error-banner">
+          <AlertCircle size={16} class="text-rose flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       {/if}
@@ -133,7 +75,8 @@
             id="login-username" 
             type="text" 
             bind:value={username} 
-            placeholder="Masukkan username (coach, analyst, player)..." 
+            placeholder="Masukkan username..." 
+            autocomplete="username"
             required 
           />
         </div>
@@ -145,11 +88,24 @@
           <Lock size={16} class="input-icon" />
           <input 
             id="login-password" 
-            type="password" 
+            type={showPassword ? 'text' : 'password'} 
             bind:value={password} 
             placeholder="Masukkan kata sandi..." 
+            autocomplete="current-password"
             required 
           />
+          <button 
+            type="button" 
+            class="btn-toggle-eye" 
+            onclick={() => (showPassword = !showPassword)}
+            tabindex="-1"
+            title={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}>
+            {#if showPassword}
+              <EyeOff size={16} />
+            {:else}
+              <Eye size={16} />
+            {/if}
+          </button>
         </div>
       </div>
 
@@ -159,10 +115,15 @@
             <span class="spinner-small"></span>
             <span>Memverifikasi...</span>
           {:else}
-            <UserCheck size={16} />
-            <span>Masuk ke Dashboard Futsal</span>
+            <UserCheck size={17} />
+            <span>Masuk ke Dashboard</span>
           {/if}
         </button>
+      </div>
+
+      <div class="login-footer-info">
+        <Shield size={13} class="text-muted" />
+        <span>Akses dibatasi hanya untuk staf pelatih, analis laga, & pemain terdaftar.</span>
       </div>
     </form>
   </div>
@@ -172,8 +133,8 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(6, 11, 20, 0.85);
-    backdrop-filter: blur(12px);
+    background: rgba(6, 11, 20, 0.88);
+    backdrop-filter: blur(14px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -183,17 +144,17 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   .login-modal-card {
     background: linear-gradient(145deg, #101d30 0%, #0c1524 60%, #080d18 100%);
     border: 1px solid rgba(156, 179, 204, 0.25);
-    border-radius: 14px;
+    border-radius: 16px;
     width: 100%;
-    max-width: 580px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.12);
+    max-width: 440px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(56, 189, 248, 0.1);
     overflow: hidden;
   }
 
@@ -202,7 +163,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 1.25rem 1.5rem;
-    background: rgba(14, 25, 42, 0.9);
+    background: rgba(14, 25, 42, 0.95);
     border-bottom: 1px solid rgba(156, 179, 204, 0.18);
   }
 
@@ -242,6 +203,9 @@
     padding: 6px;
     border-radius: 6px;
     transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn-close:hover {
@@ -249,160 +213,60 @@
     color: #ffffff;
   }
 
-  .quick-roles-section {
-    padding: 1.25rem 1.5rem 0.75rem;
-  }
-
-  .section-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #7dd3fc;
-    margin-bottom: 0.75rem;
-  }
-
-  .role-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-
-  .role-card {
-    background: rgba(18, 32, 54, 0.6);
-    border: 1px solid rgba(156, 179, 204, 0.2);
-    border-radius: 10px;
-    padding: 12px 10px;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .role-card:hover {
-    background: rgba(24, 44, 74, 0.85);
-    border-color: #38bdf8;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  }
-
-  .role-card.active-role {
-    background: linear-gradient(145deg, #1b3558 0%, #224370 100%);
-    border-color: #38bdf8;
-    box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
-  }
-
-  .role-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .role-icon {
-    font-size: 1.2rem;
-  }
-
-  .role-badge {
-    font-size: 0.62rem;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-    letter-spacing: 0.03em;
-  }
-
-  .badge-coach {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.4);
-  }
-
-  .badge-analyst {
-    background: rgba(56, 189, 248, 0.2);
-    color: #38bdf8;
-    border: 1px solid rgba(56, 189, 248, 0.4);
-  }
-
-  .badge-player {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-  }
-
-  .role-card-name {
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: #ffffff;
-  }
-
-  .role-card-desc {
-    font-size: 0.65rem;
-    color: #9cb3cc;
-    line-height: 1.3;
-    flex: 1;
-  }
-
-  .role-card-creds {
-    font-size: 0.62rem;
-    color: #64748b;
-  }
-
-  .role-card-creds code {
-    background: rgba(0, 0, 0, 0.3);
-    padding: 1px 4px;
-    border-radius: 3px;
-    color: #9cb3cc;
-  }
-
-  .divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 1rem 1.5rem 0.5rem;
-    color: #64748b;
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-
-  .divider::before, .divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid rgba(156, 179, 204, 0.15);
-  }
-
-  .divider span {
-    padding: 0 10px;
-  }
-
   .login-form {
-    padding: 1rem 1.5rem 1.5rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 1.15rem;
+  }
+
+  .form-header-intro {
+    text-align: left;
+    margin-bottom: 0.25rem;
+  }
+
+  .form-heading {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+
+  .form-subheading {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    line-height: 1.4;
   }
 
   .error-banner {
-    background: rgba(244, 63, 94, 0.15);
-    border: 1px solid rgba(244, 63, 94, 0.4);
-    color: #fda4af;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 0.75rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+  }
+
+  .text-rose {
+    color: #f87171;
   }
 
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.4rem;
   }
 
   .form-group label {
-    font-size: 0.72rem;
-    font-weight: 700;
+    font-size: 0.78rem;
+    font-weight: 600;
     color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .input-wrapper {
@@ -411,7 +275,7 @@
     align-items: center;
   }
 
-  :global(.input-icon) {
+  :global(.input-wrapper .input-icon) {
     position: absolute;
     left: 12px;
     color: #64748b;
@@ -420,45 +284,78 @@
 
   .input-wrapper input {
     width: 100%;
-    background: rgba(8, 14, 24, 0.85);
-    border: 1px solid rgba(156, 179, 204, 0.25);
+    padding: 0.75rem 2.5rem 0.75rem 2.4rem;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 8px;
-    padding: 9px 12px 9px 36px;
-    color: #ffffff;
-    font-size: 0.85rem;
-    outline: none;
-    transition: all 0.15s;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.2s;
   }
 
   .input-wrapper input:focus {
+    outline: none;
     border-color: #38bdf8;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  }
+
+  .input-wrapper input::placeholder {
+    color: #64748b;
+  }
+
+  .btn-toggle-eye {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s;
+  }
+
+  .btn-toggle-eye:hover {
+    color: #e2e8f0;
   }
 
   .form-actions {
-    margin-top: 6px;
+    margin-top: 0.5rem;
   }
 
   .btn-submit {
     width: 100%;
-    background: linear-gradient(135deg, #1e3a5f 0%, #254b7c 100%);
-    border: 1px solid #38bdf8;
-    color: #ffffff;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 800;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    padding: 0.85rem;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
     transition: all 0.2s;
   }
 
   .btn-submit:hover:not(:disabled) {
-    box-shadow: 0 4px 18px rgba(56, 189, 248, 0.4);
+    background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+    border-color: #38bdf8;
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
     transform: translateY(-1px);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
   }
 
   .spinner-small {
@@ -467,16 +364,18 @@
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: #ffffff;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.6s linear infinite;
   }
 
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
 
-  @media (max-width: 600px) {
-    .role-grid {
-      grid-template-columns: 1fr;
-    }
+  :global(.text-rose) {
+    color: #f87171;
+  }
+
+  :global(.text-muted) {
+    color: #64748b;
   }
 </style>

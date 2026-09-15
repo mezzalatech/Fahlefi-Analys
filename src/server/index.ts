@@ -59,9 +59,81 @@ export const app = new Elysia({ prefix: '/api' })
       email: users.email,
       name: users.name,
       role: users.role,
-      avatarUrl: users.avatarUrl
+      avatarUrl: users.avatarUrl,
+      createdAt: users.createdAt
     }).from(users).all();
     return allUsers;
+  })
+
+  .post('/auth/users', async ({ body, error }) => {
+    const { username, email, name, role = 'player', password } = body as any;
+    if (!username || !password || !name) {
+      return error(400, 'Username, nama, dan password wajib diisi');
+    }
+
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanEmail = (email || `${cleanUsername}@fahlefi.com`).trim().toLowerCase();
+
+    const existing = db.select().from(users).where(eq(users.username, cleanUsername)).get();
+    if (existing) {
+      return error(400, `Username "${cleanUsername}" sudah digunakan`);
+    }
+
+    const id = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const created = db.insert(users).values({
+      id,
+      username: cleanUsername,
+      email: cleanEmail,
+      name: name.trim(),
+      role: role || 'player',
+      passwordHash: password,
+      avatarUrl: ''
+    }).returning({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      name: users.name,
+      role: users.role,
+      avatarUrl: users.avatarUrl,
+      createdAt: users.createdAt
+    }).get();
+
+    return created;
+  })
+
+  .patch('/auth/users/:id', async ({ params, body, error }) => {
+    const { username, email, name, role, password } = body as any;
+    const updateData: any = {};
+    if (username) updateData.username = username.trim().toLowerCase();
+    if (email) updateData.email = email.trim().toLowerCase();
+    if (name) updateData.name = name.trim();
+    if (role) updateData.role = role;
+    if (password) updateData.passwordHash = password;
+
+    const updated = db.update(users)
+      .set(updateData)
+      .where(eq(users.id, params.id))
+      .returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        avatarUrl: users.avatarUrl,
+        createdAt: users.createdAt
+      })
+      .get();
+
+    if (!updated) return error(404, 'User not found');
+    return updated;
+  })
+
+  .delete('/auth/users/:id', async ({ params, error }) => {
+    const user = db.select().from(users).where(eq(users.id, params.id)).get();
+    if (!user) return error(404, 'User not found');
+    
+    db.delete(users).where(eq(users.id, params.id)).run();
+    return { success: true, message: `Pengguna "${user.name}" berhasil dihapus` };
   })
 
   // ==========================================

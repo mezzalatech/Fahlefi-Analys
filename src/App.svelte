@@ -10,6 +10,7 @@
   import MasterPlayerDatabase from './components/MasterPlayerDatabase.svelte';
   import MatchManagerModal from './components/MatchManagerModal.svelte';
   import LoginModal from './components/LoginModal.svelte';
+  import UserManagerModal from './components/UserManagerModal.svelte';
   import AnalyticsModal from './components/AnalyticsModal.svelte';
   import MatchConfigModal from './components/MatchConfigModal.svelte';
   import { 
@@ -21,9 +22,11 @@
     Database,
     AlertCircle,
     UserCircle,
+    UserCog,
     LogOut,
     Crown,
     Trophy,
+    Shield,
     ChevronDown
   } from 'lucide-svelte';
 
@@ -153,16 +156,37 @@
 
     <!-- User Profile & RBAC Switcher -->
     <div class="user-auth-section">
+      {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
+        <button 
+          type="button" 
+          class="btn-user-manager-nav" 
+          onclick={() => (matchStore.showUserManagerModal = true)}
+          title="Kelola Akun, Kredensial, & Hak Akses Pengguna">
+          <UserCog size={15} class="text-cyan" />
+          <span class="user-mgr-label">User Management</span>
+        </button>
+      {/if}
+
       <button 
         class="user-profile-btn" 
         onclick={() => (matchStore.showLoginModal = true)}
-        title="Klik untuk ganti hak akses / login">
+        title="Klik untuk ganti hak akses / profil">
         <span class="user-role-tag {userRoleBadge.class}">
           <span>{userRoleBadge.icon}</span>
           <span>{userRoleBadge.label}</span>
         </span>
         <span class="user-display-name">{matchStore.currentUser?.name || 'Masuk Akun'}</span>
       </button>
+
+      {#if matchStore.currentUser}
+        <button 
+          type="button" 
+          class="btn-logout-header" 
+          onclick={() => matchStore.logout()} 
+          title="Keluar / Ganti Akun">
+          <LogOut size={14} />
+        </button>
+      {/if}
     </div>
   </header>
 
@@ -201,6 +225,10 @@
   <!-- Modals -->
   {#if matchStore.showMatchManagerModal}
     <MatchManagerModal onClose={() => (matchStore.showMatchManagerModal = false)} />
+  {/if}
+
+  {#if matchStore.showUserManagerModal}
+    <UserManagerModal onClose={() => (matchStore.showUserManagerModal = false)} />
   {/if}
 
   {#if !matchStore.currentUser || matchStore.showLoginModal}
@@ -477,6 +505,31 @@
   .user-auth-section {
     display: flex;
     align-items: center;
+    gap: 8px;
+  }
+
+  .btn-user-manager-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(14, 165, 233, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+    padding: 6px 11px;
+    min-height: 36px;
+    border-radius: 9px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .btn-user-manager-nav:hover {
+    background: rgba(14, 165, 233, 0.22);
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+    color: #ffffff;
   }
 
   .user-profile-btn {
@@ -490,6 +543,27 @@
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.15s;
+  }
+
+  .btn-logout-header {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #f87171;
+    padding: 8px;
+    border-radius: 9px;
+    min-height: 36px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-logout-header:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #ffffff;
   }
 
   .user-profile-btn:hover, .user-profile-btn:active {

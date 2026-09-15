@@ -9,6 +9,9 @@ class MatchStore {
   // Auth State
   currentUser = $state<User | null>(null);
   showLoginModal = $state<boolean>(false);
+  usersList = $state<User[]>([]);
+  loadingUsers = $state<boolean>(false);
+  showUserManagerModal = $state<boolean>(false);
 
   // Master Players State
   masterPlayers = $state<MasterPlayer[]>([]);
@@ -75,6 +78,42 @@ class MatchStore {
     localStorage.removeItem('ffta_current_user');
     localStorage.removeItem('ffta_token');
     this.showLoginModal = true;
+  }
+
+  // User Management Actions
+  async loadUsers() {
+    try {
+      this.loadingUsers = true;
+      const list = await api.getUsers();
+      this.usersList = list;
+    } catch (err: any) {
+      console.error('Failed to load users list:', err);
+    } finally {
+      this.loadingUsers = false;
+    }
+  }
+
+  async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string }) {
+    const created = await api.createUser(userData);
+    await this.loadUsers();
+    return created;
+  }
+
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string }) {
+    const updated = await api.updateUser(id, userData);
+    await this.loadUsers();
+    // Update currentUser if updating own profile
+    if (this.currentUser && this.currentUser.id === id) {
+      this.currentUser = { ...this.currentUser, ...updated };
+      localStorage.setItem('ffta_current_user', JSON.stringify(this.currentUser));
+    }
+    return updated;
+  }
+
+  async deleteUser(id: string) {
+    const res = await api.deleteUser(id);
+    await this.loadUsers();
+    return res;
   }
 
   switchRole(role: 'coach' | 'analyst' | 'player') {

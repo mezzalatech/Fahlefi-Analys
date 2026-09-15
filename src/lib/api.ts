@@ -136,6 +136,43 @@ export const api = {
     return res.json();
   },
 
+  async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string }): Promise<User> {
+    const res = await fetch(`${API_BASE}/auth/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Gagal menambahkan user baru');
+    }
+    return res.json();
+  },
+
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string }): Promise<User> {
+    const res = await fetch(`${API_BASE}/auth/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Gagal memperbarui user');
+    }
+    return res.json();
+  },
+
+  async deleteUser(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/auth/users/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Gagal menghapus user');
+    }
+    return res.json();
+  },
+
   // Master Players
   async getMasterPlayers(): Promise<MasterPlayer[]> {
     const res = await fetch(`${API_BASE}/master-players`);
