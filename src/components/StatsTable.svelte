@@ -3,7 +3,7 @@
   import { api } from '../lib/api';
   import { 
     Plus, Minus, UserPlus, Filter, Search, ArrowUpDown, ArrowUp, ArrowDown, 
-    RotateCcw, Shield, Award, AlertTriangle, Check
+    RotateCcw, Shield, Award, AlertTriangle, Check, Printer, Download
   } from 'lucide-svelte';
 
   let filterPaket = $state<boolean>(false);
@@ -154,6 +154,10 @@
     newPlayerNo += 1;
     showAddPlayer = false;
   }
+
+  function handlePrint() {
+    window.print();
+  }
 </script>
 
 <div class="table-container glass-card">
@@ -168,7 +172,15 @@
     </div>
 
     <div class="header-right-tools">
-      <button class="btn-add-player" onclick={() => (showAddPlayer = !showAddPlayer)}>
+      <button type="button" class="btn-print-stats" onclick={handlePrint} title="Cetak atau Simpan Laporan Matrix Statistik ke PDF">
+        <Printer size={15} />
+        <span>Cetak PDF</span>
+      </button>
+      <a href={`/api/matches/${matchStore.data?.match.id || 1}/export`} target="_blank" class="btn-export-stats-excel" title="Ekspor Data Statistik ke File Excel">
+        <Download size={15} />
+        <span>Ekspor Excel</span>
+      </a>
+      <button type="button" class="btn-add-player" onclick={() => (showAddPlayer = !showAddPlayer)}>
         <UserPlus size={15} />
         <span>Tambah Pemain</span>
       </button>
@@ -591,10 +603,54 @@
     border-radius: 12px;
   }
 
-  .section-subtitle {
-    font-size: 0.78rem;
-    color: #94a3b8;
-    margin: 3px 0 0 0;
+  .header-right-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-print-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-print-stats:hover {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+  }
+
+  .btn-export-stats-excel {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .btn-export-stats-excel:hover {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: #10b981;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
   }
 
   .btn-add-player {
@@ -1142,5 +1198,53 @@
   .tot-gl-main {
     color: #facc15 !important;
     font-size: 0.85rem !important;
+  }
+
+  /* Print Styles for Matrix Report */
+  @media print {
+    .table-container {
+      background: #ffffff !important;
+      color: #000000 !important;
+      padding: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    .filter-toolbar,
+    .header-right-tools,
+    .btn-del-player,
+    .btn-stat-adj {
+      display: none !important;
+    }
+    .section-title {
+      color: #000000 !important;
+    }
+    .section-subtitle {
+      color: #475569 !important;
+    }
+    .table-freeze-container {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .stats-table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+    .stats-table th, .stats-table td {
+      border: 1px solid #94a3b8 !important;
+      color: #000000 !important;
+      padding: 4px 6px !important;
+      background: #ffffff !important;
+    }
+    .header-row-top th {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+    .header-row-sub th {
+      background: #f8fafc !important;
+      color: #334155 !important;
+    }
+    .td-sticky, .th-sticky {
+      position: static !important;
+    }
   }
 </style>

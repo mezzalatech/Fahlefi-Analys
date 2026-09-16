@@ -8,12 +8,17 @@
     AlertCircle, 
     Shield, 
     Flame,
-    PlusCircle
+    PlusCircle,
+    Printer
   } from 'lucide-svelte';
 
   let pitchRef: HTMLDivElement;
   let showModal = $state<boolean>(false);
   let clickCoords = $state<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  function handlePrint() {
+    window.print();
+  }
 
   // Event form
   let eventType = $state<'shot' | 'turnover' | 'recovery' | 'foul'>('shot');
@@ -120,6 +125,11 @@
           class="pill-btn {filterType === 'turnover' ? 'active' : ''}" 
           onclick={() => (filterType = 'turnover')}>Loss</button>
       </div>
+
+      <button type="button" class="btn-print-pitch" onclick={handlePrint} title="Cetak atau Simpan Tampilan Taktik & Shot Map ke PDF">
+        <Printer size={14} />
+        <span>Cetak PDF</span>
+      </button>
     </div>
   </div>
 
@@ -287,7 +297,28 @@
   .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-print-pitch {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-print-pitch:hover {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
   }
 
   .filter-group {
@@ -634,5 +665,32 @@
     padding: 0.5rem 1rem;
     border-radius: 6px;
     cursor: pointer;
+  }
+
+  /* Print Styles for Tactical Pitch */
+  @media print {
+    .pitch-section {
+      background: #ffffff !important;
+      color: #000000 !important;
+      padding: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    .filter-group,
+    .btn-print-pitch,
+    .pitch-tip,
+    .marker-tooltip {
+      display: none !important;
+    }
+    .section-title {
+      color: #000000 !important;
+    }
+    .pitch-wrapper {
+      background: #064e3b !important;
+      border: 1px solid #cbd5e1 !important;
+      box-shadow: none !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
   }
 </style>
