@@ -455,29 +455,31 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
+    min-width: 0;
   }
 
   .header-left-group {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
+    gap: 10px;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .header-center-group {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1;
-    min-width: 0;
+    flex-shrink: 0;
+    padding: 0 4px;
   }
 
   .header-right-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     flex-shrink: 0;
   }
 
@@ -548,7 +550,7 @@
     font-size: 0.78rem;
     font-weight: 800;
     color: #ffffff;
-    max-width: 260px;
+    max-width: clamp(140px, 16vw, 240px);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1103,58 +1105,56 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
-  /* iPad Specific Layout Rules */
-  @media (max-width: 1024px) {
-    .app-compact-header {
-      padding-top: max(28px, calc(env(safe-area-inset-top, 0px) + 12px));
-      padding-left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
-      padding-right: max(10px, calc(env(safe-area-inset-right, 0px) + 8px));
-      padding-bottom: 6px;
-      gap: 6px;
-    }
-
-    .app-main-content {
-      padding: 0.75rem 0.75rem;
-    }
-
+  /* Progressive Header Responsive Breakpoints (Prevent Any Overlaps) */
+  @media (max-width: 1380px) {
     .brand-subtitle {
       display: none;
     }
-
-    .active-match-title {
-      max-width: 140px;
-    }
-
-    .brand-title {
-      font-size: 0.82rem;
-    }
-
-    .user-display-name {
-      max-width: 110px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     .user-mgr-label,
     .share-header-label {
       display: none;
     }
-
     .btn-user-manager-nav,
     .btn-share-header {
       padding: 6px 9px;
       min-width: 36px;
       justify-content: center;
     }
-
-    .compact-nav-tabs {
-      width: 100%;
-      justify-content: flex-start;
+    .active-match-title {
+      max-width: 180px;
     }
   }
 
-  @media (max-width: 820px) {
+  @media (max-width: 1140px) {
+    .cloud-pill-label {
+      display: none;
+    }
+    .active-match-title {
+      max-width: 130px;
+    }
+    .user-display-name {
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cloud-sync-pill {
+      padding: 5px 9px;
+    }
+    .header-top-row {
+      gap: 8px;
+    }
+  }
+
+  @media (max-width: 980px) {
+    .app-compact-header {
+      padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 10px));
+      padding-left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
+      padding-right: max(10px, calc(env(safe-area-inset-right, 0px) + 8px));
+      padding-bottom: 6px;
+      gap: 6px;
+    }
+
     .header-top-row {
       flex-wrap: wrap;
       gap: 8px;
@@ -1164,6 +1164,32 @@
       order: 3;
       width: 100%;
       justify-content: center;
+      padding-top: 2px;
+    }
+
+    .brand-title {
+      font-size: 0.82rem;
+    }
+
+    .compact-nav-tabs {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .app-main-content {
+      padding: 0.75rem 0.75rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .user-profile-btn {
+      padding: 4px 8px;
+    }
+    .user-display-name {
+      display: none;
+    }
+    .active-match-title {
+      max-width: 100px;
     }
   }
 
