@@ -88,162 +88,171 @@
 <div class="futsal-app">
   <!-- Minimalist Compact App Header Bar (Hidden in print) -->
   <header class="app-compact-header no-print">
-    <div class="brand-left">
-      <img src="/icon.png" alt="Futsal Analysis" class="app-brand-logo" />
-      <div class="brand-text">
-        <h1 class="brand-title">FAHLEFI FUTSAL ANALYTICS</h1>
-        <span class="brand-subtitle">Official Sheet & Multi-Match Tactical Platform</span>
+    <!-- Top Row: Identity, Match Context, Match Timer, & Quick Actions -->
+    <div class="header-top-row">
+      <div class="header-left-group">
+        <div class="brand-left">
+          <img src="/icon.png" alt="Futsal Analysis" class="app-brand-logo" />
+          <div class="brand-text">
+            <h1 class="brand-title">FAHLEFI FUTSAL ANALYTICS</h1>
+            <span class="brand-subtitle">Official Sheet & Multi-Match Tactical Platform</span>
+          </div>
+        </div>
+
+        <!-- Match Selector Pill -->
+        <button 
+          type="button" 
+          class="match-selector-pill" 
+          onclick={() => (matchStore.showMatchManagerModal = true)}
+          title="Klik untuk memilih laga, membuat laga baru, atau melihat arsip pertandingan">
+          <Trophy size={14} class="text-cyan" />
+          <span class="active-match-title">
+            {matchStore.data?.match.competition || 'PASER FUTSAL CUP'}: {matchStore.data?.match.homeTeam || 'Hewah Paser'} vs {matchStore.data?.match.awayTeam || 'Lawan'}
+          </span>
+          <ChevronDown size={13} class="chevron-icon" />
+        </button>
       </div>
-    </div>
 
-    <!-- Match Selector Pill -->
-    <button 
-      type="button" 
-      class="match-selector-pill" 
-      onclick={() => (matchStore.showMatchManagerModal = true)}
-      title="Klik untuk memilih laga, membuat laga baru, atau melihat arsip pertandingan">
-      <Trophy size={14} class="text-cyan" />
-      <span class="active-match-title">
-        {matchStore.data?.match.competition || 'PASER FUTSAL CUP'}: {matchStore.data?.match.homeTeam || 'Hewah Paser'} vs {matchStore.data?.match.awayTeam || 'Lawan'}
-      </span>
-      <ChevronDown size={13} class="chevron-icon" />
-    </button>
-
-    <!-- Central Timer & Half Controller -->
-    <div class="header-timer-pill">
-      <button 
-        type="button" 
-        class="btn-half-pill {matchStore.activeHalf === 1 ? 'half-active' : ''}" 
-        onclick={() => (matchStore.activeHalf = 1)}
-        title="Set Babak 1 Aktif">
-        1ºH Babak 1
-      </button>
-      <button 
-        type="button" 
-        class="btn-half-pill {matchStore.activeHalf === 2 ? 'half-active' : ''}" 
-        onclick={() => (matchStore.activeHalf = 2)}
-        title="Set Babak 2 Aktif">
-        2ºH Babak 2
-      </button>
-      <div class="timer-clock-display" onclick={() => matchStore.toggleTimer()} role="button" tabindex="0" title="Klik Spasi atau Tombol untuk Play/Pause">
-        <span class="clock-digits">{matchStore.formattedTime}</span>
-        <span class="clock-status-dot {matchStore.timerRunning ? 'dot-running' : 'dot-paused'}">●</span>
+      <!-- Central Timer & Half Controller -->
+      <div class="header-center-group">
+        <div class="header-timer-pill">
+          <button 
+            type="button" 
+            class="btn-half-pill {matchStore.activeHalf === 1 ? 'half-active' : ''}" 
+            onclick={() => (matchStore.activeHalf = 1)}
+            title="Set Babak 1 Aktif">
+            1ºH Babak 1
+          </button>
+          <button 
+            type="button" 
+            class="btn-half-pill {matchStore.activeHalf === 2 ? 'half-active' : ''}" 
+            onclick={() => (matchStore.activeHalf = 2)}
+            title="Set Babak 2 Aktif">
+            2ºH Babak 2
+          </button>
+          <div class="timer-clock-display" onclick={() => matchStore.toggleTimer()} role="button" tabindex="0" title="Klik Spasi atau Tombol untuk Play/Pause">
+            <span class="clock-digits">{matchStore.formattedTime}</span>
+            <span class="clock-status-dot {matchStore.timerRunning ? 'dot-running' : 'dot-paused'}">●</span>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Navigation Tabs Bar -->
-    <nav class="compact-nav-tabs">
-      <button 
-        class="tab-btn {currentView === 'sheet' ? 'active' : ''}" 
-        onclick={() => (currentView = 'sheet')}>
-        <FileText size={14} />
-        <span>Lembar Dokumen</span>
-      </button>
-
-      <button 
-        class="tab-btn {currentView === 'matrix' ? 'active' : ''}" 
-        onclick={() => (currentView = 'matrix')}>
-        <Table size={14} />
-        <span>Matrix Pemain</span>
-      </button>
-
-      <button 
-        class="tab-btn {currentView === 'pitch' ? 'active' : ''}" 
-        onclick={() => (currentView = 'pitch')}>
-        <MapPin size={14} />
-        <span>Papan Taktik</span>
-      </button>
-
-      <button 
-        class="tab-btn {currentView === 'pakets' ? 'active' : ''}" 
-        onclick={() => (currentView = 'pakets')}>
-        <Users size={14} />
-        <span>Paket 5-Man</span>
-      </button>
-
-      <button 
-        class="tab-btn {currentView === 'substitutions' ? 'active' : ''}" 
-        onclick={() => (currentView = 'substitutions')}>
-        <ArrowRightLeft size={14} />
-        <span>Rotasi & Substitusi</span>
-      </button>
-
-      <button 
-        class="tab-btn {currentView === 'master_db' ? 'active' : ''}" 
-        onclick={() => (currentView = 'master_db')}>
-        <Database size={14} />
-        <span>Database Master</span>
-      </button>
-    </nav>
-
-    <!-- User Profile & RBAC Switcher -->
-    <div class="user-auth-section">
-      <!-- Cloud Realtime Sync Pill Button -->
-      <button 
-        type="button" 
-        class="cloud-sync-pill status-{matchStore.cloudStatus}" 
-        onclick={() => (matchStore.showCloudSyncModal = true)}
-        title="Status Real-Time Cloud: Klik untuk menghubungkan MacBook & iPad">
-        {#if matchStore.cloudStatus === 'connected'}
-          <span class="live-dot-ping"></span>
-          <Cloud size={14} class="text-emerald" />
-          <span class="cloud-pill-label">Cloud Realtime</span>
-          {#if matchStore.cloudLatency}
-            <span class="cloud-ms">{matchStore.cloudLatency}ms</span>
+      <!-- User Profile & RBAC Switcher & Quick Actions -->
+      <div class="header-right-group user-auth-section">
+        <!-- Cloud Realtime Sync Pill Button -->
+        <button 
+          type="button" 
+          class="cloud-sync-pill status-{matchStore.cloudStatus}" 
+          onclick={() => (matchStore.showCloudSyncModal = true)}
+          title="Status Real-Time Cloud: Klik untuk menghubungkan MacBook & iPad">
+          {#if matchStore.cloudStatus === 'connected'}
+            <span class="live-dot-ping"></span>
+            <Cloud size={14} class="text-emerald" />
+            <span class="cloud-pill-label">Cloud Realtime</span>
+            {#if matchStore.cloudLatency}
+              <span class="cloud-ms">{matchStore.cloudLatency}ms</span>
+            {/if}
+          {:else if matchStore.cloudStatus === 'connecting'}
+            <RefreshCw size={14} class="text-amber spin" />
+            <span class="cloud-pill-label">Connecting...</span>
+          {:else if matchStore.cloudStatus === 'offline'}
+            <CloudOff size={14} class="text-rose" />
+            <span class="cloud-pill-label">Cloud Offline</span>
+          {:else}
+            <CloudOff size={14} class="text-slate" />
+            <span class="cloud-pill-label">⚡ Sinkron Realtime</span>
           {/if}
-        {:else if matchStore.cloudStatus === 'connecting'}
-          <RefreshCw size={14} class="text-amber spin" />
-          <span class="cloud-pill-label">Connecting...</span>
-        {:else if matchStore.cloudStatus === 'offline'}
-          <CloudOff size={14} class="text-rose" />
-          <span class="cloud-pill-label">Cloud Offline</span>
-        {:else}
-          <CloudOff size={14} class="text-slate" />
-          <span class="cloud-pill-label">⚡ Sinkron Realtime / Cloud</span>
+        </button>
+
+        {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
+          <button 
+            type="button" 
+            class="btn-user-manager-nav" 
+            onclick={() => (matchStore.showUserManagerModal = true)}
+            title="Kelola Akun, Kredensial, & Hak Akses Pengguna">
+            <UserCog size={15} class="text-cyan" />
+            <span class="user-mgr-label">User Management</span>
+          </button>
         {/if}
-      </button>
 
-      {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
+        <button 
+          class="user-profile-btn" 
+          onclick={() => (matchStore.showLoginModal = true)}
+          title="Klik untuk ganti hak akses / profil">
+          <span class="user-role-tag {userRoleBadge.class}">
+            <span>{userRoleBadge.icon}</span>
+            <span>{userRoleBadge.label}</span>
+          </span>
+          <span class="user-display-name">{matchStore.currentUser?.name || 'Masuk Akun'}</span>
+        </button>
+
+        <!-- Share / Install to iPad Button -->
         <button 
           type="button" 
-          class="btn-user-manager-nav" 
-          onclick={() => (matchStore.showUserManagerModal = true)}
-          title="Kelola Akun, Kredensial, & Hak Akses Pengguna">
-          <UserCog size={15} class="text-cyan" />
-          <span class="user-mgr-label">User Management</span>
+          class="btn-share-header" 
+          onclick={handleShareApp} 
+          title="Pasang ke Layar Utama iPad / Bagikan Link">
+          <Share2 size={13} class="text-cyan" />
+          <span class="share-header-label">Pasang di iPad</span>
         </button>
-      {/if}
 
-      <button 
-        class="user-profile-btn" 
-        onclick={() => (matchStore.showLoginModal = true)}
-        title="Klik untuk ganti hak akses / profil">
-        <span class="user-role-tag {userRoleBadge.class}">
-          <span>{userRoleBadge.icon}</span>
-          <span>{userRoleBadge.label}</span>
-        </span>
-        <span class="user-display-name">{matchStore.currentUser?.name || 'Masuk Akun'}</span>
-      </button>
+        {#if matchStore.currentUser}
+          <button 
+            type="button" 
+            class="btn-logout-header" 
+            onclick={() => matchStore.logout()} 
+            title="Keluar / Ganti Akun">
+            <LogOut size={14} />
+          </button>
+        {/if}
+      </div>
+    </div>
 
-      <!-- Share / Install to iPad Button -->
-      <button 
-        type="button" 
-        class="btn-share-header" 
-        onclick={handleShareApp} 
-        title="Pasang ke Layar Utama iPad / Bagikan Link">
-        <Share2 size={13} class="text-cyan" />
-        <span class="share-header-label">Pasang di iPad</span>
-      </button>
-
-      {#if matchStore.currentUser}
+    <!-- Bottom Row: Navigation Tabs -->
+    <div class="header-bottom-row">
+      <nav class="compact-nav-tabs">
         <button 
-          type="button" 
-          class="btn-logout-header" 
-          onclick={() => matchStore.logout()} 
-          title="Keluar / Ganti Akun">
-          <LogOut size={14} />
+          class="tab-btn {currentView === 'sheet' ? 'active' : ''}" 
+          onclick={() => (currentView = 'sheet')}>
+          <FileText size={14} />
+          <span>Lembar Dokumen</span>
         </button>
-      {/if}
+
+        <button 
+          class="tab-btn {currentView === 'matrix' ? 'active' : ''}" 
+          onclick={() => (currentView = 'matrix')}>
+          <Table size={14} />
+          <span>Matrix Pemain</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'pitch' ? 'active' : ''}" 
+          onclick={() => (currentView = 'pitch')}>
+          <MapPin size={14} />
+          <span>Papan Taktik</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'pakets' ? 'active' : ''}" 
+          onclick={() => (currentView = 'pakets')}>
+          <Users size={14} />
+          <span>Paket 5-Man</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'substitutions' ? 'active' : ''}" 
+          onclick={() => (currentView = 'substitutions')}>
+          <ArrowRightLeft size={14} />
+          <span>Rotasi & Substitusi</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'master_db' ? 'active' : ''}" 
+          onclick={() => (currentView = 'master_db')}>
+          <Database size={14} />
+          <span>Database Master</span>
+        </button>
+      </nav>
     </div>
   </header>
 
@@ -388,6 +397,13 @@
 </div>
 
 <style>
+  :global(:root) {
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+  }
+
   :global(body) {
     margin: 0;
     padding: 0;
@@ -412,10 +428,13 @@
   /* Compact Header Bar */
   .app-compact-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: calc(0.6rem + var(--sat, 0px)) 1.25rem 0.6rem 1.25rem;
-    background: rgba(12, 21, 36, 0.95);
+    flex-direction: column;
+    gap: 8px;
+    padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 12px));
+    padding-left: max(14px, calc(env(safe-area-inset-left, 0px) + 12px));
+    padding-right: max(14px, calc(env(safe-area-inset-right, 0px) + 12px));
+    padding-bottom: 8px;
+    background: rgba(12, 21, 36, 0.96);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(156, 179, 204, 0.18);
@@ -423,8 +442,49 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    flex-wrap: wrap;
-    gap: 10px;
+  }
+
+  /* When running as iPad Standalone / Home Screen App */
+  @media all and (display-mode: standalone) {
+    .app-compact-header {
+      padding-top: max(32px, calc(env(safe-area-inset-top, 0px) + 12px));
+    }
+  }
+
+  .header-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .header-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .header-center-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-right-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .header-bottom-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
   }
 
   .brand-left {
@@ -583,14 +643,14 @@
 
   .compact-nav-tabs {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     background: rgba(8, 14, 24, 0.65);
     padding: 4px;
     border-radius: 10px;
     border: 1px solid rgba(156, 179, 204, 0.18);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    max-width: 100%;
+    width: 100%;
   }
 
   .compact-nav-tabs::-webkit-scrollbar {
@@ -600,9 +660,10 @@
   .compact-nav-tabs .tab-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 6px 13px;
-    min-height: 34px;
+    padding: 6px 12px;
+    min-height: 36px;
     border-radius: 7px;
     font-size: 0.78rem;
     font-weight: 600;
@@ -612,6 +673,7 @@
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    flex: 1;
   }
 
   .compact-nav-tabs .tab-btn:hover {
@@ -1044,25 +1106,64 @@
   /* iPad Specific Layout Rules */
   @media (max-width: 1024px) {
     .app-compact-header {
-      padding: 0.5rem 0.8rem;
+      padding-top: max(28px, calc(env(safe-area-inset-top, 0px) + 12px));
+      padding-left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
+      padding-right: max(10px, calc(env(safe-area-inset-right, 0px) + 8px));
+      padding-bottom: 6px;
+      gap: 6px;
     }
 
     .app-main-content {
       padding: 0.75rem 0.75rem;
     }
 
+    .brand-subtitle {
+      display: none;
+    }
+
     .active-match-title {
-      max-width: 180px;
+      max-width: 140px;
     }
 
     .brand-title {
-      font-size: 0.88rem;
+      font-size: 0.82rem;
+    }
+
+    .user-display-name {
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-mgr-label,
+    .share-header-label {
+      display: none;
+    }
+
+    .btn-user-manager-nav,
+    .btn-share-header {
+      padding: 6px 9px;
+      min-width: 36px;
+      justify-content: center;
     }
 
     .compact-nav-tabs {
-      order: 3;
       width: 100%;
       justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .header-top-row {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .header-center-group {
+      order: 3;
+      width: 100%;
+      justify-content: center;
     }
   }
 
