@@ -152,6 +152,55 @@
   // Auto-Sticky toggle: when true, choosing a player in quick popover locks them as active player
   let autoLockPlayerOnTag = $state<boolean>(false);
 
+  // Smart Player Callname & Display Helper
+  function getPlayerShortName(pNo: number): string {
+    const pObj = players.find(x => x.no === pNo);
+    const masterP = matchStore.masterPlayers.find(mp => mp.noPunggung === pNo);
+    
+    // 1. If master squad has a dedicated nickname, use it directly
+    if (masterP?.nickname?.trim()) {
+      return masterP.nickname.trim();
+    }
+
+    const fullName = pObj?.name?.trim() || masterP?.name?.trim() || '';
+    if (!fullName) return `P#${pNo}`;
+
+    // 2. Filter out generic Indonesian prefixes (Muhammad, Moch, M., Ahmad, etc.)
+    const skipWords = new Set([
+      'muhammad', 'mochammad', 'moch', 'muh', 'mohammad', 'm.', 'm', 'md', 
+      'ahmad', 'achmad', 'nur', 'ali'
+    ]);
+
+    const words = fullName.split(/\s+/).filter(Boolean);
+    if (words.length === 1) return words[0];
+
+    for (let i = 0; i < words.length; i++) {
+      const cleanWord = words[i].replace(/[^a-zA-Z0-9]/g, '');
+      if (cleanWord.length > 1 && !skipWords.has(cleanWord.toLowerCase())) {
+        return cleanWord;
+      }
+    }
+
+    return words[1] || words[0];
+  }
+
+  function getPlayerPosition(pNo: number): string {
+    const masterP = matchStore.masterPlayers.find(mp => mp.noPunggung === pNo);
+    const pObj = players.find(x => x.no === pNo);
+    if (pObj?.isGk || masterP?.position === 'GK') return 'GK';
+    if (masterP?.position === 'ANCHOR') return 'ANC';
+    if (masterP?.position === 'FLANK_LEFT') return 'FL-L';
+    if (masterP?.position === 'FLANK_RIGHT') return 'FL-R';
+    if (masterP?.position === 'PIVOT') return 'PIV';
+    return '';
+  }
+
+  function isPlayerGk(pNo: number): boolean {
+    const pObj = players.find(x => x.no === pNo);
+    const masterP = matchStore.masterPlayers.find(mp => mp.noPunggung === pNo);
+    return Boolean(pObj?.isGk || masterP?.position === 'GK');
+  }
+
   // Filtered Events for Event Manager
   let filteredEvents = $derived.by(() => {
     return events.filter(e => {
@@ -401,8 +450,8 @@
       category: category as 'rec' | 'lost' | 'shot_tim',
       x,
       y,
-      screenX: Math.min(window.innerWidth - 320, Math.max(20, e.clientX - 140)),
-      screenY: Math.min(window.innerHeight - 260, Math.max(70, e.clientY - 70)),
+      screenX: Math.min(window.innerWidth - 410, Math.max(10, e.clientX - 195)),
+      screenY: Math.min(window.innerHeight - 300, Math.max(60, e.clientY - 70)),
       outcome: category === 'shot_tim' ? activeShotTimOutcome : undefined
     };
   }
@@ -1060,37 +1109,83 @@
             role="dialog"
             aria-label="Pilih Pemain Futsal Cepat">
             
-            <div class="quick-tag-header">
+            <div class="quick-tag-header header-{quickTagState.category}">
               <div class="qth-title-group">
                 <Zap size={14} class="text-amber" />
                 <span class="qth-title">
                   {#if quickTagState.category === 'rec'}
-                    🔵 RECOVERY: KETUK PEMAIN
+                    🔵 RECOVERY BOLA: KETUK PEMAIN
                   {:else if quickTagState.category === 'lost'}
                     🟠 LOST BALL: KETUK PEMAIN
                   {:else}
-                    🎯 SHOT ({quickTagState.outcome?.toUpperCase()}): KETUK PEMAIN
+                    🎯 TEMBAKAN TIM: KETUK PEMAIN
                   {/if}
                 </span>
               </div>
               <button type="button" class="btn-close-quick-pop" onclick={() => (quickTagState = null)} title="Batal">
-                <X size={13} />
+                <X size={14} />
               </button>
             </div>
 
+            <!-- Quick Shot Outcome Selector if category is shot_tim -->
+            {#if quickTagState.category === 'shot_tim'}
+              <div class="quick-pop-shot-outcomes">
+                <span class="qso-label">Hasil:</span>
+                <div class="qso-chips">
+                  <button 
+                    type="button" 
+                    class="qso-chip {quickTagState.outcome === 'ontarget' ? 'qso-target' : ''}" 
+                    onclick={() => (quickTagState.outcome = 'ontarget')}>
+                    Ⓣ Target
+                  </button>
+                  <button 
+                    type="button" 
+                    class="qso-chip {quickTagState.outcome === 'goal' ? 'qso-goal' : ''}" 
+                    onclick={() => (quickTagState.outcome = 'goal')}>
+                    ⚽ GOAL
+                  </button>
+                  <button 
+                    type="button" 
+                    class="qso-chip {quickTagState.outcome === 'rejected' ? 'qso-reject' : ''}" 
+                    onclick={() => (quickTagState.outcome = 'rejected')}>
+                    Ⓡ Reject
+                  </button>
+                  <button 
+                    type="button" 
+                    class="qso-chip {quickTagState.outcome === 'post' ? 'qso-post' : ''}" 
+                    onclick={() => (quickTagState.outcome = 'post')}>
+                    Ⓟ Tiang
+                  </button>
+                  <button 
+                    type="button" 
+                    class="qso-chip {quickTagState.outcome === 'out' ? 'qso-out' : ''}" 
+                    onclick={() => (quickTagState.outcome = 'out')}>
+                    Ⓞ Out
+                  </button>
+                </div>
+              </div>
+            {/if}
+
             <div class="quick-tag-body">
-              <div class="quick-tag-section-label">5 PEMAIN LAPANGAN (1 KETUK LANGSUNG CATAT):</div>
+              <div class="quick-tag-section-label">5 PEMAIN DI LAPANGAN (1-TAP INSTAN):</div>
               
               <div class="quick-pitch-players-grid">
                 {#each (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5]) as pNo}
-                  {@const pObj = players.find(x => x.no === pNo)}
+                  {@const shortName = getPlayerShortName(pNo)}
+                  {@const posTag = getPlayerPosition(pNo)}
+                  {@const isGk = isPlayerGk(pNo)}
                   <button 
                     type="button" 
-                    class="btn-quick-court-player" 
+                    class="btn-quick-court-player {isGk ? 'is-gk-card' : ''}" 
                     onclick={() => selectQuickPlayerAndTag(pNo)}
-                    title="Ketuk untuk langsung catat ke #{pNo}">
-                    <span class="bqp-no">#{pNo}</span>
-                    <span class="bqp-name">{pObj ? (pObj.name ? pObj.name.split(' ')[0] : `P#${pNo}`) : `P#${pNo}`}</span>
+                    title="Ketuk untuk langsung catat ke #{pNo} {shortName}">
+                    <div class="bqp-header">
+                      <span class="bqp-no">#{pNo}</span>
+                      {#if posTag}
+                        <span class="bqp-pos {isGk ? 'bqp-pos-gk' : ''}">{posTag}</span>
+                      {/if}
+                    </div>
+                    <span class="bqp-name" title={shortName}>{shortName}</span>
                   </button>
                 {/each}
               </div>
@@ -1102,8 +1197,8 @@
                   type="button" 
                   class="btn-quick-neutral" 
                   onclick={() => selectQuickPlayerAndTag(null)}
-                  title="Catat untuk Tim Kita tanpa menghubungkan ke nomor pemain tertentu">
-                  ⚪ Tim Kita (Anonim)
+                  title="Catat untuk Tim Kita tanpa nama pemain (Situasi kemelut / anonim)">
+                  ⚪ Tim (Kemelut/Anonim)
                 </button>
 
                 <select 
@@ -1115,7 +1210,7 @@
                   <option value="">Pemain Cadangan (25)...</option>
                   {#each players as p}
                     {#if !matchStore.onPitchPlayers.includes(p.no)}
-                      <option value={p.no}>#{p.no} - {p.name}</option>
+                      <option value={p.no}>#{p.no} - {getPlayerShortName(p.no)} ({p.name})</option>
                     {/if}
                   {/each}
                 </select>
@@ -1124,7 +1219,7 @@
               <div class="quick-tag-autolock-row">
                 <label class="autolock-label">
                   <input type="checkbox" bind:checked={autoLockPlayerOnTag} />
-                  <span>Kunci pemain ini untuk klik berikutnya (Sticky Mode 0-Detik)</span>
+                  <span>🔒 Kunci pemain terpilih untuk klik berikutnya (Fast-Tag 0-Detik)</span>
                 </label>
               </div>
             </div>
@@ -1155,15 +1250,20 @@
             <div class="tagger-oncourt-group">
               <span class="court-label-mini">5 ON PITCH:</span>
               {#each (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5]) as pNo}
-                {@const pObj = players.find(x => x.no === pNo)}
+                {@const shortName = getPlayerShortName(pNo)}
+                {@const posTag = getPlayerPosition(pNo)}
+                {@const isGk = isPlayerGk(pNo)}
                 <button 
                   type="button" 
-                  class="chip-tagger chip-tagger-court {selectedTagPlayerNo === pNo ? 'chip-tagger-active' : ''}" 
+                  class="chip-tagger chip-tagger-court {selectedTagPlayerNo === pNo ? 'chip-tagger-active' : ''} {isGk ? 'chip-gk' : ''}" 
                   onclick={() => (selectedTagPlayerNo = pNo)}
-                  title="Klik untuk KUNCI tag langsung ke #{pNo} (0-Detik)">
-                  <span class="chip-court-dot">●</span>
+                  title="Klik untuk KUNCI tag langsung ke #{pNo} {shortName} (0-Detik)">
+                  <span class="chip-court-dot {isGk ? 'dot-gk' : ''}">●</span>
                   <span class="chip-pno">#{pNo}</span>
-                  <span class="chip-pname">{pObj ? (pObj.name ? pObj.name.split(' ')[0] : `P#${pNo}`) : `P#${pNo}`}</span>
+                  <span class="chip-pname">{shortName}</span>
+                  {#if posTag}
+                    <span class="chip-pos-tag">{posTag}</span>
+                  {/if}
                 </button>
               {/each}
             </div>
@@ -1174,7 +1274,7 @@
             <select bind:value={selectedTagPlayerNo} class="select-tagger-player" title="Pilih dari seluruh 25 pemain roster">
               <option value={null}>-- Cari dari 25 Pemain --</option>
               {#each players as p}
-                <option value={p.no}>#{p.no} - {p.name}</option>
+                <option value={p.no}>#{p.no} - {getPlayerShortName(p.no)} ({p.name})</option>
               {/each}
             </select>
           </div>
@@ -1219,7 +1319,7 @@
                 <select bind:value={activeRecPlayerNo} class="select-mini-player" title="Pilih Pemain Pelaksana Recovery (Sinkron ke Matrix REC)">
                   <option value={null}>{selectedTagPlayerNo ? `Pemain: #${selectedTagPlayerNo}` : 'Pilih Pemain'}</option>
                   {#each players as p}
-                    <option value={p.no}>#{p.no} {p.name.split(' ')[0]}</option>
+                    <option value={p.no}>#{p.no} - {getPlayerShortName(p.no)}</option>
                   {/each}
                 </select>
               {/if}
@@ -1297,7 +1397,7 @@
                 <select bind:value={activeLostPlayerNo} class="select-mini-player" title="Pilih Pemain Lost Ball (Sinkron ke Matrix LOSS)">
                   <option value={null}>{selectedTagPlayerNo ? `Pemain: #${selectedTagPlayerNo}` : 'Pilih Pemain'}</option>
                   {#each players as p}
-                    <option value={p.no}>#{p.no} {p.name.split(' ')[0]}</option>
+                    <option value={p.no}>#{p.no} - {getPlayerShortName(p.no)}</option>
                   {/each}
                 </select>
               {/if}
@@ -1377,7 +1477,7 @@
               <select bind:value={activeShotShooterNo} class="select-mini-player" title="Pilih Penembak (Sinkron ke Matrix SH & GL)">
                 <option value={null}>{selectedTagPlayerNo ? `Penembak: #${selectedTagPlayerNo}` : 'Pilih Penembak'}</option>
                 {#each players as p}
-                  <option value={p.no}>#{p.no} {p.name.split(' ')[0]}</option>
+                  <option value={p.no}>#{p.no} - {getPlayerShortName(p.no)}</option>
                 {/each}
               </select>
               <button type="button" class="btn-expand-pitch" onclick={() => (expandedPitch = 'shot_tim')} title="Perbesar Layar Penuh">
@@ -2789,6 +2889,33 @@
     font-size: 8px;
   }
 
+  .chip-court-dot.dot-gk {
+    color: #facc15;
+  }
+
+  .chip-tagger-court.chip-gk {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(36, 28, 18, 0.9);
+  }
+
+  .chip-tagger-court.chip-gk:hover,
+  .chip-tagger-court.chip-gk.chip-tagger-active {
+    background: #b45309;
+    border-color: #facc15;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+  }
+
+  .chip-pos-tag {
+    font-size: 0.55rem;
+    font-weight: 800;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    margin-left: 2px;
+  }
+
   .chip-pno {
     color: #facc15;
     font-weight: 800;
@@ -3041,13 +3168,14 @@
 
   .quick-tag-popover {
     position: absolute;
-    width: 290px;
-    background: #0f172a;
+    width: min(390px, 94vw);
+    background: #0b1325;
     border: 1.5px solid #38bdf8;
-    border-radius: 10px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.4);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.35);
     overflow: hidden;
     animation: popIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 105;
   }
 
   @keyframes popIn {
@@ -3065,9 +3193,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #1e293b;
+    background: #17243c;
     padding: 8px 12px;
     border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+  }
+
+  .quick-tag-header.header-rec {
+    background: linear-gradient(135deg, #0f2c4c 0%, #17243c 100%);
+    border-bottom-color: rgba(56, 189, 248, 0.4);
+  }
+
+  .quick-tag-header.header-lost {
+    background: linear-gradient(135deg, #422006 0%, #17243c 100%);
+    border-bottom-color: rgba(249, 115, 22, 0.4);
+  }
+
+  .quick-tag-header.header-shot_tim {
+    background: linear-gradient(135deg, #063c24 0%, #17243c 100%);
+    border-bottom-color: rgba(16, 185, 129, 0.4);
   }
 
   .qth-title-group {
@@ -3077,7 +3220,7 @@
   }
 
   .qth-title {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 800;
     color: #f8fafc;
     letter-spacing: 0.03em;
@@ -3092,21 +3235,101 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 4px;
+    transition: all 0.12s;
   }
 
   .btn-close-quick-pop:hover {
     color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Shot outcomes strip inside popover */
+  .quick-pop-shot-outcomes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .qso-label {
+    font-size: 0.64rem;
+    font-weight: 700;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+
+  .qso-chips {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .qso-chip {
+    padding: 3px 6px;
+    border-radius: 5px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .qso-chip:hover {
+    background: rgba(51, 65, 85, 0.9);
+    color: #ffffff;
+  }
+
+  .qso-chip.qso-target {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  }
+
+  .qso-chip.qso-goal {
+    background: #059669;
+    border-color: #34d399;
+    color: #ffffff;
+    font-weight: 800;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.6);
+  }
+
+  .qso-chip.qso-reject {
+    background: #dc2626;
+    border-color: #f87171;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+  }
+
+  .qso-chip.qso-post {
+    background: #d97706;
+    border-color: #fbbf24;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+  }
+
+  .qso-chip.qso-out {
+    background: #475569;
+    border-color: #94a3b8;
+    color: #ffffff;
   }
 
   .quick-tag-body {
-    padding: 10px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
 
   .quick-tag-section-label {
-    font-size: 0.65rem;
+    font-size: 0.66rem;
     font-weight: 800;
     color: #38bdf8;
     letter-spacing: 0.04em;
@@ -3115,7 +3338,7 @@
   .quick-pitch-players-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
+    gap: 6px;
   }
 
   .btn-quick-court-player {
@@ -3123,40 +3346,86 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(30, 41, 59, 0.9);
-    border: 1.5px solid rgba(56, 189, 248, 0.4);
-    border-radius: 6px;
-    padding: 6px 2px;
+    background: rgba(22, 33, 54, 0.95);
+    border: 1.5px solid rgba(56, 189, 248, 0.35);
+    border-radius: 8px;
+    padding: 6px 3px 5px 3px;
+    min-height: 52px;
     cursor: pointer;
-    transition: all 0.12s;
+    transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 2px;
   }
 
-  .btn-quick-court-player:hover {
-    background: #0284c7;
+  .btn-quick-court-player:hover,
+  .btn-quick-court-player:active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     border-color: #38bdf8;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.5);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 16px rgba(56, 189, 248, 0.55);
+  }
+
+  .btn-quick-court-player.is-gk-card {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: rgba(36, 28, 18, 0.95);
+  }
+
+  .btn-quick-court-player.is-gk-card:hover,
+  .btn-quick-court-player.is-gk-card:active {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+    border-color: #facc15;
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.55);
+  }
+
+  .bqp-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    line-height: 1;
   }
 
   .bqp-no {
-    font-size: 0.88rem;
+    font-size: 1rem;
     font-weight: 900;
     color: #facc15;
-    line-height: 1.1;
+    line-height: 1;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .btn-quick-court-player:hover .bqp-no {
     color: #ffffff;
   }
 
+  .bqp-pos {
+    font-size: 0.52rem;
+    font-weight: 800;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(56, 189, 248, 0.2);
+    color: #7dd3fc;
+    line-height: 1;
+  }
+
+  .bqp-pos.bqp-pos-gk {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fde68a;
+  }
+
   .bqp-name {
-    font-size: 0.62rem;
-    color: #cbd5e1;
-    font-weight: 700;
-    max-width: 48px;
+    font-size: 0.72rem;
+    color: #f1f5f9;
+    font-weight: 800;
+    max-width: 66px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
+  .btn-quick-court-player:hover .bqp-name {
+    color: #ffffff;
   }
 
   .quick-tag-divider {
@@ -3172,35 +3441,50 @@
 
   .btn-quick-neutral {
     flex: 1;
-    background: rgba(51, 65, 85, 0.6);
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    color: #e2e8f0;
-    font-size: 0.68rem;
+    background: rgba(51, 65, 85, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #f8fafc;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 5px 6px;
-    border-radius: 6px;
+    padding: 7px 8px;
+    min-height: 36px;
+    border-radius: 7px;
     cursor: pointer;
     transition: all 0.12s;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
   }
 
   .btn-quick-neutral:hover {
     background: #475569;
+    border-color: #94a3b8;
     color: #ffffff;
   }
 
   .select-quick-cadangan {
-    flex: 1;
+    flex: 1.1;
     background: #0f172a;
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    border: 1px solid rgba(148, 163, 184, 0.35);
     color: #cbd5e1;
-    font-size: 0.68rem;
-    padding: 4px;
-    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 7px 8px;
+    min-height: 36px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+
+  .select-quick-cadangan:hover,
+  .select-quick-cadangan:focus {
+    border-color: #38bdf8;
+    color: #ffffff;
   }
 
   .quick-tag-autolock-row {
-    font-size: 0.66rem;
+    font-size: 0.68rem;
     color: #94a3b8;
   }
 
