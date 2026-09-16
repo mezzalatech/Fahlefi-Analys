@@ -1549,23 +1549,26 @@ kbd {
   border-radius: 4px;
 }
 
-/* Print CSS */
+/* Print CSS: Dedicated A4 Landscape Official Sheet */
 @media print {
-  body {
-    background: #fff !important;
-    color: #000 !important;
+  @page {
+    size: A4 landscape;
+    margin: 4mm 5mm;
   }
-  .header-actions, .main-tabs, .tactical-sidebar, .matrix-actions, .btn {
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print, .header-actions, .main-tabs, .tactical-sidebar, .matrix-actions, .btn, .app-compact-header {
     display: none !important;
-  }
-  .glass-panel {
-    background: #fff !important;
-    border: 1px solid #ccc !important;
-    box-shadow: none !important;
-  }
-  .stats-table th, .stats-table td {
-    border: 1px solid #000 !important;
-    color: #000 !important;
   }
 }
 

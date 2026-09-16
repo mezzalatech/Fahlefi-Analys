@@ -4606,33 +4606,209 @@
     }
   }
 
-  /* PRINT STYLES: Perfect A4 Landscape match to contoh.pdf */
+  /* PRINT STYLES: Perfect 1-Page A4 Landscape match to contoh.pdf */
   @media print {
-    .no-print {
+    @page {
+      size: A4 landscape;
+      margin: 3mm 4mm;
+    }
+
+    .no-print,
+    .sheet-toolbar,
+    .tagger-toolbar-card,
+    .btn-expand-pitch,
+    .card-team-toggle,
+    .pitch-bar-right,
+    .btn-stamp-to,
+    .sheet-width-switcher,
+    .court-dot-badge {
       display: none !important;
     }
 
-    body {
+    :global(body), :global(html), :global(.futsal-app), :global(.app-main-content) {
       background: #ffffff !important;
       color: #000000 !important;
       margin: 0 !important;
       padding: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     .sheet-viewport {
       padding: 0 !important;
+      margin: 0 !important;
+      background: #ffffff !important;
     }
 
     .analysis-document-sheet {
       box-shadow: none !important;
       max-width: 100% !important;
-      padding: 0 !important;
       width: 100% !important;
+      padding: 1px !important;
+      margin: 0 auto !important;
+      border: none !important;
+      font-size: 7.5px !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
 
-    @page {
-      size: A4 landscape;
-      margin: 6mm 8mm;
+    /* Top Header Bar */
+    .doc-header-row {
+      margin-bottom: 2px !important;
+      border: 1px solid #000000 !important;
+      height: 16px !important;
+      min-height: 16px !important;
+    }
+
+    .hdr-cell {
+      border-right: 1px solid #000000 !important;
+      height: 16px !important;
+    }
+
+    .hdr-label {
+      font-size: 7px !important;
+      padding: 0 4px !important;
+      line-height: 16px !important;
+    }
+
+    .hdr-input {
+      font-size: 7.5px !important;
+      height: 16px !important;
+      padding: 0 2px !important;
+    }
+
+    /* Sub Row */
+    .doc-sub-row {
+      margin-bottom: 2px !important;
+      gap: 3px !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    /* All Doc Tables */
+    .doc-table {
+      border: 1px solid #000000 !important;
+    }
+
+    .doc-table th, .doc-table td {
+      border: 0.6px solid #000000 !important;
+      padding: 0.5px 1.5px !important;
+      font-size: 7px !important;
+      line-height: 1.1 !important;
+      color: #000000 !important;
+    }
+
+    .th-blue, .th-main-blue, .th-stats-banner, .th-cat-title {
+      background: #0033cc !important;
+      color: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .th-card-y {
+      background: #eab308 !important;
+      color: #000000 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .th-card-r {
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .foul-filled {
+      background: #f59e0b !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Matrix Table 17 Rows */
+    .doc-matrix-section {
+      margin-bottom: 2px !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    .tr-player-data td {
+      height: 12px !important;
+      max-height: 12px !important;
+    }
+
+    .cell-input, .player-name-cell, .td-matrix-stat input {
+      font-size: 7px !important;
+      height: 12px !important;
+      line-height: 12px !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      color: #000000 !important;
+    }
+
+    .td-row-no {
+      width: 16px !important;
+      font-size: 7px !important;
+      font-weight: bold !important;
+    }
+
+    .no-digit {
+      font-size: 7px !important;
+    }
+
+    /* 4-Pitches Bottom Grid in Print */
+    .doc-pitches-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 3px !important;
+      margin-top: 2px !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    .pitch-column-card {
+      border: 0.8px solid #000000 !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      box-shadow: none !important;
+    }
+
+    .pitch-title-bar {
+      font-size: 7px !important;
+      padding: 1px 3px !important;
+      background: #142236 !important;
+      color: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .mini-futsal-pitch {
+      max-height: 72px !important;
+      aspect-ratio: 800/480 !important;
+      border-bottom: 0.6px solid #000000 !important;
+    }
+
+    .pitch-bg-img {
+      max-height: 72px !important;
+      object-fit: fill !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .mini-pitch-dot {
+      transform: translate(-50%, -50%) scale(0.65) !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .mini-table th, .mini-table td {
+      font-size: 6.5px !important;
+      padding: 0.5px !important;
+      height: 9px !important;
+      line-height: 1 !important;
     }
   }
 </style>
