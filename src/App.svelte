@@ -31,12 +31,30 @@
     ChevronDown,
     Cloud,
     CloudOff,
-    RefreshCw
+    RefreshCw,
+    Share2,
+    Smartphone,
+    X
   } from 'lucide-svelte';
 
   let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db'>('sheet');
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
+  let showIpadInstallModal = $state<boolean>(false);
+
+  function handleShareApp() {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: 'FAHLEFI Futsal Analytics',
+        text: 'Aplikasi Analisis Pertandingan Futsal & Papan Taktis Real-Time',
+        url: window.location.href
+      }).catch(() => {
+        showIpadInstallModal = true;
+      });
+    } else {
+      showIpadInstallModal = true;
+    }
+  }
 
   onMount(() => {
     matchStore.loadMatch();
@@ -207,6 +225,16 @@
         <span class="user-display-name">{matchStore.currentUser?.name || 'Masuk Akun'}</span>
       </button>
 
+      <!-- Share / Install to iPad Button -->
+      <button 
+        type="button" 
+        class="btn-share-header" 
+        onclick={handleShareApp} 
+        title="Pasang ke Layar Utama iPad / Bagikan Link">
+        <Share2 size={13} class="text-cyan" />
+        <span class="share-header-label">Pasang di iPad</span>
+      </button>
+
       {#if matchStore.currentUser}
         <button 
           type="button" 
@@ -276,6 +304,72 @@
 
   {#if matchStore.showCloudSyncModal}
     <CloudSyncModal />
+  {/if}
+
+  {#if showIpadInstallModal}
+    <div class="modal-backdrop" onclick={(e) => { if (e.target === e.currentTarget) showIpadInstallModal = false; }} role="presentation">
+      <div class="ipad-install-card" role="dialog" aria-modal="true" tabindex="-1">
+        <div class="install-card-header">
+          <div class="install-title-group">
+            <Smartphone size={22} class="text-cyan" />
+            <div>
+              <h3 class="install-modal-title">Pasang Aplikasi ke Layar Utama iPad</h3>
+              <p class="install-modal-sub">Jadikan seperti aplikasi iPad asli tanpa bingkai browser</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" onclick={() => showIpadInstallModal = false}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div class="install-card-body">
+          <div class="install-steps">
+            <div class="step-item">
+              <span class="step-num">1</span>
+              <div>
+                <strong>Buka di Browser Safari iPad</strong>
+                <p>Buka alamat web Vercel ini menggunakan browser <strong>Safari</strong> di iPad Anda.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">2</span>
+              <div>
+                <strong>Ketuk Tombol Share (Bagikan)</strong>
+                <p>Di bilah atas Safari, ketuk tombol <strong>Share</strong> (ikon kotak dengan panah ke atas: <span class="share-icon-preview">⎋</span>).</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">3</span>
+              <div>
+                <strong>Pilih "Tambahkan ke Layar Utama"</strong>
+                <p>Gulir ke bawah pada menu yang muncul, lalu pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <span class="step-num">4</span>
+              <div>
+                <strong>Ketuk "Tambah" di Pojok Kanan Atas</strong>
+                <p>Ikon aplikasi resmi <strong>Futsal Analys</strong> akan langsung terpasang di menu beranda iPad Anda!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="install-card-footer">
+          <button type="button" class="btn-primary-sync" onclick={() => {
+            if (typeof navigator !== 'undefined' && navigator.share) {
+              navigator.share({ title: 'FAHLEFI Futsal Analytics', url: window.location.href }).catch(() => {});
+            }
+          }}>
+            <Share2 size={14} />
+            <span>Buka Menu Share iPad Sekarang</span>
+          </button>
+          <button type="button" class="btn-done" onclick={() => showIpadInstallModal = false}>
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
   {/if}
 
   <!-- Footer Info Bar (Hidden in print) -->
@@ -672,6 +766,136 @@
     background: rgba(239, 68, 68, 0.25);
     border-color: #ef4444;
     color: #ffffff;
+  }
+
+  .btn-share-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #e2e8f0;
+    padding: 6px 12px;
+    min-height: 36px;
+    border-radius: 9px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .btn-share-header:hover {
+    background: rgba(56, 189, 248, 0.22);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  }
+
+  /* iPad Install Card */
+  .ipad-install-card {
+    background: #0f172a;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    color: #f1f5f9;
+    overflow: hidden;
+  }
+
+  .install-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #131d38;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .install-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .install-modal-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #f8fafc;
+  }
+
+  .install-modal-sub {
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  .install-card-body {
+    padding: 20px;
+  }
+
+  .install-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(30, 41, 59, 0.6);
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .step-item strong {
+    display: block;
+    font-size: 0.84rem;
+    color: #f1f5f9;
+    margin-bottom: 3px;
+  }
+
+  .step-item p {
+    margin: 0;
+    font-size: 0.76rem;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+
+  .share-icon-preview {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 900;
+  }
+
+  .install-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #090d16;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .user-profile-btn:hover, .user-profile-btn:active {
