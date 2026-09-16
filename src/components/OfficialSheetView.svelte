@@ -77,7 +77,33 @@
     const list = [];
     const maxNo = Math.max(rowsCount, ...players.map(p => p.no || 0));
     for (let i = 1; i <= maxNo; i++) {
-      const p = players.find(item => item.no === i);
+      let p = players.find(item => item.no === i);
+      const masterP = matchStore.masterPlayers.find(mp => mp.noPunggung === i);
+
+      if (!p && masterP) {
+        p = {
+          id: 0,
+          matchId: match?.id || 1,
+          no: i,
+          name: masterP.name,
+          isGk: masterP.position === 'GK' ? 1 : 0,
+          yellowCards: 0,
+          redCards: 0,
+          loss1: 0,
+          loss2: 0,
+          rec1: 0,
+          rec2: 0,
+          fl1: 0,
+          fl2: 0,
+          sh1: 0,
+          sh2: 0,
+          gl1: 0,
+          gl2: 0
+        };
+      } else if (p && !p.name?.trim() && masterP) {
+        p.name = masterP.name;
+      }
+
       list.push({
         no: i,
         player: p || null
@@ -460,6 +486,10 @@
           <Settings size={14} class="text-emerald" />
           <span>Pengaturan Laga</span>
         </button>
+        <button type="button" class="btn-tool-action btn-tool-sync-master" onclick={() => matchStore.syncSquadFromMaster()} title="Muat seluruh nama dan nomor pemain dari Database Master ke Laga ini">
+          <Sparkles size={14} class="text-amber" />
+          <span>Isi dari Master Skuad</span>
+        </button>
         <button type="button" class="btn-tool-action btn-tool-print" onclick={handlePrint} title="Cetak atau Simpan sebagai PDF">
           <Printer size={14} />
           <span>Cetak PDF</span>
@@ -806,14 +836,14 @@
                   placeholder="" 
                   onchange={async (e) => {
                     const name = e.currentTarget.value.trim();
-                    if (p) {
+                    if (p && p.id > 0) {
                       await api.updatePlayer(p.id, { name });
                       p.name = name;
                     } else if (name) {
                       const newP = await api.addPlayer(match!.id, {
                         no: item.no,
                         name,
-                        position: 'PLAYER',
+                        position: p?.position || 'PLAYER',
                         starter: false,
                         yellowCards: 0,
                         redCards: 0,
@@ -828,6 +858,12 @@
                         gl1: 0,
                         gl2: 0
                       });
+                      if (p) {
+                        p.id = newP.id;
+                        p.name = name;
+                      } else {
+                        item.player = newP;
+                      }
                       matchStore.data!.players = [...players, newP];
                     }
                   }} 
@@ -1996,6 +2032,18 @@
     background: rgba(56, 189, 248, 0.12);
     color: #7dd3fc;
     border: 1px solid rgba(56, 189, 248, 0.35);
+  }
+
+  .btn-tool-sync-master {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+
+  .btn-tool-sync-master:hover {
+    background: rgba(245, 158, 11, 0.3);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
   }
 
   .btn-tool-manage:hover {

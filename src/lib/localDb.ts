@@ -352,6 +352,34 @@ class LocalDatabase {
       localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
       return defaultMatch;
     }
+
+    // Auto-populate from master players if match players are missing or empty
+    if (!match.players || match.players.length === 0 || !match.players.some(p => Boolean(p.name?.trim()))) {
+      const master: MasterPlayer[] = JSON.parse(localStorage.getItem(MASTER_PLAYERS_KEY) || '[]');
+      if (master.length > 0) {
+        match.players = master.map((p, idx) => ({
+          id: idx + 1,
+          matchId: id,
+          no: p.noPunggung,
+          name: p.name,
+          isGk: p.position === 'GK' ? 1 : 0,
+          yellowCards: 0,
+          redCards: 0,
+          loss1: 0,
+          loss2: 0,
+          rec1: 0,
+          rec2: 0,
+          fl1: 0,
+          fl2: 0,
+          sh1: 0,
+          sh2: 0,
+          gl1: 0,
+          gl2: 0
+        }));
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+      }
+    }
+
     return match;
   }
 

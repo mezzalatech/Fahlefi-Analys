@@ -330,6 +330,45 @@ class MatchStore {
     }
   }
 
+  async syncSquadFromMaster(matchId?: number) {
+    const mId = matchId ?? this.activeMatchId;
+    await this.loadMasterPlayers();
+    if (!this.data || this.masterPlayers.length === 0) return;
+
+    for (const mp of this.masterPlayers) {
+      const existing = this.data.players.find(p => p.no === mp.noPunggung);
+      if (existing) {
+        if (!existing.name || existing.name !== mp.name) {
+          await api.updatePlayer(existing.id, {
+            name: mp.name,
+            isGk: mp.position === 'GK' ? 1 : 0
+          });
+          existing.name = mp.name;
+          existing.isGk = mp.position === 'GK' ? 1 : 0;
+        }
+      } else {
+        const newPlayer = await api.addPlayer(mId, {
+          no: mp.noPunggung,
+          name: mp.name,
+          isGk: mp.position === 'GK' ? 1 : 0,
+          yellowCards: 0,
+          redCards: 0,
+          loss1: 0,
+          loss2: 0,
+          rec1: 0,
+          rec2: 0,
+          fl1: 0,
+          fl2: 0,
+          sh1: 0,
+          sh2: 0,
+          gl1: 0,
+          gl2: 0
+        });
+        this.data.players.push(newPlayer);
+      }
+    }
+  }
+
   // Multi-Match Actions
   async loadMatchesList() {
     try {
@@ -411,7 +450,12 @@ class MatchStore {
           this.onPitchPlayers = res.players.slice(0, 5).map((p: any) => p.no);
         }
       }
-      this.loadMasterPlayers();
+      await this.loadMasterPlayers();
+      // Auto-populate match roster from master players if empty or all names blank
+      const hasNamedPlayers = this.data?.players?.some(p => Boolean(p.name?.trim()));
+      if (!hasNamedPlayers && this.masterPlayers.length > 0) {
+        await this.syncSquadFromMaster(mId);
+      }
       this.loadMatchesList();
     } catch (err: any) {
       this.error = err.message || 'Failed to load match';

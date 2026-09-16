@@ -363,6 +363,38 @@ export const supabaseApi = {
       return this.getMatch(m.id);
     }
 
+    let matchPlayers = (playersRes.data || []);
+    if (matchPlayers.length === 0) {
+      try {
+        const { data: masterList } = await supabase.from('master_players').select('*').order('no_punggung', { ascending: true });
+        if (masterList && masterList.length > 0) {
+          const toInsert = masterList.map((mp, idx) => ({
+            id: id * 1000 + (idx + 1),
+            match_id: id,
+            no: mp.no_punggung,
+            name: mp.name,
+            is_gk: mp.position === 'GK' ? 1 : 0,
+            yellow_cards: 0,
+            red_cards: 0,
+            loss_1: 0,
+            loss_2: 0,
+            rec_1: 0,
+            rec_2: 0,
+            fl_1: 0,
+            fl_2: 0,
+            sh_1: 0,
+            sh_2: 0,
+            gl_1: 0,
+            gl_2: 0
+          }));
+          await supabase.from('players').insert(toInsert);
+          matchPlayers = toInsert;
+        }
+      } catch (err) {
+        console.warn('Auto-populate match players warning:', err);
+      }
+    }
+
     const formattedMatch: MatchData = {
       match: {
         id: Number(m.id),
@@ -385,7 +417,7 @@ export const supabaseApi = {
         timerRemaining: m.timer_remaining,
         timeouts: m.timeouts
       },
-      players: (playersRes.data || []).map(p => ({
+      players: matchPlayers.map(p => ({
         id: Number(p.id),
         matchId: Number(p.match_id),
         no: p.no,
