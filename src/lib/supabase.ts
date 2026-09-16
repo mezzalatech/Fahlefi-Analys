@@ -22,12 +22,15 @@ let cachedClient: SupabaseClient | null = null;
 let cachedConfigKey = '';
 
 export function getSupabase(): SupabaseClient | null {
-  const { url, key } = getStoredSupabaseConfig();
+  let { url, key } = getStoredSupabaseConfig();
   if (!url || !key) {
     cachedClient = null;
     cachedConfigKey = '';
     return null;
   }
+
+  // Auto-sanitize URL: strip /rest/v1 or trailing slashes if user copied from API URL box
+  url = url.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 
   const currentKey = `${url}:::${key}`;
   if (cachedClient && cachedConfigKey === currentKey) {
