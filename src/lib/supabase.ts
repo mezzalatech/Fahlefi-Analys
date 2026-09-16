@@ -4,9 +4,12 @@ import { localDb } from './localDb';
 export const SUPABASE_URL_KEY = 'ffta_supabase_url';
 export const SUPABASE_KEY_KEY = 'ffta_supabase_anon_key';
 
+export const DEFAULT_SUPABASE_URL = 'https://qdnqyotxpwgbsuauzlde.supabase.co';
+export const DEFAULT_SUPABASE_KEY = 'sb_publishable_EwtlM-a0T3jjk6LX0uiqFw_fXIzxkkl';
+
 export function getStoredSupabaseConfig() {
-  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY;
 
   const storedUrl = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_URL_KEY) || '' : '';
   const storedKey = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_KEY_KEY) || '' : '';
@@ -14,7 +17,7 @@ export function getStoredSupabaseConfig() {
   return {
     url: (storedUrl || envUrl).trim(),
     key: (storedKey || envKey).trim(),
-    source: storedUrl ? 'custom' : (envUrl ? 'env' : 'none')
+    source: storedUrl ? 'custom' : (envUrl ? 'default' : 'none')
   };
 }
 
