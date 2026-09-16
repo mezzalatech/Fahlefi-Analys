@@ -1,5 +1,6 @@
-// Hybrid API Client with Transparent Local Database Fallback (Offline-First for GOR & Vercel)
 import { localDb } from './localDb';
+import { isSupabaseConfigured } from './supabase';
+import { supabaseApi } from './supabaseApi';
 
 export interface User {
   id: string;
@@ -190,10 +191,27 @@ async function tryFetchOrFallback<T>(fetchFn: () => Promise<Response>, fallbackF
   }
 }
 
+// Primary Hybrid Executor: Supabase Cloud -> Elysia Backend -> LocalDB
+async function executeWithCloudFallback<T>(
+  supabaseFn: () => Promise<T>,
+  fetchFn: () => Promise<Response>,
+  fallbackFn: () => Promise<T>
+): Promise<T> {
+  if (isSupabaseConfigured()) {
+    try {
+      return await supabaseFn();
+    } catch (err: any) {
+      console.warn('Supabase cloud error, falling back:', err.message || err);
+    }
+  }
+  return tryFetchOrFallback(fetchFn, fallbackFn);
+}
+
 export const api = {
   // Auth
   async login(username: string, password: string): Promise<{ user: User; token: string }> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.login(username, password),
       () => fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,14 +222,16 @@ export const api = {
   },
 
   async getUsers(): Promise<User[]> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.getUsers(),
       () => fetch(`${API_BASE}/auth/users`),
       () => localDb.getUsers()
     );
   },
 
   async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string }): Promise<User> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.createUser(userData),
       () => fetch(`${API_BASE}/auth/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -222,7 +242,8 @@ export const api = {
   },
 
   async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string }): Promise<User> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.updateUser(id, userData),
       () => fetch(`${API_BASE}/auth/users/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -233,7 +254,8 @@ export const api = {
   },
 
   async deleteUser(id: string): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.deleteUser(id),
       () => fetch(`${API_BASE}/auth/users/${id}`, { method: 'DELETE' }),
       () => localDb.deleteUser(id)
     );
@@ -241,14 +263,16 @@ export const api = {
 
   // Master Players
   async getMasterPlayers(): Promise<MasterPlayer[]> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.getMasterPlayers(),
       () => fetch(`${API_BASE}/master-players`),
       () => localDb.getMasterPlayers()
     );
   },
 
   async createMasterPlayer(player: Partial<MasterPlayer>): Promise<MasterPlayer> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.createMasterPlayer(player),
       () => fetch(`${API_BASE}/master-players`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -259,7 +283,8 @@ export const api = {
   },
 
   async updateMasterPlayer(id: string, player: Partial<MasterPlayer>): Promise<MasterPlayer> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.updateMasterPlayer(id, player),
       () => fetch(`${API_BASE}/master-players/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -270,7 +295,8 @@ export const api = {
   },
 
   async deleteMasterPlayer(id: string): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.deleteMasterPlayer(id),
       () => fetch(`${API_BASE}/master-players/${id}`, { method: 'DELETE' }),
       () => localDb.deleteMasterPlayer(id)
     );
@@ -317,8 +343,8 @@ export const api = {
     if (!sheet) throw new Error('Lembar Excel kosong.');
 
     let count = 0;
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return; // skip header
+    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
+      const row = sheet.getRow(rowNumber);
       const no = Number(row.getCell(1).value);
       const name = String(row.getCell(2).value || '').trim();
       const nickname = String(row.getCell(3).value || '').trim();
@@ -329,7 +355,7 @@ export const api = {
       const status = String(row.getCell(8).value || 'ACTIVE').trim();
 
       if (no && name) {
-        localDb.createMasterPlayer({
+        await api.createMasterPlayer({
           noPunggung: no,
           name,
           nickname,
@@ -341,21 +367,23 @@ export const api = {
         });
         count++;
       }
-    });
+    }
 
     return { success: true, count };
   },
 
   // Substitutions
   async getSubstitutions(matchId: number): Promise<SubstitutionLog[]> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.getSubstitutions(matchId),
       () => fetch(`${API_BASE}/matches/${matchId}/substitutions`),
       () => localDb.getSubstitutions(matchId)
     );
   },
 
   async logSubstitution(matchId: number, sub: Partial<SubstitutionLog>): Promise<SubstitutionLog> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.logSubstitution(matchId, sub),
       () => fetch(`${API_BASE}/matches/${matchId}/substitutions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,7 +394,8 @@ export const api = {
   },
 
   async deleteSubstitution(matchId: number, subId: string): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.deleteSubstitution(matchId, subId),
       () => fetch(`${API_BASE}/matches/${matchId}/substitutions/${subId}`, { method: 'DELETE' }),
       () => localDb.deleteSubstitution(matchId, subId)
     );
@@ -374,21 +403,24 @@ export const api = {
 
   // Matches
   async getMatches(): Promise<any[]> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.getMatches(),
       () => fetch(`${API_BASE}/matches`),
       () => localDb.getMatches()
     );
   },
 
   async getMatch(id: number): Promise<MatchData> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.getMatch(id),
       () => fetch(`${API_BASE}/matches/${id}`),
       () => localDb.getMatch(id)
     );
   },
 
   async createMatch(matchData: any): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.createMatch(matchData),
       () => fetch(`${API_BASE}/matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -399,21 +431,24 @@ export const api = {
   },
 
   async duplicateMatch(id: number): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.duplicateMatch(id),
       () => fetch(`${API_BASE}/matches/${id}/duplicate`, { method: 'POST' }),
       () => localDb.duplicateMatch(id)
     );
   },
 
   async deleteMatch(id: number): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.deleteMatch(id),
       () => fetch(`${API_BASE}/matches/${id}`, { method: 'DELETE' }),
       () => localDb.deleteMatch(id)
     );
   },
 
   async updateMatch(id: number, data: Partial<MatchData['match']>): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.updateMatch(id, data),
       () => fetch(`${API_BASE}/matches/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -424,7 +459,8 @@ export const api = {
   },
 
   async updatePlayer(id: number, data: Partial<MatchData['players'][0]>): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.updatePlayer(id, data),
       () => fetch(`${API_BASE}/players/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -435,7 +471,8 @@ export const api = {
   },
 
   async addPlayer(matchId: number, data: Omit<MatchData['players'][0], 'id' | 'matchId'>): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.addPlayer(matchId, data),
       () => fetch(`${API_BASE}/matches/${matchId}/players`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -446,14 +483,16 @@ export const api = {
   },
 
   async deletePlayer(id: number): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.deletePlayer(id),
       () => fetch(`${API_BASE}/players/${id}`, { method: 'DELETE' }),
       () => localDb.deletePlayer(id)
     );
   },
 
   async addEvent(matchId: number, event: Omit<MatchData['events'][0], 'matchId'>): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.addEvent(matchId, event),
       () => fetch(`${API_BASE}/matches/${matchId}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,7 +503,8 @@ export const api = {
   },
 
   async updateEvent(id: string, partial: Partial<MatchData['events'][0]>): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.updateEvent(id, partial),
       () => fetch(`${API_BASE}/events/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -475,14 +515,16 @@ export const api = {
   },
 
   async deleteEvent(id: string): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.deleteEvent(id),
       () => fetch(`${API_BASE}/events/${id}`, { method: 'DELETE' }),
       () => localDb.deleteEvent(id)
     );
   },
 
   async savePakets(matchId: number, pakets: Array<{ paketIndex: number; code: string; playerNumbers: string }>): Promise<any> {
-    return tryFetchOrFallback(
+    return executeWithCloudFallback(
+      () => supabaseApi.savePakets(matchId, pakets),
       () => fetch(`${API_BASE}/matches/${matchId}/pakets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

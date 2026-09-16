@@ -23,6 +23,7 @@
     "@elysiajs/cors": "^1.4.2",
     "@elysiajs/eden": "^1.4.9",
     "@elysiajs/static": "^1.4.10",
+    "@supabase/supabase-js": "^2.116.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "canvas-confetti": "^1.9.4",
     "drizzle-orm": "^0.45.2",

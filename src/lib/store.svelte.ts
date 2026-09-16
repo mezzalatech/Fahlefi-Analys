@@ -1,5 +1,10 @@
 import { api, type MatchData, type User, type MasterPlayer, type SubstitutionLog } from './api';
 import confetti from 'canvas-confetti';
+import { 
+  initRealtimeSync, 
+  testSupabaseConnection, 
+  isSupabaseConfigured 
+} from './supabase';
 
 class MatchStore {
   data = $state<MatchData | null>(null);
@@ -25,6 +30,11 @@ class MatchStore {
   // Substitution History State
   substitutions = $state<SubstitutionLog[]>([]);
 
+  // Cloud Realtime Sync State
+  cloudStatus = $state<'connected' | 'connecting' | 'offline' | 'unconfigured'>('unconfigured');
+  cloudLatency = $state<number | null>(null);
+  showCloudSyncModal = $state<boolean>(false);
+
   // UI & Timer State
   timerRunning = $state<boolean>(false);
   private timerInterval: any = null;
@@ -36,6 +46,148 @@ class MatchStore {
   constructor() {
     this.initAuth();
     this.initActiveMatch();
+    this.setupRealtimeSync();
+  }
+
+  async setupRealtimeSync() {
+    if (!isSupabaseConfigured()) {
+      this.cloudStatus = 'unconfigured';
+      return;
+    }
+
+    this.cloudStatus = 'connecting';
+    const test = await testSupabaseConnection();
+    if (test.ok) {
+      this.cloudStatus = 'connected';
+      this.cloudLatency = test.latencyMs || null;
+    } else {
+      this.cloudStatus = 'offline';
+    }
+
+    initRealtimeSync(async (event, payload) => {
+      console.log('⚡ Realtime sync received:', event, payload);
+      this.cloudStatus = 'connected';
+
+      // 1. Master player updates
+      if (
+        event === 'master_player_created' || 
+        event === 'master_player_updated' || 
+        event === 'master_player_deleted' ||
+        event.includes('master_players')
+      ) {
+        await this.loadMasterPlayers();
+      }
+
+      // 2. Match updates
+      if (event === 'match_updated' || event.includes('_matches')) {
+        const mId = payload?.matchId || payload?.new?.id;
+        if (mId === this.activeMatchId) {
+          if (payload?.data && this.data) {
+            Object.assign(this.data.match, payload.data);
+          } else {
+            await this.loadMatch(this.activeMatchId);
+          }
+        }
+      }
+
+      // 3. Player stats updates
+      if (event === 'player_stats_updated' || event.includes('_players')) {
+        const pId = payload?.playerId || payload?.new?.id;
+        const pData = payload?.data || payload?.new;
+        if (this.data && pId && pData) {
+          const p = this.data.players.find(x => x.id === pId);
+          if (p) {
+            Object.assign(p, pData);
+          } else {
+            await this.loadMatch(this.activeMatchId);
+          }
+        }
+      }
+
+      // 4. Pitch Events
+      if (event === 'event_added' || event.includes('_pitch_events')) {
+        const newEv = payload?.event || payload?.new;
+        if (this.data && newEv && (newEv.matchId === this.activeMatchId || newEv.match_id === this.activeMatchId)) {
+          const formattedEv = {
+            id: newEv.id,
+            matchId: newEv.matchId || newEv.match_id,
+            type: newEv.type,
+            outcome: newEv.outcome,
+            team: newEv.team,
+            half: newEv.half,
+            timeStr: newEv.timeStr || newEv.time_str,
+            x: newEv.x,
+            y: newEv.y,
+            playerNo: newEv.playerNo || newEv.player_no,
+            note: newEv.note || ''
+          };
+          if (!this.data.events.some(e => e.id === formattedEv.id)) {
+            this.data.events.push(formattedEv);
+          }
+        }
+      } else if (event === 'event_deleted') {
+        if (this.data && payload?.id) {
+          this.data.events = this.data.events.filter(e => e.id !== payload.id);
+        }
+      }
+
+      // 5. Substitutions
+      if (event === 'substitution_logged' || event.includes('_substitutions')) {
+        const newSub = payload?.sub || payload?.new;
+        if (newSub && (newSub.matchId === this.activeMatchId || newSub.match_id === this.activeMatchId)) {
+          const formattedSub = {
+            id: newSub.id,
+            matchId: newSub.matchId || newSub.match_id,
+            half: newSub.half,
+            timeStr: newSub.timeStr || newSub.time_str,
+            timerRemaining: newSub.timerRemaining || newSub.timer_remaining,
+            paketIndex: newSub.paketIndex !== undefined ? newSub.paketIndex : newSub.paket_index,
+            playerNumbers: newSub.playerNumbers || newSub.player_numbers,
+            type: newSub.type,
+            note: newSub.note || '',
+            createdAt: newSub.createdAt || newSub.created_at
+          };
+          if (!this.substitutions.some(s => s.id === formattedSub.id)) {
+            this.substitutions.unshift(formattedSub);
+          }
+        }
+      } else if (event === 'substitution_deleted') {
+        if (payload?.subId) {
+          this.substitutions = this.substitutions.filter(s => s.id !== payload.subId);
+        }
+      }
+
+      // 6. Pakets
+      if (event === 'pakets_saved' || event.includes('_lineup_pakets')) {
+        if (this.data && (payload?.matchId === this.activeMatchId || payload?.new?.match_id === this.activeMatchId)) {
+          await this.loadMatch(this.activeMatchId);
+        }
+      }
+
+      // 7. Migration completed
+      if (event === 'migration_completed') {
+        await this.loadMasterPlayers();
+        await this.loadMatch(this.activeMatchId);
+      }
+    });
+  }
+
+  async checkCloudConnection() {
+    if (!isSupabaseConfigured()) {
+      this.cloudStatus = 'unconfigured';
+      this.cloudLatency = null;
+      return { ok: false, error: 'Belum dikonfigurasi' };
+    }
+    this.cloudStatus = 'connecting';
+    const res = await testSupabaseConnection();
+    if (res.ok) {
+      this.cloudStatus = 'connected';
+      this.cloudLatency = res.latencyMs || null;
+    } else {
+      this.cloudStatus = 'offline';
+      this.cloudLatency = null;
+    }
+    return res;
   }
 
   private initActiveMatch() {

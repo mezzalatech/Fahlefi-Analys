@@ -13,21 +13,25 @@
   import UserManagerModal from './components/UserManagerModal.svelte';
   import AnalyticsModal from './components/AnalyticsModal.svelte';
   import MatchConfigModal from './components/MatchConfigModal.svelte';
+  import CloudSyncModal from './components/CloudSyncModal.svelte';
   import { 
     FileText, 
     Table, 
     MapPin, 
     Users, 
-    ArrowRightLeft,
-    Database,
-    AlertCircle,
-    UserCircle,
-    UserCog,
-    LogOut,
-    Crown,
-    Trophy,
-    Shield,
-    ChevronDown
+    ArrowRightLeft, 
+    Database, 
+    AlertCircle, 
+    UserCircle, 
+    UserCog, 
+    LogOut, 
+    Crown, 
+    Trophy, 
+    Shield, 
+    ChevronDown,
+    Cloud,
+    CloudOff,
+    RefreshCw
   } from 'lucide-svelte';
 
   let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db'>('sheet');
@@ -156,6 +160,31 @@
 
     <!-- User Profile & RBAC Switcher -->
     <div class="user-auth-section">
+      <!-- Cloud Realtime Sync Pill Button -->
+      <button 
+        type="button" 
+        class="cloud-sync-pill status-{matchStore.cloudStatus}" 
+        onclick={() => (matchStore.showCloudSyncModal = true)}
+        title="Status Real-Time Cloud: Klik untuk menghubungkan MacBook & iPad">
+        {#if matchStore.cloudStatus === 'connected'}
+          <span class="live-dot-ping"></span>
+          <Cloud size={14} class="text-emerald" />
+          <span class="cloud-pill-label">Cloud Realtime</span>
+          {#if matchStore.cloudLatency}
+            <span class="cloud-ms">{matchStore.cloudLatency}ms</span>
+          {/if}
+        {:else if matchStore.cloudStatus === 'connecting'}
+          <RefreshCw size={14} class="text-amber spin" />
+          <span class="cloud-pill-label">Connecting...</span>
+        {:else if matchStore.cloudStatus === 'offline'}
+          <CloudOff size={14} class="text-rose" />
+          <span class="cloud-pill-label">Cloud Offline</span>
+        {:else}
+          <CloudOff size={14} class="text-slate" />
+          <span class="cloud-pill-label">⚡ Sinkron Realtime / Cloud</span>
+        {/if}
+      </button>
+
       {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
         <button 
           type="button" 
@@ -243,6 +272,10 @@
 
   {#if showConfigModal}
     <MatchConfigModal onClose={() => (showConfigModal = false)} />
+  {/if}
+
+  {#if matchStore.showCloudSyncModal}
+    <CloudSyncModal />
   {/if}
 
   <!-- Footer Info Bar (Hidden in print) -->
@@ -499,6 +532,81 @@
     font-weight: 700;
     border-color: #38bdf8;
     box-shadow: 0 2px 12px rgba(56, 189, 248, 0.35);
+  }
+
+  /* Cloud Sync Pill */
+  .cloud-sync-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    height: 34px;
+    border-radius: 20px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+  }
+
+  .cloud-sync-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .cloud-sync-pill.status-connected {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
+  }
+
+  .cloud-sync-pill.status-connected:hover {
+    background: rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+  }
+
+  .cloud-sync-pill.status-connecting {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fcd34d;
+  }
+
+  .cloud-sync-pill.status-offline, .cloud-sync-pill.status-unconfigured {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+  }
+
+  .cloud-sync-pill.status-offline:hover, .cloud-sync-pill.status-unconfigured:hover {
+    border-color: #38bdf8;
+    color: #f1f5f9;
+  }
+
+  .live-dot-ping {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: pulseDot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .cloud-ms {
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    background: rgba(16, 185, 129, 0.25);
+    border-radius: 10px;
+    color: #a7f3d0;
+    font-family: monospace;
   }
 
   /* User Auth Section */
