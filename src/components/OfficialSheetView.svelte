@@ -4656,33 +4656,34 @@
 
     /* Top Header Bar */
     .doc-header-row {
-      margin-bottom: 2px !important;
+      margin-bottom: 3px !important;
       border: 1px solid #000000 !important;
-      height: 16px !important;
-      min-height: 16px !important;
+      height: 18px !important;
+      min-height: 18px !important;
     }
 
     .hdr-cell {
       border-right: 1px solid #000000 !important;
-      height: 16px !important;
+      height: 18px !important;
     }
 
     .hdr-label {
-      font-size: 7px !important;
-      padding: 0 4px !important;
-      line-height: 16px !important;
+      font-size: 7.5px !important;
+      padding: 0 5px !important;
+      line-height: 18px !important;
+      font-weight: bold !important;
     }
 
     .hdr-input {
-      font-size: 7.5px !important;
-      height: 16px !important;
-      padding: 0 2px !important;
+      font-size: 8px !important;
+      height: 18px !important;
+      padding: 0 3px !important;
     }
 
     /* Sub Row */
     .doc-sub-row {
-      margin-bottom: 2px !important;
-      gap: 3px !important;
+      margin-bottom: 3px !important;
+      gap: 4px !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
@@ -4693,10 +4694,10 @@
     }
 
     .doc-table th, .doc-table td {
-      border: 0.6px solid #000000 !important;
-      padding: 0.5px 1.5px !important;
-      font-size: 7px !important;
-      line-height: 1.1 !important;
+      border: 0.65px solid #000000 !important;
+      padding: 1px 2px !important;
+      font-size: 7.5px !important;
+      line-height: 1.15 !important;
       color: #000000 !important;
     }
 
@@ -4727,88 +4728,89 @@
       print-color-adjust: exact !important;
     }
 
-    /* Matrix Table 17 Rows */
+    /* Matrix Table 25 Rows */
     .doc-matrix-section {
-      margin-bottom: 2px !important;
+      margin-bottom: 3px !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
 
     .tr-player-data td {
-      height: 12px !important;
-      max-height: 12px !important;
+      height: 13.5px !important;
+      max-height: 13.5px !important;
     }
 
     .cell-input, .player-name-cell, .td-matrix-stat input {
-      font-size: 7px !important;
-      height: 12px !important;
-      line-height: 12px !important;
-      padding: 0 !important;
+      font-size: 7.5px !important;
+      height: 13px !important;
+      line-height: 13px !important;
+      padding: 0 1px !important;
       border: none !important;
       background: transparent !important;
       color: #000000 !important;
     }
 
     .td-row-no {
-      width: 16px !important;
-      font-size: 7px !important;
+      width: 18px !important;
+      font-size: 7.5px !important;
       font-weight: bold !important;
     }
 
     .no-digit {
-      font-size: 7px !important;
+      font-size: 7.5px !important;
     }
 
     /* 4-Pitches Bottom Grid in Print */
     .doc-pitches-grid {
       display: grid !important;
       grid-template-columns: repeat(4, 1fr) !important;
-      gap: 3px !important;
-      margin-top: 2px !important;
+      gap: 4px !important;
+      margin-top: 3px !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
 
     .pitch-column-card {
-      border: 0.8px solid #000000 !important;
+      border: 1px solid #000000 !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       box-shadow: none !important;
     }
 
     .pitch-title-bar {
-      font-size: 7px !important;
-      padding: 1px 3px !important;
+      font-size: 7.5px !important;
+      padding: 2px 4px !important;
       background: #142236 !important;
       color: #ffffff !important;
+      font-weight: bold !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
 
     .mini-futsal-pitch {
-      max-height: 72px !important;
+      max-height: 92px !important;
       aspect-ratio: 800/480 !important;
-      border-bottom: 0.6px solid #000000 !important;
+      border-bottom: 0.8px solid #000000 !important;
     }
 
     .pitch-bg-img {
-      max-height: 72px !important;
+      max-height: 92px !important;
       object-fit: fill !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
 
     .mini-pitch-dot {
-      transform: translate(-50%, -50%) scale(0.65) !important;
+      transform: translate(-50%, -50%) scale(0.75) !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
 
     .mini-table th, .mini-table td {
-      font-size: 6.5px !important;
-      padding: 0.5px !important;
-      height: 9px !important;
-      line-height: 1 !important;
+      font-size: 7px !important;
+      padding: 1px 2px !important;
+      height: 11px !important;
+      line-height: 1.1 !important;
     }
   }
 </style>
