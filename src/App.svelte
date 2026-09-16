@@ -88,7 +88,7 @@
 <div class="futsal-app">
   <!-- Minimalist Compact App Header Bar (Hidden in print) -->
   <header class="app-compact-header no-print">
-    <!-- Top Row: Identity, Match Context, Match Timer, & Quick Actions -->
+    <!-- Top Row: Identity, Match Context, & User Actions -->
     <div class="header-top-row">
       <div class="header-left-group">
         <div class="brand-left">
@@ -111,30 +111,6 @@
           </span>
           <ChevronDown size={13} class="chevron-icon" />
         </button>
-      </div>
-
-      <!-- Central Timer & Half Controller -->
-      <div class="header-center-group">
-        <div class="header-timer-pill">
-          <button 
-            type="button" 
-            class="btn-half-pill {matchStore.activeHalf === 1 ? 'half-active' : ''}" 
-            onclick={() => (matchStore.activeHalf = 1)}
-            title="Set Babak 1 Aktif">
-            1ºH Babak 1
-          </button>
-          <button 
-            type="button" 
-            class="btn-half-pill {matchStore.activeHalf === 2 ? 'half-active' : ''}" 
-            onclick={() => (matchStore.activeHalf = 2)}
-            title="Set Babak 2 Aktif">
-            2ºH Babak 2
-          </button>
-          <div class="timer-clock-display" onclick={() => matchStore.toggleTimer()} role="button" tabindex="0" title="Klik Spasi atau Tombol untuk Play/Pause">
-            <span class="clock-digits">{matchStore.formattedTime}</span>
-            <span class="clock-status-dot {matchStore.timerRunning ? 'dot-running' : 'dot-paused'}">●</span>
-          </div>
-        </div>
       </div>
 
       <!-- User Profile & RBAC Switcher & Quick Actions -->
@@ -208,7 +184,7 @@
       </div>
     </div>
 
-    <!-- Bottom Row: Navigation Tabs -->
+    <!-- Bottom Row: Navigation Tabs & Match Clock Toolbar -->
     <div class="header-bottom-row">
       <nav class="compact-nav-tabs">
         <button 
@@ -253,6 +229,28 @@
           <span>Database Master</span>
         </button>
       </nav>
+
+      <!-- Match Timer & Half Controller in Toolbar (Clean & Distinct) -->
+      <div class="header-timer-pill">
+        <button 
+          type="button" 
+          class="btn-half-pill {matchStore.activeHalf === 1 ? 'half-active' : ''}" 
+          onclick={() => (matchStore.activeHalf = 1)}
+          title="Set Babak 1 Aktif">
+          1ºH Babak 1
+        </button>
+        <button 
+          type="button" 
+          class="btn-half-pill {matchStore.activeHalf === 2 ? 'half-active' : ''}" 
+          onclick={() => (matchStore.activeHalf = 2)}
+          title="Set Babak 2 Aktif">
+          2ºH Babak 2
+        </button>
+        <div class="timer-clock-display" onclick={() => matchStore.toggleTimer()} role="button" tabindex="0" title="Klik Spasi atau Tombol untuk Play/Pause">
+          <span class="clock-digits">{matchStore.formattedTime}</span>
+          <span class="clock-status-dot {matchStore.timerRunning ? 'dot-running' : 'dot-paused'}">●</span>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -455,7 +453,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
     min-width: 0;
   }
@@ -468,14 +466,6 @@
     flex-shrink: 1;
   }
 
-  .header-center-group {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    padding: 0 4px;
-  }
-
   .header-right-group {
     display: flex;
     align-items: center;
@@ -486,6 +476,8 @@
   .header-bottom-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     width: 100%;
   }
 
@@ -652,7 +644,8 @@
     border: 1px solid rgba(156, 179, 204, 0.18);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 
   .compact-nav-tabs::-webkit-scrollbar {
@@ -1105,8 +1098,8 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
-  /* Progressive Header Responsive Breakpoints (Prevent Any Overlaps) */
-  @media (max-width: 1380px) {
+  /* Progressive Header Responsive Breakpoints */
+  @media (max-width: 1280px) {
     .brand-subtitle {
       display: none;
     }
@@ -1121,11 +1114,11 @@
       justify-content: center;
     }
     .active-match-title {
-      max-width: 180px;
+      max-width: 170px;
     }
   }
 
-  @media (max-width: 1140px) {
+  @media (max-width: 1024px) {
     .cloud-pill-label {
       display: none;
     }
@@ -1146,7 +1139,7 @@
     }
   }
 
-  @media (max-width: 980px) {
+  @media (max-width: 860px) {
     .app-compact-header {
       padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 10px));
       padding-left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
@@ -1155,25 +1148,25 @@
       gap: 6px;
     }
 
-    .header-top-row {
+    .header-bottom-row {
       flex-wrap: wrap;
       gap: 8px;
     }
 
-    .header-center-group {
-      order: 3;
+    .compact-nav-tabs {
+      width: 100%;
+      flex: none;
+      order: 1;
+    }
+
+    .header-timer-pill {
       width: 100%;
       justify-content: center;
-      padding-top: 2px;
+      order: 2;
     }
 
     .brand-title {
-      font-size: 0.82rem;
-    }
-
-    .compact-nav-tabs {
-      width: 100%;
-      justify-content: flex-start;
+      font-size: 0.85rem;
     }
 
     .app-main-content {
@@ -1181,7 +1174,7 @@
     }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 600px) {
     .user-profile-btn {
       padding: 4px 8px;
     }
