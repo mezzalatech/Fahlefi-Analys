@@ -93,10 +93,7 @@
       <div class="header-left-group">
         <div class="brand-left">
           <img src="/icon.png" alt="Futsal Analysis" class="app-brand-logo" />
-          <div class="brand-text">
-            <h1 class="brand-title">FAHLEFI FUTSAL ANALYTICS</h1>
-            <span class="brand-subtitle">Official Sheet & Multi-Match Tactical Platform</span>
-          </div>
+          <h1 class="brand-title">FAHLEFI FUTSAL ANALYTICS</h1>
         </div>
 
         <!-- Match Selector Pill -->
@@ -524,25 +521,15 @@
     border-radius: 8px;
   }
 
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-  }
-
   .brand-title {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 900;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
     background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #7dd3fc 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-  }
-
-  .brand-subtitle {
-    font-size: 0.68rem;
-    color: #9cb3cc;
-    font-weight: 500;
   }
 
   /* Match Selector Pill */
