@@ -32,7 +32,7 @@
   let filterHalf = $state<number | 'all'>('all');
   let filterType = $state<string>('all');
 
-  let events = $derived(matchStore.data?.events || []);
+  let events = $derived(matchStore.scopedEvents);
   let players = $derived(matchStore.data?.players || []);
 
   let filteredEvents = $derived.by(() => {

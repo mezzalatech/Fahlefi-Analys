@@ -115,6 +115,35 @@
 
       <!-- User Profile & RBAC Switcher & Quick Actions -->
       <div class="header-right-group user-auth-section">
+        <!-- Team Scope & Confidentiality Switcher -->
+        <div class="team-scope-switcher" title="Ruang Kerja Analisis & Data Rahasia Tim: {matchStore.activeTeamName}">
+          <button 
+            type="button" 
+            class="scope-chip {matchStore.teamScope === 'home' ? 'scope-active-home' : ''}" 
+            onclick={() => matchStore.setTeamScope('home')}
+            title="Analisis Tim Home (Data Rahasia): {matchStore.data?.match.homeTeam || 'Home'}">
+            <Shield size={12} class={matchStore.teamScope === 'home' ? 'text-cyan' : ''} />
+            <span class="scope-text">{matchStore.data?.match.homeTeam || 'Home'}</span>
+          </button>
+          <button 
+            type="button" 
+            class="scope-chip {matchStore.teamScope === 'away' ? 'scope-active-away' : ''}" 
+            onclick={() => matchStore.setTeamScope('away')}
+            title="Analisis Tim Away (Data Rahasia): {matchStore.data?.match.awayTeam || 'Away'}">
+            <Shield size={12} class={matchStore.teamScope === 'away' ? 'text-amber' : ''} />
+            <span class="scope-text">{matchStore.data?.match.awayTeam || 'Away'}</span>
+          </button>
+          {#if matchStore.currentUser?.role === 'admin'}
+            <button 
+              type="button" 
+              class="scope-chip {matchStore.teamScope === 'all' ? 'scope-active-all' : ''}" 
+              onclick={() => matchStore.setTeamScope('all')}
+              title="Mode Panitia / Admin: Akses Semua Olahan Data">
+              <span class="scope-text">Semua</span>
+            </button>
+          {/if}
+        </div>
+
         <!-- Cloud Realtime Sync Pill Button -->
         <button 
           type="button" 
@@ -767,6 +796,65 @@
     gap: 8px;
   }
 
+  /* Team Scope & Confidentiality Switcher */
+  .team-scope-switcher {
+    display: flex;
+    align-items: center;
+    background: rgba(8, 14, 24, 0.75);
+    border: 1px solid rgba(156, 179, 204, 0.22);
+    padding: 3px;
+    border-radius: 20px;
+    gap: 3px;
+  }
+
+  .scope-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    min-height: 28px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .scope-chip:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .scope-active-home {
+    background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%);
+    color: #ffffff;
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  }
+
+  .scope-active-away {
+    background: linear-gradient(135deg, #78350f 0%, #b45309 100%);
+    color: #ffffff;
+    border-color: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  }
+
+  .scope-active-all {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    color: #ffffff;
+    border-color: #9ca3af;
+  }
+
+  .scope-text {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .btn-user-manager-nav {
     display: flex;
     align-items: center;
@@ -1116,6 +1204,9 @@
     .active-match-title {
       max-width: 170px;
     }
+    .scope-text {
+      max-width: 65px;
+    }
   }
 
   @media (max-width: 1024px) {
@@ -1133,6 +1224,12 @@
     }
     .cloud-sync-pill {
       padding: 5px 9px;
+    }
+    .scope-text {
+      display: none;
+    }
+    .scope-chip {
+      padding: 3px 6px;
     }
     .header-top-row {
       gap: 8px;

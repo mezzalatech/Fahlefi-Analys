@@ -6,7 +6,7 @@
     FileSpreadsheet, Sparkles, Edit3, X, AlertCircle, CheckCircle2, Shield
   } from 'lucide-svelte';
 
-  let pakets = $derived(matchStore.data?.pakets || []);
+  let pakets = $derived(matchStore.scopedPakets);
   let players = $derived(matchStore.data?.players || []);
 
   let showAddPaket = $state<boolean>(false);

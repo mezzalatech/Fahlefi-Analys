@@ -18,6 +18,9 @@ class MatchStore {
   loadingUsers = $state<boolean>(false);
   showUserManagerModal = $state<boolean>(false);
 
+  // Team Scope & Analytics Privacy State (Confidential Isolation per Team)
+  teamScope = $state<'home' | 'away' | 'all'>('home');
+
   // Master Players State
   masterPlayers = $state<MasterPlayer[]>([]);
   loadingMaster = $state<boolean>(false);
@@ -45,8 +48,50 @@ class MatchStore {
 
   constructor() {
     this.initAuth();
+    this.initTeamScope();
     this.initActiveMatch();
     this.setupRealtimeSync();
+  }
+
+  private initTeamScope() {
+    try {
+      const savedScope = localStorage.getItem('ffta_team_scope');
+      if (savedScope === 'home' || savedScope === 'away' || savedScope === 'all') {
+        this.teamScope = savedScope;
+      } else if (this.currentUser?.teamScope) {
+        this.teamScope = (this.currentUser.teamScope as any) || 'home';
+      }
+    } catch {}
+  }
+
+  setTeamScope(scope: 'home' | 'away' | 'all') {
+    this.teamScope = scope;
+    try {
+      localStorage.setItem('ffta_team_scope', scope);
+    } catch {}
+  }
+
+  get activeTeamName(): string {
+    if (!this.data) return 'Tim Analisis';
+    if (this.teamScope === 'away') return this.data.match.awayTeam || 'Tim Lawan (Away)';
+    if (this.teamScope === 'all') return 'Semua Tim (Panitia/Admin)';
+    return this.data.match.homeTeam || 'Tim Tuan Rumah (Home)';
+  }
+
+  get isPrivateAway(): boolean {
+    return this.teamScope === 'away';
+  }
+
+  get scopedEvents(): MatchData['events'] {
+    if (!this.data) return [];
+    if (this.teamScope === 'all') return this.data.events;
+    return this.data.events.filter(e => !e.teamScope || e.teamScope === this.teamScope);
+  }
+
+  get scopedPakets(): MatchData['pakets'] {
+    if (!this.data) return [];
+    if (this.teamScope === 'all') return this.data.pakets;
+    return this.data.pakets.filter(p => !p.teamScope || p.teamScope === this.teamScope);
   }
 
   async setupRealtimeSync() {
@@ -706,6 +751,9 @@ class MatchStore {
   // Pitch Events
   async addPitchEvent(event: Omit<MatchData['events'][0], 'matchId'>) {
     if (!this.data) return;
+    if (!event.teamScope) {
+      event.teamScope = this.teamScope;
+    }
     const newEvent = await api.addEvent(this.data.match.id, event);
     this.data.events = [...this.data.events, newEvent];
 
@@ -844,9 +892,13 @@ class MatchStore {
   }
 
   // Pakets
-  async savePakets(newPakets: Array<{ paketIndex: number; code: string; playerNumbers: string }>) {
+  async savePakets(newPakets: Array<{ paketIndex: number; code: string; playerNumbers: string; teamScope?: string }>) {
     if (!this.data) return;
-    const saved = await api.savePakets(this.data.match.id, newPakets);
+    const scopedPakets = newPakets.map(p => ({
+      ...p,
+      teamScope: p.teamScope || this.teamScope
+    }));
+    const saved = await api.savePakets(this.data.match.id, scopedPakets);
     this.data.pakets = saved;
   }
 

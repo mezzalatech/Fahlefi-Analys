@@ -20,8 +20,8 @@
 
   let match = $derived(matchStore.data?.match);
   let players = $derived(matchStore.data?.players || []);
-  let events = $derived(matchStore.data?.events || []);
-  let pakets = $derived(matchStore.data?.pakets || []);
+  let events = $derived(matchStore.scopedEvents);
+  let pakets = $derived(matchStore.scopedPakets);
 
   // Timeouts parsed
   let timeouts = $derived.by(() => {

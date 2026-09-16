@@ -9,6 +9,8 @@ export interface User {
   name: string;
   role: 'coach' | 'analyst' | 'player' | 'admin';
   avatarUrl?: string;
+  teamScope?: 'home' | 'away' | 'all' | string;
+  teamName?: string;
 }
 
 export interface MasterPlayer {
@@ -47,6 +49,7 @@ export interface SubstitutionLog {
   type: string;
   note?: string;
   createdAt?: string;
+  teamScope?: 'home' | 'away' | 'all' | string;
 }
 
 export interface MatchData {
@@ -91,6 +94,7 @@ export interface MatchData {
     sh2: number;
     gl1: number;
     gl2: number;
+    teamScope?: 'home' | 'away' | 'all' | string;
   }>;
   events: Array<{
     id: string;
@@ -104,6 +108,7 @@ export interface MatchData {
     y: number;
     playerNo: number | null;
     note: string;
+    teamScope?: 'home' | 'away' | 'all' | string;
   }>;
   pakets: Array<{
     id: number;
@@ -111,6 +116,7 @@ export interface MatchData {
     paketIndex: number;
     code: string;
     playerNumbers: string;
+    teamScope?: 'home' | 'away' | 'all' | string;
   }>;
   substitutions?: SubstitutionLog[];
 }
