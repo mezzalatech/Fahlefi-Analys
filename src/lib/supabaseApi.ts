@@ -21,9 +21,7 @@ export const supabaseApi = {
           createdAt: t.created_at || new Date().toISOString()
         }));
       }
-    } catch (err) {
-      console.warn('Supabase getTeams error, falling back to localDb:', err);
-    }
+    } catch {}
     return localDb.getTeams();
   },
 
@@ -57,9 +55,7 @@ export const supabaseApi = {
         broadcastFutsalAction('team_created', team);
         return team;
       }
-    } catch (err) {
-      console.warn('Supabase createTeam error, saving locally:', err);
-    }
+    } catch {}
     return localDb.createTeam(teamData);
   },
 
@@ -89,9 +85,7 @@ export const supabaseApi = {
         broadcastFutsalAction('team_updated', team);
         return team;
       }
-    } catch (err) {
-      console.warn('Supabase updateTeam error, saving locally:', err);
-    }
+    } catch {}
     return localDb.updateTeam(id, teamData);
   },
 
@@ -112,29 +106,31 @@ export const supabaseApi = {
     if (!supabase) return localDb.login(username, password);
 
     const cleanUsername = username.trim().toLowerCase();
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .ilike('username', cleanUsername)
-      .maybeSingle();
+    let targetUser: any = null;
 
-    let targetUser = user;
-
-    if (error || !targetUser) {
-      // Also try by role for demo convenience
-      const { data: userByRole } = await supabase
+    try {
+      const { data: user } = await supabase
         .from('users')
         .select('*')
-        .ilike('role', cleanUsername)
+        .ilike('username', cleanUsername)
         .maybeSingle();
 
-      if (userByRole) {
-        targetUser = userByRole;
+      targetUser = user;
+
+      if (!targetUser) {
+        const { data: userByRole } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('role', cleanUsername)
+          .maybeSingle();
+
+        if (userByRole) {
+          targetUser = userByRole;
+        }
       }
-    }
+    } catch {}
 
     if (!targetUser) {
-      // Check localDb users fallback
       return localDb.login(username, password);
     }
 
@@ -151,16 +147,7 @@ export const supabaseApi = {
     }
 
     if (resolvedTeamId && !resolvedTeamName) {
-      try {
-        const { data: teamRow } = await supabase.from('teams').select('name').eq('id', resolvedTeamId).maybeSingle();
-        if (teamRow?.name) {
-          resolvedTeamName = teamRow.name;
-        } else {
-          resolvedTeamName = resolvedTeamId === 'team_nazara' ? 'Nazara FC' : 'Porprov Paser';
-        }
-      } catch {
-        resolvedTeamName = resolvedTeamId === 'team_nazara' ? 'Nazara FC' : 'Porprov Paser';
-      }
+      resolvedTeamName = resolvedTeamId === 'team_nazara' ? 'Nazara FC' : 'Porprov Paser';
     }
 
     const authUser: User = {
@@ -185,26 +172,26 @@ export const supabaseApi = {
     if (!supabase) return localDb.getUsers(teamId);
 
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('users')
-        .select('id, username, email, name, role, avatar_url, team_id, created_at')
+        .select('*')
         .order('created_at', { ascending: true });
 
-      if (teamId) {
-        query = query.eq('team_id', teamId);
-      }
-
-      const { data, error } = await query;
       if (!error && data) {
-        return data.map(u => ({
+        let list = data.map(u => ({
           id: u.id,
           username: u.username,
           email: u.email,
           name: u.name,
           role: u.role,
           avatarUrl: u.avatar_url,
-          teamId: u.team_id
+          teamId: u.team_id || (u.username.includes('nazara') ? 'team_nazara' : (u.role === 'superadmin' ? undefined : 'team_paser'))
         }));
+
+        if (teamId) {
+          list = list.filter(u => u.teamId === teamId);
+        }
+        return list;
       }
     } catch {}
     return localDb.getUsers(teamId);
@@ -297,19 +284,17 @@ export const supabaseApi = {
     if (!supabase) return localDb.getMasterPlayers(teamId);
 
     try {
-      let query = supabase.from('master_players').select('*').order('no_punggung', { ascending: true });
-      if (teamId) {
-        query = query.eq('team_id', teamId);
-      }
-
       const [playersRes, matchPlayersRes, subsRes] = await Promise.all([
-        query,
+        supabase.from('master_players').select('*').order('no_punggung', { ascending: true }),
         supabase.from('players').select('*'),
         supabase.from('substitutions').select('*')
       ]);
 
       if (!playersRes.error && playersRes.data) {
-        const playersList = playersRes.data || [];
+        let playersList = playersRes.data || [];
+        if (teamId) {
+          playersList = playersList.filter((p: any) => (p.team_id || 'team_paser') === teamId);
+        }
         const allMatchPlayers = matchPlayersRes.data || [];
         const allSubs = subsRes.data || [];
 
@@ -350,7 +335,7 @@ export const supabaseApi = {
 
           return {
             id: p.id,
-            teamId: p.team_id,
+            teamId: p.team_id || 'team_paser',
             noPunggung: p.no_punggung,
             name: p.name,
             nickname: p.nickname || '',
@@ -480,15 +465,11 @@ export const supabaseApi = {
     if (!supabase) return localDb.getMatches(teamId);
 
     try {
-      let query = supabase.from('matches').select('*').order('id', { ascending: true });
-      if (teamId) {
-        query = query.eq('team_id', teamId);
-      }
-      const { data, error } = await query;
+      const { data, error } = await supabase.from('matches').select('*').order('id', { ascending: true });
       if (!error && data) {
-        return data.map(m => ({
+        let list = data.map(m => ({
           id: Number(m.id),
-          teamId: m.team_id,
+          teamId: m.team_id || 'team_paser',
           name: m.name,
           competition: m.competition,
           date: m.date,
@@ -508,6 +489,11 @@ export const supabaseApi = {
           timerRemaining: m.timer_remaining,
           timeouts: m.timeouts
         }));
+
+        if (teamId) {
+          list = list.filter(m => m.teamId === teamId);
+        }
+        return list;
       }
     } catch {}
     return localDb.getMatches(teamId);

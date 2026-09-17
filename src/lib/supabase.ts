@@ -356,13 +356,32 @@ export async function migrateLocalToSupabase(): Promise<{ success: boolean; stat
 
 // Ready-to-use SQL Schema for Supabase SQL Editor
 export const SUPABASE_SQL_SETUP = `-- ==========================================
--- FAHLEFI FUTSAL ANALYTICS - SUPABASE SCHEMA
+-- FAHLEFI FUTSAL ANALYTICS - SUPABASE MULTI-TENANT SCHEMA
 -- Jalankan skrip ini di menu SQL Editor Supabase
 -- ==========================================
 
--- 1. Master Pemain (Database Skuad Utama)
+-- 1. Tabel Klub / Tim (Multi-Tenancy)
+CREATE TABLE IF NOT EXISTS public.teams (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  short_name TEXT NOT NULL,
+  city TEXT DEFAULT '',
+  logo_url TEXT DEFAULT '/icon.png',
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Inisialisasi Tim Default jika belum ada
+INSERT INTO public.teams (id, name, short_name, city, logo_url, status)
+VALUES 
+  ('team_paser', 'Porprov Paser', 'PASER', 'Kabupaten Paser', '/icon.png', 'ACTIVE'),
+  ('team_nazara', 'Nazara FC', 'NAZARA', 'Samarinda / Tanah Grogot', '/icon.png', 'ACTIVE')
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Master Pemain (Database Skuad Utama)
 CREATE TABLE IF NOT EXISTS public.master_players (
   id TEXT PRIMARY KEY,
+  team_id TEXT DEFAULT 'team_paser',
   no_punggung INTEGER NOT NULL,
   name TEXT NOT NULL,
   nickname TEXT DEFAULT '',
@@ -375,9 +394,10 @@ CREATE TABLE IF NOT EXISTS public.master_players (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Pertandingan (Matches)
+-- 3. Pertandingan (Matches)
 CREATE TABLE IF NOT EXISTS public.matches (
   id BIGINT PRIMARY KEY,
+  team_id TEXT DEFAULT 'team_paser',
   name TEXT NOT NULL DEFAULT 'Match Analysis',
   competition TEXT NOT NULL DEFAULT 'PASER FUTSAL CUP',
   date TEXT NOT NULL DEFAULT '07/08/2024',
@@ -400,7 +420,7 @@ CREATE TABLE IF NOT EXISTS public.matches (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Pemain di Laga (Match Players Stats)
+-- 4. Pemain di Laga (Match Players Stats)
 CREATE TABLE IF NOT EXISTS public.players (
   id BIGINT PRIMARY KEY,
   match_id BIGINT REFERENCES public.matches(id) ON DELETE CASCADE,
@@ -421,7 +441,7 @@ CREATE TABLE IF NOT EXISTS public.players (
   gl_2 INTEGER NOT NULL DEFAULT 0
 );
 
--- 4. Event Aksi Lapangan (Pitch Events Tagging)
+-- 5. Event Aksi Lapangan (Pitch Events Tagging)
 CREATE TABLE IF NOT EXISTS public.pitch_events (
   id TEXT PRIMARY KEY,
   match_id BIGINT REFERENCES public.matches(id) ON DELETE CASCADE,
@@ -437,7 +457,7 @@ CREATE TABLE IF NOT EXISTS public.pitch_events (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Paket Rotasi 5 Pemain (Lineup Pakets)
+-- 6. Paket Rotasi 5 Pemain (Lineup Pakets)
 CREATE TABLE IF NOT EXISTS public.lineup_pakets (
   id BIGINT PRIMARY KEY,
   match_id BIGINT REFERENCES public.matches(id) ON DELETE CASCADE,
@@ -446,7 +466,7 @@ CREATE TABLE IF NOT EXISTS public.lineup_pakets (
   player_numbers TEXT NOT NULL DEFAULT '[]'
 );
 
--- 6. Log Pergantian & Rotasi (Substitutions)
+-- 7. Log Pergantian & Rotasi (Substitutions)
 CREATE TABLE IF NOT EXISTS public.substitutions (
   id TEXT PRIMARY KEY,
   match_id BIGINT REFERENCES public.matches(id) ON DELETE CASCADE,
@@ -460,9 +480,10 @@ CREATE TABLE IF NOT EXISTS public.substitutions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. Pengguna & RBAC (Users)
+-- 8. Pengguna & RBAC (Users)
 CREATE TABLE IF NOT EXISTS public.users (
   id TEXT PRIMARY KEY,
+  team_id TEXT,
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
@@ -472,7 +493,13 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Migrasi Tambah Kolom team_id jika tabel sudah terlanjur ada
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS team_id TEXT DEFAULT 'team_paser';
+ALTER TABLE public.master_players ADD COLUMN IF NOT EXISTS team_id TEXT DEFAULT 'team_paser';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS team_id TEXT DEFAULT 'team_paser';
+
 -- AKTIFKAN REALTIME REPLICATION UNTUK SEMUA TABEL
+ALTER PUBLICATION supabase_realtime ADD TABLE public.teams;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.master_players;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.matches;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.players;
@@ -482,6 +509,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.substitutions;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
 
 -- AKTIFKAN AKSES PUBLIK ANON (Untuk App Futsal)
+ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.master_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
@@ -490,6 +518,7 @@ ALTER TABLE public.lineup_pakets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.substitutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Allow public read/write teams" ON public.teams FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write master_players" ON public.master_players FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write matches" ON public.matches FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write players" ON public.players FOR ALL USING (true) WITH CHECK (true);
