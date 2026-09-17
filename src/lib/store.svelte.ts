@@ -368,7 +368,9 @@ class MatchStore {
           localStorage.setItem('ffta_current_user', JSON.stringify(this.currentUser));
         }
 
-        if (savedTeamId) {
+        if (this.currentUser?.teamId && this.currentUser.role !== 'superadmin') {
+          this.activeTeamId = this.currentUser.teamId;
+        } else if (savedTeamId) {
           this.activeTeamId = savedTeamId;
         } else if (this.currentUser?.teamId) {
           this.activeTeamId = this.currentUser.teamId;
@@ -392,7 +394,9 @@ class MatchStore {
       this.teamsList = teams;
       
       const savedTeamId = localStorage.getItem('ffta_active_team_id');
-      if (savedTeamId && teams.some(t => t.id === savedTeamId)) {
+      if (this.currentUser?.teamId && this.currentUser.role !== 'superadmin') {
+        this.activeTeamId = this.currentUser.teamId;
+      } else if (savedTeamId && teams.some(t => t.id === savedTeamId)) {
         this.activeTeamId = savedTeamId;
       } else if (this.currentUser?.teamId) {
         this.activeTeamId = this.currentUser.teamId;
@@ -451,6 +455,9 @@ class MatchStore {
     this.currentUser = res.user;
     if (res.user.teamId) {
       this.activeTeamId = res.user.teamId;
+      try {
+        localStorage.setItem('ffta_active_team_id', res.user.teamId);
+      } catch {}
     }
     localStorage.setItem('ffta_current_user', JSON.stringify(res.user));
     localStorage.setItem('ffta_token', res.token);
@@ -507,9 +514,12 @@ class MatchStore {
   async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }) {
     const updated = await api.updateUser(id, userData);
     await this.loadUsers();
-    if (this.currentUser && this.currentUser.id === id) {
+    if (this.currentUser && (this.currentUser.id === id || this.currentUser.username.toLowerCase() === userData.username?.toLowerCase())) {
       this.currentUser = { ...this.currentUser, ...updated };
       localStorage.setItem('ffta_current_user', JSON.stringify(this.currentUser));
+      if (updated.teamId && updated.teamId !== this.activeTeamId) {
+        await this.switchTeam(updated.teamId);
+      }
     }
     return updated;
   }
