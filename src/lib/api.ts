@@ -2,19 +2,31 @@ import { localDb } from './localDb';
 import { isSupabaseConfigured } from './supabase';
 import { supabaseApi } from './supabaseApi';
 
+export interface Team {
+  id: string;
+  name: string;
+  shortName?: string;
+  city?: string;
+  logoUrl?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
+}
+
 export interface User {
   id: string;
   username: string;
   email: string;
   name: string;
-  role: 'coach' | 'analyst' | 'player' | 'admin';
+  role: 'superadmin' | 'coach' | 'analyst' | 'player' | 'admin';
   avatarUrl?: string;
-  teamScope?: 'home' | 'away' | 'all' | string;
+  teamId?: string;
   teamName?: string;
+  teamScope?: 'home' | 'away' | 'all' | string;
 }
 
 export interface MasterPlayer {
   id: string;
+  teamId?: string;
   noPunggung: number;
   name: string;
   nickname: string;
@@ -55,6 +67,7 @@ export interface SubstitutionLog {
 export interface MatchData {
   match: {
     id: number;
+    teamId?: string;
     name: string;
     competition: string;
     date: string;
@@ -214,6 +227,47 @@ async function executeWithCloudFallback<T>(
 }
 
 export const api = {
+  // Teams (Multi-Tenant Management)
+  async getTeams(): Promise<Team[]> {
+    return executeWithCloudFallback(
+      () => supabaseApi.getTeams ? supabaseApi.getTeams() : localDb.getTeams(),
+      () => fetch(`${API_BASE}/teams`),
+      () => localDb.getTeams()
+    );
+  },
+
+  async createTeam(teamData: Partial<Team>): Promise<Team> {
+    return executeWithCloudFallback(
+      () => supabaseApi.createTeam ? supabaseApi.createTeam(teamData) : localDb.createTeam(teamData),
+      () => fetch(`${API_BASE}/teams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teamData)
+      }),
+      () => localDb.createTeam(teamData)
+    );
+  },
+
+  async updateTeam(id: string, teamData: Partial<Team>): Promise<Team> {
+    return executeWithCloudFallback(
+      () => supabaseApi.updateTeam ? supabaseApi.updateTeam(id, teamData) : localDb.updateTeam(id, teamData),
+      () => fetch(`${API_BASE}/teams/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teamData)
+      }),
+      () => localDb.updateTeam(id, teamData)
+    );
+  },
+
+  async deleteTeam(id: string): Promise<any> {
+    return executeWithCloudFallback(
+      () => supabaseApi.deleteTeam ? supabaseApi.deleteTeam(id) : localDb.deleteTeam(id),
+      () => fetch(`${API_BASE}/teams/${id}`, { method: 'DELETE' }),
+      () => localDb.deleteTeam(id)
+    );
+  },
+
   // Auth
   async login(username: string, password: string): Promise<{ user: User; token: string }> {
     return executeWithCloudFallback(
@@ -227,15 +281,15 @@ export const api = {
     );
   },
 
-  async getUsers(): Promise<User[]> {
+  async getUsers(teamId?: string): Promise<User[]> {
     return executeWithCloudFallback(
       () => supabaseApi.getUsers(),
-      () => fetch(`${API_BASE}/auth/users`),
-      () => localDb.getUsers()
+      () => fetch(`${API_BASE}/auth/users${teamId ? `?teamId=${teamId}` : ''}`),
+      () => localDb.getUsers(teamId)
     );
   },
 
-  async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string }): Promise<User> {
+  async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string; teamId?: string }): Promise<User> {
     return executeWithCloudFallback(
       () => supabaseApi.createUser(userData),
       () => fetch(`${API_BASE}/auth/users`, {
@@ -247,7 +301,7 @@ export const api = {
     );
   },
 
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string }): Promise<User> {
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }): Promise<User> {
     return executeWithCloudFallback(
       () => supabaseApi.updateUser(id, userData),
       () => fetch(`${API_BASE}/auth/users/${id}`, {
@@ -268,11 +322,11 @@ export const api = {
   },
 
   // Master Players
-  async getMasterPlayers(): Promise<MasterPlayer[]> {
+  async getMasterPlayers(teamId?: string): Promise<MasterPlayer[]> {
     return executeWithCloudFallback(
-      () => supabaseApi.getMasterPlayers(),
-      () => fetch(`${API_BASE}/master-players`),
-      () => localDb.getMasterPlayers()
+      () => supabaseApi.getMasterPlayers(teamId),
+      () => fetch(`${API_BASE}/master-players${teamId ? `?teamId=${teamId}` : ''}`),
+      () => localDb.getMasterPlayers(teamId)
     );
   },
 
@@ -408,11 +462,11 @@ export const api = {
   },
 
   // Matches
-  async getMatches(): Promise<any[]> {
+  async getMatches(teamId?: string): Promise<any[]> {
     return executeWithCloudFallback(
-      () => supabaseApi.getMatches(),
-      () => fetch(`${API_BASE}/matches`),
-      () => localDb.getMatches()
+      () => supabaseApi.getMatches(teamId),
+      () => fetch(`${API_BASE}/matches${teamId ? `?teamId=${teamId}` : ''}`),
+      () => localDb.getMatches(teamId)
     );
   },
 
@@ -424,15 +478,16 @@ export const api = {
     );
   },
 
-  async createMatch(matchData: any): Promise<any> {
+  async createMatch(matchData: any, teamId?: string): Promise<any> {
+    const payload = teamId ? { ...matchData, teamId } : matchData;
     return executeWithCloudFallback(
-      () => supabaseApi.createMatch(matchData),
+      () => supabaseApi.createMatch(payload),
       () => fetch(`${API_BASE}/matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(matchData)
+        body: JSON.stringify(payload)
       }),
-      () => localDb.createMatch(matchData)
+      () => localDb.createMatch(payload, teamId)
     );
   },
 

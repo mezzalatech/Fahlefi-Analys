@@ -11,6 +11,8 @@
   import MatchManagerModal from './components/MatchManagerModal.svelte';
   import LoginModal from './components/LoginModal.svelte';
   import UserManagerModal from './components/UserManagerModal.svelte';
+  import SuperAdminModal from './components/SuperAdminModal.svelte';
+  import AppSidebar from './components/AppSidebar.svelte';
   import AnalyticsModal from './components/AnalyticsModal.svelte';
   import MatchConfigModal from './components/MatchConfigModal.svelte';
   import CloudSyncModal from './components/CloudSyncModal.svelte';
@@ -44,10 +46,13 @@
     Check,
     Zap,
     Plus,
-    Minus
+    Minus,
+    Building2,
+    Menu
   } from 'lucide-svelte';
 
   let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation'>('sheet');
+  let showSidebar = $state<boolean>(false);
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
   let showIpadInstallModal = $state<boolean>(false);
@@ -102,10 +107,17 @@
 
   function getRoleBadge(role?: string) {
     switch (role) {
-      case 'coach': return { label: 'HEAD COACH', class: 'user-badge-coach', icon: '👑' };
-      case 'analyst': return { label: 'ANALYST', class: 'user-badge-analyst', icon: '📊' };
-      case 'player': return { label: 'PLAYER', class: 'user-badge-player', icon: '⚽' };
-      default: return { label: 'GUEST', class: 'user-badge-guest', icon: '👤' };
+      case 'superadmin':
+      case 'admin':
+        return { label: 'SUPER ADMIN', class: 'user-badge-superadmin', icon: '👑' };
+      case 'coach': 
+        return { label: 'HEAD COACH', class: 'user-badge-coach', icon: '👔' };
+      case 'analyst': 
+        return { label: 'ANALYST', class: 'user-badge-analyst', icon: '📊' };
+      case 'player': 
+        return { label: 'PLAYER', class: 'user-badge-player', icon: '⚽' };
+      default: 
+        return { label: 'GUEST', class: 'user-badge-guest', icon: '👤' };
     }
   }
 
@@ -118,9 +130,24 @@
     <!-- Top Row: Identity, Match Context, & User Actions -->
     <div class="header-top-row">
       <div class="header-left-group">
+        <!-- Sidebar Toggle Hamburger Button -->
+        <button 
+          type="button" 
+          class="btn-hamburger-sidebar" 
+          onclick={() => (showSidebar = true)} 
+          title="Buka Menu Samping (Sidebar Profil, Tim, & Manajemen)">
+          <Menu size={18} />
+        </button>
+
         <div class="brand-left">
           <img src="/icon.png" alt="Futsal Analysis" class="app-brand-logo" />
           <h1 class="brand-title">FAHLEFI FUTSAL ANALYTICS</h1>
+        </div>
+
+        <!-- Team Workspace Indicator -->
+        <div class="team-workspace-pill" title="Ruang Kerja Tim: {matchStore.currentTeamName}">
+          <Building2 size={13} class="text-emerald" />
+          <span class="team-ws-name">{matchStore.currentTeamName}</span>
         </div>
 
         <!-- Match Selector Pill -->
@@ -139,34 +166,17 @@
 
       <!-- User Profile & RBAC Switcher & Quick Actions -->
       <div class="header-right-group user-auth-section">
-        <!-- Team Scope & Confidentiality Switcher -->
-        <div class="team-scope-switcher" title="Ruang Kerja Analisis & Data Rahasia Tim: {matchStore.activeTeamName}">
+        <!-- Super Admin Portal Button -->
+        {#if matchStore.isSuperAdmin}
           <button 
             type="button" 
-            class="scope-chip {matchStore.teamScope === 'home' ? 'scope-active-home' : ''}" 
-            onclick={() => matchStore.setTeamScope('home')}
-            title="Analisis Tim Home (Data Rahasia): {matchStore.data?.match.homeTeam || 'Home'}">
-            <Shield size={12} class={matchStore.teamScope === 'home' ? 'text-cyan' : ''} />
-            <span class="scope-text">{matchStore.data?.match.homeTeam || 'Home'}</span>
+            class="btn-superadmin-console" 
+            onclick={() => (matchStore.showSuperAdminModal = true)}
+            title="Buka Portal Super Admin (Kelola Tim & Akun Global)">
+            <Crown size={14} class="text-amber-400" />
+            <span class="superadmin-btn-text">Super Admin Portal</span>
           </button>
-          <button 
-            type="button" 
-            class="scope-chip {matchStore.teamScope === 'away' ? 'scope-active-away' : ''}" 
-            onclick={() => matchStore.setTeamScope('away')}
-            title="Analisis Tim Away (Data Rahasia): {matchStore.data?.match.awayTeam || 'Away'}">
-            <Shield size={12} class={matchStore.teamScope === 'away' ? 'text-amber' : ''} />
-            <span class="scope-text">{matchStore.data?.match.awayTeam || 'Away'}</span>
-          </button>
-          {#if matchStore.currentUser?.role === 'admin'}
-            <button 
-              type="button" 
-              class="scope-chip {matchStore.teamScope === 'all' ? 'scope-active-all' : ''}" 
-              onclick={() => matchStore.setTeamScope('all')}
-              title="Mode Panitia / Admin: Akses Semua Olahan Data">
-              <span class="scope-text">Semua</span>
-            </button>
-          {/if}
-        </div>
+        {/if}
 
         <!-- Cloud Realtime Sync Pill Button -->
         <button 
@@ -193,14 +203,14 @@
           {/if}
         </button>
 
-        {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
+        {#if !matchStore.isSuperAdmin && (matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin')}
           <button 
             type="button" 
             class="btn-user-manager-nav" 
             onclick={() => (matchStore.showUserManagerModal = true)}
-            title="Kelola Akun, Kredensial, & Hak Akses Pengguna">
+            title="Kelola Akun, Kredensial, & Hak Akses Pengguna Tim">
             <UserCog size={15} class="text-cyan" />
-            <span class="user-mgr-label">User Management</span>
+            <span class="user-mgr-label">Staf Tim</span>
           </button>
         {/if}
 
@@ -484,9 +494,20 @@
     {/if}
   </main>
 
+  <!-- App Sidebar Drawer -->
+  <AppSidebar 
+    isOpen={showSidebar} 
+    onClose={() => (showSidebar = false)} 
+    onOpenIpadInstall={() => (showIpadInstallModal = true)} 
+  />
+
   <!-- Modals -->
   {#if matchStore.showMatchManagerModal}
     <MatchManagerModal onClose={() => (matchStore.showMatchManagerModal = false)} />
+  {/if}
+
+  {#if matchStore.showSuperAdminModal}
+    <SuperAdminModal onClose={() => (matchStore.showSuperAdminModal = false)} />
   {/if}
 
   {#if matchStore.showUserManagerModal}
@@ -681,6 +702,32 @@
     width: 100%;
   }
 
+  .btn-hamburger-sidebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    background: rgba(18, 32, 54, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 9px;
+    color: #7dd3fc;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+
+  .btn-hamburger-sidebar:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    transform: translateY(-1px);
+  }
+
   .brand-left {
     display: flex;
     align-items: center;
@@ -705,6 +752,61 @@
     background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #7dd3fc 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+
+  /* Team Workspace Pill */
+  .team-workspace-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 0 10px;
+    height: 34px;
+    min-height: 34px;
+    border-radius: 18px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+
+  .team-ws-name {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #6ee7b7;
+    white-space: nowrap;
+  }
+
+  /* Super Admin Console Button */
+  .btn-superadmin-console {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.15) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #fbbf24;
+    padding: 0 12px;
+    height: 34px;
+    min-height: 34px;
+    border-radius: 9px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  }
+
+  .btn-superadmin-console:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0%, rgba(217, 119, 6, 0.25) 100%);
+    border-color: #fbbf24;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .superadmin-btn-text {
+    letter-spacing: 0.02em;
   }
 
   /* Match Selector Pill */
@@ -1611,10 +1713,17 @@
     letter-spacing: 0.04em;
   }
 
-  .user-badge-coach {
-    background: rgba(245, 158, 11, 0.2);
+  .user-badge-superadmin {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.2) 100%);
     color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.4);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+  }
+
+  .user-badge-coach {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
   }
 
   .user-badge-analyst {

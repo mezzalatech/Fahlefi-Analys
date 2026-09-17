@@ -1,4 +1,4 @@
-import { api, type MatchData, type User, type MasterPlayer, type SubstitutionLog } from './api';
+import { api, type MatchData, type User, type MasterPlayer, type SubstitutionLog, type Team } from './api';
 import confetti from 'canvas-confetti';
 import { 
   initRealtimeSync, 
@@ -17,6 +17,13 @@ class MatchStore {
   usersList = $state<User[]>([]);
   loadingUsers = $state<boolean>(false);
   showUserManagerModal = $state<boolean>(false);
+
+  // Multi-Tenancy (Multi-Team & Super Admin) State
+  teamsList = $state<Team[]>([]);
+  activeTeamId = $state<string>('team_paser');
+  activeTeam = $state<Team | null>(null);
+  showSuperAdminModal = $state<boolean>(false);
+  loadingTeams = $state<boolean>(false);
 
   // Team Scope & Analytics Privacy State (Confidential Isolation per Team)
   teamScope = $state<'home' | 'away' | 'all'>('home');
@@ -50,7 +57,22 @@ class MatchStore {
     this.initAuth();
     this.initTeamScope();
     this.initActiveMatch();
+    this.loadTeams();
     this.setupRealtimeSync();
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'admin';
+  }
+
+  get currentTeamName(): string {
+    if (this.activeTeam?.name) return this.activeTeam.name;
+    if (this.currentUser?.teamName) return this.currentUser.teamName;
+    return 'Porprov Paser';
+  }
+
+  get currentTeamLogo(): string {
+    return this.activeTeam?.logoUrl || '/icon.png';
   }
 
   private initTeamScope() {
@@ -72,6 +94,7 @@ class MatchStore {
   }
 
   get activeTeamName(): string {
+    if (this.activeTeam?.name) return this.activeTeam.name;
     if (!this.data) return 'Tim Analisis';
     if (this.teamScope === 'away') return this.data.match.awayTeam || 'Tim Lawan (Away)';
     if (this.teamScope === 'all') return 'Semua Tim (Panitia/Admin)';
@@ -330,6 +353,9 @@ class MatchStore {
       const savedToken = localStorage.getItem('ffta_token');
       if (savedUser && savedToken) {
         this.currentUser = JSON.parse(savedUser);
+        if (this.currentUser?.teamId) {
+          this.activeTeamId = this.currentUser.teamId;
+        }
         this.showLoginModal = false;
       } else {
         this.currentUser = null;
@@ -341,12 +367,77 @@ class MatchStore {
     }
   }
 
+  // ==================== MULTI-TENANCY & TEAMS ====================
+  async loadTeams() {
+    try {
+      this.loadingTeams = true;
+      const teams = await api.getTeams();
+      this.teamsList = teams;
+      if (this.currentUser?.teamId) {
+        this.activeTeamId = this.currentUser.teamId;
+      } else if (!this.activeTeamId && teams.length > 0) {
+        this.activeTeamId = teams[0].id;
+      }
+      this.activeTeam = this.teamsList.find(t => t.id === this.activeTeamId) || this.teamsList[0] || null;
+    } catch (err) {
+      console.error('Failed to load teams:', err);
+    } finally {
+      this.loadingTeams = false;
+    }
+  }
+
+  async switchTeam(teamId: string) {
+    this.pauseTimer();
+    this.activeTeamId = teamId;
+    this.activeTeam = this.teamsList.find(t => t.id === teamId) || null;
+    await this.loadMasterPlayers(teamId);
+    await this.loadMatchesList(teamId);
+    if (this.matchesList.length > 0) {
+      await this.switchMatch(this.matchesList[0].id);
+    } else {
+      await this.createNewMatch({
+        name: `Match Analisis ${this.currentTeamName}`,
+        homeTeam: this.currentTeamName,
+        awayTeam: 'Lawan'
+      });
+    }
+  }
+
+  async createTeam(teamData: Partial<Team>) {
+    const created = await api.createTeam(teamData);
+    await this.loadTeams();
+    return created;
+  }
+
+  async updateTeam(id: string, teamData: Partial<Team>) {
+    const updated = await api.updateTeam(id, teamData);
+    await this.loadTeams();
+    return updated;
+  }
+
+  async deleteTeam(id: string) {
+    const res = await api.deleteTeam(id);
+    await this.loadTeams();
+    return res;
+  }
+
+  // ==================== AUTH ACTIONS ====================
   async login(username: string, password: string) {
     const res = await api.login(username, password);
     this.currentUser = res.user;
+    if (res.user.teamId) {
+      this.activeTeamId = res.user.teamId;
+    }
     localStorage.setItem('ffta_current_user', JSON.stringify(res.user));
     localStorage.setItem('ffta_token', res.token);
     this.showLoginModal = false;
+
+    await this.loadTeams();
+    await this.loadMasterPlayers();
+    await this.loadMatchesList();
+    if (this.matchesList.length > 0) {
+      await this.switchMatch(this.matchesList[0].id);
+    }
     return res.user;
   }
 
@@ -358,10 +449,11 @@ class MatchStore {
   }
 
   // User Management Actions
-  async loadUsers() {
+  async loadUsers(teamId?: string) {
     try {
       this.loadingUsers = true;
-      const list = await api.getUsers();
+      const targetTeamId = teamId || (this.isSuperAdmin ? undefined : this.activeTeamId);
+      const list = await api.getUsers(targetTeamId);
       this.usersList = list;
     } catch (err: any) {
       console.error('Failed to load users list:', err);
@@ -370,16 +462,19 @@ class MatchStore {
     }
   }
 
-  async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string }) {
-    const created = await api.createUser(userData);
+  async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string; teamId?: string }) {
+    const payload = {
+      ...userData,
+      teamId: userData.teamId || (this.isSuperAdmin ? (userData.role === 'superadmin' ? undefined : this.activeTeamId) : this.activeTeamId)
+    };
+    const created = await api.createUser(payload);
     await this.loadUsers();
     return created;
   }
 
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string }) {
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }) {
     const updated = await api.updateUser(id, userData);
     await this.loadUsers();
-    // Update currentUser if updating own profile
     if (this.currentUser && this.currentUser.id === id) {
       this.currentUser = { ...this.currentUser, ...updated };
       localStorage.setItem('ffta_current_user', JSON.stringify(this.currentUser));
@@ -393,28 +488,32 @@ class MatchStore {
     return res;
   }
 
-  switchRole(role: 'coach' | 'analyst' | 'player') {
+  switchRole(role: 'superadmin' | 'coach' | 'analyst' | 'player') {
     const names = {
-      coach: 'Coach Achmad Reza Fahlefi',
-      analyst: 'Tactical Analyst & Scorer',
-      player: 'Squad Player / Viewer'
+      superadmin: 'Super Admin Platform',
+      coach: `Coach ${this.currentTeamName}`,
+      analyst: `Tactical Analyst ${this.currentTeamName}`,
+      player: `Pemain ${this.currentTeamName}`
     };
     this.currentUser = {
       id: `usr_${role}`,
       username: role,
       email: `${role}@fahlefi.com`,
       name: names[role],
-      role: role,
-      avatarUrl: role === 'coach' ? '/icon.png' : ''
+      role: role as any,
+      teamId: role === 'superadmin' ? undefined : this.activeTeamId,
+      teamName: role === 'superadmin' ? 'Super User' : this.currentTeamName,
+      avatarUrl: (role === 'coach' || role === 'superadmin') ? '/icon.png' : ''
     };
     localStorage.setItem('ffta_current_user', JSON.stringify(this.currentUser));
   }
 
   // Master Players Actions
-  async loadMasterPlayers() {
+  async loadMasterPlayers(teamId?: string) {
     try {
       this.loadingMaster = true;
-      const res = await api.getMasterPlayers();
+      const targetTeam = teamId || (this.isSuperAdmin ? this.activeTeamId : this.currentUser?.teamId || this.activeTeamId);
+      const res = await api.getMasterPlayers(targetTeam);
       this.masterPlayers = res;
     } catch (err: any) {
       console.error('Failed to load master players:', err);
@@ -424,7 +523,11 @@ class MatchStore {
   }
 
   async createMasterPlayer(player: Partial<MasterPlayer>) {
-    const created = await api.createMasterPlayer(player);
+    const payload = {
+      ...player,
+      teamId: player.teamId || this.activeTeamId
+    };
+    const created = await api.createMasterPlayer(payload);
     await this.loadMasterPlayers();
     return created;
   }
@@ -495,9 +598,10 @@ class MatchStore {
   }
 
   // Multi-Match Actions
-  async loadMatchesList() {
+  async loadMatchesList(teamId?: string) {
     try {
-      const list = await api.getMatches();
+      const targetTeam = teamId || (this.isSuperAdmin ? this.activeTeamId : this.currentUser?.teamId || this.activeTeamId);
+      const list = await api.getMatches(targetTeam);
       this.matchesList = list;
     } catch (err) {
       console.error('Failed to load matches list:', err);
@@ -513,7 +617,12 @@ class MatchStore {
   }
 
   async createNewMatch(matchData: any) {
-    const created = await api.createMatch(matchData);
+    const payload = {
+      ...matchData,
+      teamId: matchData.teamId || this.activeTeamId,
+      homeTeam: matchData.homeTeam || this.currentTeamName
+    };
+    const created = await api.createMatch(payload, this.activeTeamId);
     await this.loadMatchesList();
     await this.switchMatch(created.id);
     return created;
@@ -534,7 +643,7 @@ class MatchStore {
       if (nextMatch) {
         await this.switchMatch(nextMatch.id);
       } else {
-        await this.createNewMatch({ name: 'Match Analysis Baru' });
+        await this.createNewMatch({ name: `Match Analisis ${this.currentTeamName}` });
       }
     }
   }

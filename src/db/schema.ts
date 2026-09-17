@@ -1,8 +1,19 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
+export const teams = sqliteTable('teams', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  shortName: text('short_name').default(''),
+  city: text('city').default(''),
+  logoUrl: text('logo_url').default('/icon.png'),
+  status: text('status').notNull().default('ACTIVE'), // 'ACTIVE' | 'INACTIVE'
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
 export const matches = sqliteTable('matches', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  teamId: text('team_id').references(() => teams.id).default('team_paser'),
   name: text('name').notNull().default('Match Analysis'),
   competition: text('competition').notNull().default('PASER FUTSAL CUP'),
   date: text('date').notNull().default('07/08/2024'),
@@ -69,10 +80,11 @@ export const lineupPakets = sqliteTable('lineup_pakets', {
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
+  teamId: text('team_id').references(() => teams.id),
   username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
-  role: text('role').notNull().default('coach'), // 'coach' | 'analyst' | 'player' | 'admin'
+  role: text('role').notNull().default('coach'), // 'superadmin' | 'coach' | 'analyst' | 'player' | 'admin'
   passwordHash: text('password_hash').notNull(),
   avatarUrl: text('avatar_url').default(''),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
@@ -80,6 +92,7 @@ export const users = sqliteTable('users', {
 
 export const masterPlayers = sqliteTable('master_players', {
   id: text('id').primaryKey(),
+  teamId: text('team_id').references(() => teams.id).default('team_paser'),
   noPunggung: integer('no_punggung').notNull(),
   name: text('name').notNull(),
   nickname: text('nickname').default(''),
@@ -105,6 +118,8 @@ export const substitutions = sqliteTable('substitutions', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
+export type Team = typeof teams.$inferSelect;
+export type InsertTeam = typeof teams.$inferInsert;
 export type Match = typeof matches.$inferSelect;
 export type InsertMatch = typeof matches.$inferInsert;
 export type Player = typeof players.$inferSelect;

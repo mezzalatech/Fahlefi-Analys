@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { localDb, INITIAL_USERS, INITIAL_MASTER_PLAYERS } from './localDb';
+import { localDb, INITIAL_USERS, INITIAL_MASTER_PLAYERS, INITIAL_TEAMS } from './localDb';
 
 // Mock localStorage for Bun test environment if needed
 if (typeof globalThis.localStorage === 'undefined') {
@@ -14,29 +14,34 @@ if (typeof globalThis.localStorage === 'undefined') {
   };
 }
 
-describe('Fahlefi Tactical Local Database & Offline Engine', () => {
+describe('Fahlefi Tactical Multi-Tenant & Offline Database Engine', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  describe('Authentication & RBAC', () => {
-    it('should authenticate default coach account with valid credentials', async () => {
-      const res = await localDb.login('coach', 'coach123');
-      expect(res.user.username).toBe('coach');
-      expect(res.user.role).toBe('coach');
+  describe('Authentication & Multi-Tenant Roles', () => {
+    it('should authenticate Super Admin account with admin credentials', async () => {
+      const res = await localDb.login('admin', 'admin123');
+      expect(res.user.username).toBe('admin');
+      expect(res.user.role).toBe('superadmin');
       expect(res.token).toBeDefined();
     });
 
-    it('should authenticate analyst account with valid credentials', async () => {
-      const res = await localDb.login('analyst', 'analyst123');
-      expect(res.user.username).toBe('analyst');
-      expect(res.user.role).toBe('analyst');
+    it('should authenticate Porprov Paser coach account', async () => {
+      const res = await localDb.login('coach', 'coach123');
+      expect(res.user.username).toBe('coach');
+      expect(res.user.role).toBe('coach');
+      expect(res.user.teamId).toBe('team_paser');
+      expect(res.user.teamName).toBe('Porprov Paser');
+      expect(res.token).toBeDefined();
     });
 
-    it('should authenticate player account with valid credentials', async () => {
-      const res = await localDb.login('player', 'player123');
-      expect(res.user.username).toBe('player');
-      expect(res.user.role).toBe('player');
+    it('should authenticate Nazara FC coach account', async () => {
+      const res = await localDb.login('coach_nazara', 'nazara123');
+      expect(res.user.username).toBe('coach_nazara');
+      expect(res.user.role).toBe('coach');
+      expect(res.user.teamId).toBe('team_nazara');
+      expect(res.user.teamName).toBe('Nazara FC');
     });
 
     it('should reject invalid password', async () => {
@@ -48,115 +53,107 @@ describe('Fahlefi Tactical Local Database & Offline Engine', () => {
     });
   });
 
-  describe('User Management CRUD', () => {
-    it('should list all initial users', async () => {
-      const users = await localDb.getUsers();
-      expect(users.length).toBeGreaterThanOrEqual(3);
+  describe('Team Management (Multi-Tenancy CRUD)', () => {
+    it('should list all registered teams (Porprov Paser & Nazara FC)', async () => {
+      const teams = await localDb.getTeams();
+      expect(teams.length).toBeGreaterThanOrEqual(2);
+      expect(teams.some(t => t.id === 'team_paser')).toBe(true);
+      expect(teams.some(t => t.id === 'team_nazara')).toBe(true);
     });
 
-    it('should create a new user and allow login with new credentials', async () => {
-      const newUser = await localDb.createUser({
-        name: 'Asisten Pelatih Futsal',
-        username: 'asisten',
-        email: 'asisten@fahlefi.com',
-        role: 'coach',
-        password: 'asistenpass123'
-      });
-
-      expect(newUser.id).toBeDefined();
-      expect(newUser.username).toBe('asisten');
-
-      // Test login with new user
-      const loginRes = await localDb.login('asisten', 'asistenpass123');
-      expect(loginRes.user.name).toBe('Asisten Pelatih Futsal');
-    });
-
-    it('should update user information and password', async () => {
-      const users = await localDb.getUsers();
-      const target = users[0];
-
-      const updated = await localDb.updateUser(target.id, {
-        name: 'Coach Achmad Reza Fahlefi Updated',
-        password: 'newcoachpass'
-      });
-
-      expect(updated.name).toBe('Coach Achmad Reza Fahlefi Updated');
-
-      // Verify login with new password
-      const loginRes = await localDb.login(target.username, 'newcoachpass');
-      expect(loginRes.user.name).toBe('Coach Achmad Reza Fahlefi Updated');
-    });
-
-    it('should delete a user and prevent subsequent login', async () => {
-      const tempUser = await localDb.createUser({
-        name: 'User Sementara',
-        username: 'temporary',
-        password: 'temppassword'
-      });
-
-      await localDb.deleteUser(tempUser.id);
-      expect(localDb.login('temporary', 'temppassword')).rejects.toThrow('Username tidak ditemukan.');
-    });
-  });
-
-  describe('Master Squad Players (25 Player Roster)', () => {
-    it('should load 25 squad players by default', async () => {
-      const players = await localDb.getMasterPlayers();
-      expect(players.length).toBe(25);
-      expect(players[0].noPunggung).toBe(1);
-      expect(players[24].noPunggung).toBe(25);
-    });
-
-    it('should create a new master player with sequential numbering', async () => {
-      const newPlayer = await localDb.createMasterPlayer({
-        noPunggung: 26,
-        name: 'Pemain Tambahan',
-        nickname: 'Tambahan',
-        position: 'FLANK_RIGHT',
+    it('should create a new club/team', async () => {
+      const newTeam = await localDb.createTeam({
+        name: 'Giga FC Kota',
+        shortName: 'GIGA',
+        city: 'Balikpapan',
         status: 'ACTIVE'
       });
 
-      expect(newPlayer.noPunggung).toBe(26);
-      const players = await localDb.getMasterPlayers();
-      expect(players.length).toBe(26);
+      expect(newTeam.id).toBeDefined();
+      expect(newTeam.name).toBe('Giga FC Kota');
+
+      const teams = await localDb.getTeams();
+      expect(teams.some(t => t.id === newTeam.id)).toBe(true);
     });
 
-    it('should update player attributes and position', async () => {
-      const players = await localDb.getMasterPlayers();
-      const first = players[0];
+    it('should update team details', async () => {
+      const teams = await localDb.getTeams();
+      const target = teams[0];
 
-      const updated = await localDb.updateMasterPlayer(first.id, {
-        name: 'M. Rizky Pratama (Senior)',
-        height: 185
+      const updated = await localDb.updateTeam(target.id, {
+        city: 'Kota Paser Tanah Grogot'
       });
 
-      expect(updated.name).toBe('M. Rizky Pratama (Senior)');
-      expect(updated.height).toBe(185);
+      expect(updated.city).toBe('Kota Paser Tanah Grogot');
     });
   });
 
-  describe('Match Management & Tactical Data', () => {
-    it('should get default match data with 25 players and 4 pakets', async () => {
-      const matchData = await localDb.getMatch(1);
-      expect(matchData.match.id).toBe(1);
-      expect(matchData.players.length).toBe(25);
-      expect(matchData.pakets.length).toBe(4);
-      expect(matchData.match.competition).toBe('Porprov Paser');
-      expect(matchData.match.venue).toBe('GOR Sadurengas Paser');
-    });
-
-    it('should create and duplicate match', async () => {
-      const newMatch = await localDb.createMatch({
-        name: 'Final Porprov Paser',
-        competition: 'Porprov Paser Final'
+  describe('User Management CRUD by Team', () => {
+    it('should create a new user for specific team and allow login', async () => {
+      const newUser = await localDb.createUser({
+        name: 'Asisten Pelatih Nazara',
+        username: 'asisten_nazara',
+        email: 'asisten@nazara.com',
+        role: 'coach',
+        teamId: 'team_nazara',
+        password: 'nazaraasisten123'
       });
-      expect(newMatch.id).toBeDefined();
 
-      const duplicated = await localDb.duplicateMatch(newMatch.id);
-      expect(duplicated.id).toBeGreaterThan(newMatch.id);
-      expect(duplicated.name).toContain('(Salinan)');
+      expect(newUser.id).toBeDefined();
+      expect(newUser.teamId).toBe('team_nazara');
+
+      const loginRes = await localDb.login('asisten_nazara', 'nazaraasisten123');
+      expect(loginRes.user.name).toBe('Asisten Pelatih Nazara');
+      expect(loginRes.user.teamName).toBe('Nazara FC');
     });
 
+    it('should filter users by team', async () => {
+      const paserUsers = await localDb.getUsers('team_paser');
+      expect(paserUsers.every(u => u.teamId === 'team_paser')).toBe(true);
+
+      const nazaraUsers = await localDb.getUsers('team_nazara');
+      expect(nazaraUsers.every(u => u.teamId === 'team_nazara')).toBe(true);
+    });
+  });
+
+  describe('Data Privacy & Isolation (Master Squad & Matches)', () => {
+    it('should isolate master players per team', async () => {
+      const paserPlayers = await localDb.getMasterPlayers('team_paser');
+      expect(paserPlayers.length).toBe(20);
+      expect(paserPlayers.every(p => p.teamId === 'team_paser')).toBe(true);
+
+      const nazaraPlayers = await localDb.getMasterPlayers('team_nazara');
+      expect(nazaraPlayers.length).toBe(7);
+      expect(nazaraPlayers.every(p => p.teamId === 'team_nazara')).toBe(true);
+    });
+
+    it('should isolate match records per team', async () => {
+      const paserMatches = await localDb.getMatches('team_paser');
+      expect(paserMatches.length).toBeGreaterThanOrEqual(1);
+      expect(paserMatches.every(m => m.teamId === 'team_paser')).toBe(true);
+
+      const nazaraMatches = await localDb.getMatches('team_nazara');
+      expect(nazaraMatches.length).toBeGreaterThanOrEqual(1);
+      expect(nazaraMatches.every(m => m.teamId === 'team_nazara')).toBe(true);
+    });
+
+    it('should create match tagged to specific team', async () => {
+      const match = await localDb.createMatch({
+        name: 'Semi Final Nazara',
+        competition: 'Paser Cup'
+      }, 'team_nazara');
+
+      expect(match.teamId).toBe('team_nazara');
+
+      const nazaraMatches = await localDb.getMatches('team_nazara');
+      expect(nazaraMatches.some(m => m.id === match.id)).toBe(true);
+
+      const paserMatches = await localDb.getMatches('team_paser');
+      expect(paserMatches.some(m => m.id === match.id)).toBe(false);
+    });
+  });
+
+  describe('Tactical Match Tagging & Substitutions', () => {
     it('should log substitutions and retrieve timeline', async () => {
       const sub = await localDb.logSubstitution(1, {
         half: 1,

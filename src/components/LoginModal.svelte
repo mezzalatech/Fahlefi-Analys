@@ -1,6 +1,6 @@
 <script lang="ts">
   import { matchStore } from '../lib/store.svelte';
-  import { Shield, UserCheck, Lock, X, Eye, EyeOff, User, AlertCircle } from 'lucide-svelte';
+  import { Shield, UserCheck, Lock, X, Eye, EyeOff, User, AlertCircle, Crown, Building2 } from 'lucide-svelte';
 
   interface Props {
     onClose?: () => void;
@@ -33,6 +33,12 @@
       loading = false;
     }
   }
+
+  function fillDemo(u: string, p: string) {
+    username = u;
+    password = p;
+    errorMessage = null;
+  }
 </script>
 
 <div class="modal-backdrop" onclick={(e) => { if (e.target === e.currentTarget && onClose && matchStore.currentUser) onClose(); }} role="presentation">
@@ -43,7 +49,7 @@
         <img src="/icon.png" alt="FAHLEFI FFTA" class="modal-emblem" />
         <div>
           <h2 class="modal-title">FAHLEFI FUTSAL TACTICAL</h2>
-          <span class="modal-subtitle">Sistem Autentikasi & Hak Akses Tim</span>
+          <span class="modal-subtitle">Sistem Analisis Multi-Tim & Hak Akses Taktis</span>
         </div>
       </div>
       {#if onClose && matchStore.currentUser}
@@ -56,8 +62,8 @@
     <!-- Login Form -->
     <form class="login-form" onsubmit={handleLogin}>
       <div class="form-header-intro">
-        <h3 class="form-heading">Masuk ke Sistem</h3>
-        <p class="form-subheading">Silakan masukkan username dan kata sandi akun Anda untuk melanjutkan.</p>
+        <h3 class="form-heading">Masuk ke Ruang Tim</h3>
+        <p class="form-subheading">Masukkan kredensial akun Anda. Data statistik & taktik diisolasi khusus untuk tim Anda.</p>
       </div>
 
       {#if errorMessage}
@@ -113,7 +119,7 @@
         <button type="submit" class="btn-submit" disabled={loading}>
           {#if loading}
             <span class="spinner-small"></span>
-            <span>Memverifikasi...</span>
+            <span>Memverifikasi Akses...</span>
           {:else}
             <UserCheck size={17} />
             <span>Masuk ke Dashboard</span>
@@ -121,9 +127,50 @@
         </button>
       </div>
 
+      <!-- Quick Demo Account Chips -->
+      <div class="demo-accounts-section">
+        <div class="demo-header-label">
+          <span>⚡ PILIH AKUN UJI COBA CEPAT (DEMO):</span>
+        </div>
+        <div class="demo-chips-grid">
+          <button 
+            type="button" 
+            class="demo-chip chip-superadmin" 
+            onclick={() => fillDemo('admin', 'admin123')}>
+            <Crown size={13} class="text-amber-400" />
+            <div class="chip-text">
+              <span class="chip-title">👑 Super Admin</span>
+              <span class="chip-cred">admin / admin123</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            class="demo-chip chip-paser" 
+            onclick={() => fillDemo('coach', 'coach123')}>
+            <Building2 size={13} class="text-emerald-400" />
+            <div class="chip-text">
+              <span class="chip-title">🟢 Porprov Paser</span>
+              <span class="chip-cred">coach / coach123</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            class="demo-chip chip-nazara" 
+            onclick={() => fillDemo('coach_nazara', 'nazara123')}>
+            <Building2 size={13} class="text-sky-400" />
+            <div class="chip-text">
+              <span class="chip-title">🔵 Nazara FC</span>
+              <span class="chip-cred">coach_nazara / nazara123</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div class="login-footer-info">
         <Shield size={13} class="text-muted" />
-        <span>Akses dibatasi hanya untuk staf pelatih, analis laga, & pemain terdaftar.</span>
+        <span>Pembuatan tim baru & akun resmi dikelola eksklusif oleh Super Administrator.</span>
       </div>
     </form>
   </div>
@@ -153,7 +200,7 @@
     border: 1px solid rgba(156, 179, 204, 0.25);
     border-radius: 16px;
     width: 100%;
-    max-width: 440px;
+    max-width: 470px;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(56, 189, 248, 0.1);
     overflow: hidden;
   }
@@ -174,8 +221,8 @@
   }
 
   .modal-emblem {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
   }
@@ -217,12 +264,12 @@
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.15rem;
+    gap: 1.1rem;
   }
 
   .form-header-intro {
     text-align: left;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
   }
 
   .form-heading {
@@ -234,7 +281,7 @@
 
   .form-subheading {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: #94a3b8;
     line-height: 1.4;
   }
@@ -258,11 +305,11 @@
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.35rem;
   }
 
   .form-group label {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 600;
     color: #cbd5e1;
     text-transform: uppercase;
@@ -284,12 +331,12 @@
 
   .input-wrapper input {
     width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 2.4rem;
+    padding: 0.72rem 2.5rem 0.72rem 2.4rem;
     background: rgba(15, 23, 42, 0.7);
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 8px;
     color: #f8fafc;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-family: inherit;
     transition: all 0.2s;
   }
@@ -325,7 +372,7 @@
   }
 
   .form-actions {
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
   }
 
   .btn-submit {
@@ -334,12 +381,12 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 0.85rem;
+    padding: 0.8rem;
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     border: 1px solid rgba(56, 189, 248, 0.4);
     border-radius: 8px;
     color: #ffffff;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
@@ -358,6 +405,85 @@
     cursor: not-allowed;
   }
 
+  /* Demo section */
+  .demo-accounts-section {
+    background: rgba(12, 22, 38, 0.7);
+    border: 1px dashed rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .demo-header-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+  }
+
+  .demo-chips-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .demo-chip {
+    background: rgba(15, 27, 48, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+
+  .demo-chip:hover {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .chip-text {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chip-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chip-cred {
+    font-size: 0.64rem;
+    color: #94a3b8;
+    font-family: monospace;
+  }
+
+  .chip-superadmin:hover {
+    border-color: #fbbf24;
+    background: rgba(245, 158, 11, 0.12);
+  }
+
+  .chip-paser:hover {
+    border-color: #4ade80;
+    background: rgba(34, 197, 94, 0.12);
+  }
+
+  .chip-nazara:hover {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+  }
+
   .spinner-small {
     width: 16px;
     height: 16px;
@@ -371,8 +497,14 @@
     to { transform: rotate(360deg); }
   }
 
-  :global(.text-rose) {
-    color: #f87171;
+  .login-footer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1.35;
+    margin-top: 0.2rem;
   }
 
   :global(.text-muted) {

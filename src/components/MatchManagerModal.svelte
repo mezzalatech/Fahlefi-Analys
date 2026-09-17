@@ -29,9 +29,9 @@
   let activeTab = $state<'list' | 'create'>('list');
 
   // Form State for New Match
-  let formName = $state<string>('Match Analysis');
-  let formCompetition = $state<string>('Porprov Paser');
-  let formHomeTeam = $state<string>('');
+  let formName = $state<string>(`Match Analysis ${matchStore.currentTeamName}`);
+  let formCompetition = $state<string>('Paser Futsal Cup');
+  let formHomeTeam = $state<string>(matchStore.currentTeamName);
   let formAwayTeam = $state<string>('');
   let formVenue = $state<string>('GOR Sadurengas Paser');
   let formDate = $state<string>(new Date().toISOString().split('T')[0]);
@@ -41,6 +41,8 @@
   let isSubmitting = $state<boolean>(false);
 
   onMount(() => {
+    formHomeTeam = matchStore.currentTeamName;
+    formName = `Match Analysis ${matchStore.currentTeamName}`;
     matchStore.loadMatchesList();
   });
 
