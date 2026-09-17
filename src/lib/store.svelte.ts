@@ -127,27 +127,32 @@ class MatchStore {
         const mId = payload?.matchId || payload?.new?.id;
         if (mId === this.activeMatchId && this.data) {
           if (payload?.data) {
-            Object.assign(this.data.match, payload.data);
+            const d = payload.data;
+            for (const k in d) {
+              if ((this.data.match as any)[k] !== d[k]) {
+                (this.data.match as any)[k] = d[k];
+              }
+            }
           } else if (payload?.new) {
             const n = payload.new;
-            if (n.name !== undefined) this.data.match.name = n.name;
-            if (n.competition !== undefined) this.data.match.competition = n.competition;
-            if (n.date !== undefined) this.data.match.date = n.date;
-            if (n.time !== undefined) this.data.match.time = n.time;
-            if (n.venue !== undefined) this.data.match.venue = n.venue;
-            if (n.home_team !== undefined) this.data.match.homeTeam = n.home_team;
-            if (n.away_team !== undefined) this.data.match.awayTeam = n.away_team;
-            if (n.home_score_1st !== undefined) this.data.match.homeScore1st = n.home_score_1st;
-            if (n.home_score_2nd !== undefined) this.data.match.homeScore2nd = n.home_score_2nd;
-            if (n.away_score_1st !== undefined) this.data.match.awayScore1st = n.away_score_1st;
-            if (n.away_score_2nd !== undefined) this.data.match.awayScore2nd = n.away_score_2nd;
-            if (n.home_fouls_1st !== undefined) this.data.match.homeFouls1st = n.home_fouls_1st;
-            if (n.home_fouls_2nd !== undefined) this.data.match.homeFouls2nd = n.home_fouls_2nd;
-            if (n.away_fouls_1st !== undefined) this.data.match.awayFouls1st = n.away_fouls_1st;
-            if (n.away_fouls_2nd !== undefined) this.data.match.awayFouls2nd = n.away_fouls_2nd;
-            if (n.period !== undefined) this.data.match.period = n.period;
-            if (n.timer_remaining !== undefined && !this.timerRunning) this.data.match.timerRemaining = n.timer_remaining;
-            if (n.timeouts !== undefined) this.data.match.timeouts = n.timeouts;
+            if (n.name !== undefined && this.data.match.name !== n.name) this.data.match.name = n.name;
+            if (n.competition !== undefined && this.data.match.competition !== n.competition) this.data.match.competition = n.competition;
+            if (n.date !== undefined && this.data.match.date !== n.date) this.data.match.date = n.date;
+            if (n.time !== undefined && this.data.match.time !== n.time) this.data.match.time = n.time;
+            if (n.venue !== undefined && this.data.match.venue !== n.venue) this.data.match.venue = n.venue;
+            if (n.home_team !== undefined && this.data.match.homeTeam !== n.home_team) this.data.match.homeTeam = n.home_team;
+            if (n.away_team !== undefined && this.data.match.awayTeam !== n.away_team) this.data.match.awayTeam = n.away_team;
+            if (n.home_score_1st !== undefined && this.data.match.homeScore1st !== n.home_score_1st) this.data.match.homeScore1st = n.home_score_1st;
+            if (n.home_score_2nd !== undefined && this.data.match.homeScore2nd !== n.home_score_2nd) this.data.match.homeScore2nd = n.home_score_2nd;
+            if (n.away_score_1st !== undefined && this.data.match.awayScore1st !== n.away_score_1st) this.data.match.awayScore1st = n.away_score_1st;
+            if (n.away_score_2nd !== undefined && this.data.match.awayScore2nd !== n.away_score_2nd) this.data.match.awayScore2nd = n.away_score_2nd;
+            if (n.home_fouls_1st !== undefined && this.data.match.homeFouls1st !== n.home_fouls_1st) this.data.match.homeFouls1st = n.home_fouls_1st;
+            if (n.home_fouls_2nd !== undefined && this.data.match.homeFouls2nd !== n.home_fouls_2nd) this.data.match.homeFouls2nd = n.home_fouls_2nd;
+            if (n.away_fouls_1st !== undefined && this.data.match.awayFouls1st !== n.away_fouls_1st) this.data.match.awayFouls1st = n.away_fouls_1st;
+            if (n.away_fouls_2nd !== undefined && this.data.match.awayFouls2nd !== n.away_fouls_2nd) this.data.match.awayFouls2nd = n.away_fouls_2nd;
+            if (n.period !== undefined && this.data.match.period !== n.period) this.data.match.period = n.period;
+            if (n.timer_remaining !== undefined && !this.timerRunning && this.data.match.timerRemaining !== n.timer_remaining) this.data.match.timerRemaining = n.timer_remaining;
+            if (n.timeouts !== undefined && this.data.match.timeouts !== n.timeouts) this.data.match.timeouts = n.timeouts;
           }
         }
       }
@@ -159,24 +164,29 @@ class MatchStore {
           const p = this.data.players.find(x => x.id === pId);
           if (p) {
             if (payload?.data) {
-              Object.assign(p, payload.data);
+              const d = payload.data;
+              for (const k in d) {
+                if ((p as any)[k] !== d[k]) {
+                  (p as any)[k] = d[k];
+                }
+              }
             } else if (payload?.new) {
               const n = payload.new;
-              if (n.no !== undefined) p.no = n.no;
-              if (n.name !== undefined) p.name = n.name;
-              if (n.is_gk !== undefined) p.isGk = n.is_gk;
-              if (n.yellow_cards !== undefined) p.yellowCards = n.yellow_cards;
-              if (n.red_cards !== undefined) p.redCards = n.red_cards;
-              if (n.loss_1 !== undefined) p.loss1 = n.loss_1;
-              if (n.loss_2 !== undefined) p.loss2 = n.loss_2;
-              if (n.rec_1 !== undefined) p.rec1 = n.rec_1;
-              if (n.rec_2 !== undefined) p.rec2 = n.rec_2;
-              if (n.fl_1 !== undefined) p.fl1 = n.fl_1;
-              if (n.fl_2 !== undefined) p.fl2 = n.fl_2;
-              if (n.sh_1 !== undefined) p.sh1 = n.sh_1;
-              if (n.sh_2 !== undefined) p.sh2 = n.sh_2;
-              if (n.gl_1 !== undefined) p.gl1 = n.gl_1;
-              if (n.gl_2 !== undefined) p.gl2 = n.gl_2;
+              if (n.no !== undefined && p.no !== n.no) p.no = n.no;
+              if (n.name !== undefined && p.name !== n.name) p.name = n.name;
+              if (n.is_gk !== undefined && p.isGk !== n.is_gk) p.isGk = n.is_gk;
+              if (n.yellow_cards !== undefined && p.yellowCards !== n.yellow_cards) p.yellowCards = n.yellow_cards;
+              if (n.red_cards !== undefined && p.redCards !== n.red_cards) p.redCards = n.red_cards;
+              if (n.loss_1 !== undefined && p.loss1 !== n.loss_1) p.loss1 = n.loss_1;
+              if (n.loss_2 !== undefined && p.loss2 !== n.loss_2) p.loss2 = n.loss_2;
+              if (n.rec_1 !== undefined && p.rec1 !== n.rec_1) p.rec1 = n.rec_1;
+              if (n.rec_2 !== undefined && p.rec2 !== n.rec_2) p.rec2 = n.rec_2;
+              if (n.fl_1 !== undefined && p.fl1 !== n.fl_1) p.fl1 = n.fl_1;
+              if (n.fl_2 !== undefined && p.fl2 !== n.fl_2) p.fl2 = n.fl_2;
+              if (n.sh_1 !== undefined && p.sh1 !== n.sh_1) p.sh1 = n.sh_1;
+              if (n.sh_2 !== undefined && p.sh2 !== n.sh_2) p.sh2 = n.sh_2;
+              if (n.gl_1 !== undefined && p.gl1 !== n.gl_1) p.gl1 = n.gl_1;
+              if (n.gl_2 !== undefined && p.gl2 !== n.gl_2) p.gl2 = n.gl_2;
             }
           }
         }
@@ -200,7 +210,7 @@ class MatchStore {
             note: newEv.note || ''
           };
           if (!this.data.events.some(e => e.id === formattedEv.id)) {
-            this.data.events.push(formattedEv);
+            this.data.events = [...this.data.events, formattedEv];
           }
         }
       } else if (event === 'event_deleted') {

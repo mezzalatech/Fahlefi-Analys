@@ -860,7 +860,7 @@
         </thead>
 
         <tbody>
-          {#each allRows as item}
+          {#each allRows as item (item.no)}
             {@const p = item.player}
             {@const isOnCourt = matchStore.onPitchPlayers.includes(item.no)}
             <tr class="tr-player-data {isOnCourt ? 'row-on-court' : ''} {recentlyUpdatedPlayerNo === item.no ? 'row-just-tagged' : ''}">
