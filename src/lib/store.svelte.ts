@@ -782,6 +782,26 @@ class MatchStore {
     }
   }
 
+  setTimer(seconds: number) {
+    if (!this.data) return;
+    const clamped = Math.max(0, Math.min(3600, Math.round(seconds)));
+    this.data.match.timerRemaining = clamped;
+    api.updateMatch(this.data.match.id, { timerRemaining: clamped });
+  }
+
+  adjustTimer(deltaSeconds: number) {
+    if (!this.data) return;
+    const current = this.data.match.timerRemaining || 0;
+    const nextVal = Math.max(0, Math.min(3600, current + deltaSeconds));
+    this.data.match.timerRemaining = nextVal;
+    api.updateMatch(this.data.match.id, { timerRemaining: nextVal });
+  }
+
+  setTimeByMinutesSeconds(minutes: number, seconds: number) {
+    const total = (Math.max(0, minutes) * 60) + Math.max(0, Math.min(59, seconds));
+    this.setTimer(total);
+  }
+
   get formattedTime(): string {
     if (!this.data) return '20:00';
     const total = this.data.match.timerRemaining;
@@ -876,11 +896,11 @@ class MatchStore {
 
     // 1. Synchronize to Player Matrix Stats if home player is assigned
     if (event.team === 'home' && event.playerNo) {
-      let player = this.data.players.find((p) => p.no === event.playerNo);
+      let player = this.data.players.find((p) => Number(p.no) === Number(event.playerNo));
       if (!player) {
-        const masterP = this.masterPlayers.find(mp => mp.noPunggung === event.playerNo);
+        const masterP = this.masterPlayers.find(mp => mp.noPunggung === Number(event.playerNo));
         player = await api.addPlayer(this.data.match.id, {
-          no: event.playerNo,
+          no: Number(event.playerNo),
           name: masterP?.name || `Pemain #${event.playerNo}`,
           isGk: masterP?.position === 'GK' ? 1 : 0
         });
@@ -935,7 +955,7 @@ class MatchStore {
 
     // 1. Revert old player stat
     if (oldEvt.team === 'home' && oldEvt.playerNo) {
-      const oldPlayer = this.data.players.find((p) => p.no === oldEvt.playerNo);
+      const oldPlayer = this.data.players.find((p) => Number(p.no) === Number(oldEvt.playerNo));
       if (oldPlayer) {
         if (oldEvt.type === 'recovery') {
           await this.updatePlayerStat(oldPlayer.id, `rec${oldHalfKey}`, -1);
@@ -965,11 +985,11 @@ class MatchStore {
     const newHalfKey = newEvt.half === 1 ? '1' : '2';
 
     if (newEvt.team === 'home' && newEvt.playerNo) {
-      let newPlayer = this.data.players.find((p) => p.no === newEvt.playerNo);
+      let newPlayer = this.data.players.find((p) => Number(p.no) === Number(newEvt.playerNo));
       if (!newPlayer) {
-        const masterP = this.masterPlayers.find(mp => mp.noPunggung === newEvt.playerNo);
+        const masterP = this.masterPlayers.find(mp => mp.noPunggung === Number(newEvt.playerNo));
         newPlayer = await api.addPlayer(this.data.match.id, {
-          no: newEvt.playerNo,
+          no: Number(newEvt.playerNo),
           name: masterP?.name || `Pemain #${newEvt.playerNo}`,
           isGk: masterP?.position === 'GK' ? 1 : 0
         });
@@ -1018,7 +1038,7 @@ class MatchStore {
 
       // 1. Revert Player Matrix Stats
       if (evt.team === 'home' && evt.playerNo) {
-        const player = this.data.players.find((p) => p.no === evt.playerNo);
+        const player = this.data.players.find((p) => Number(p.no) === Number(evt.playerNo));
         if (player) {
           if (evt.type === 'recovery') {
             await this.updatePlayerStat(player.id, `rec${halfKey}`, -1);
@@ -1051,8 +1071,173 @@ class MatchStore {
       }
     }
 
-    await api.deleteEvent(eventId);
     this.data.events = this.data.events.filter((e) => e.id !== eventId);
+    await api.deleteEvent(eventId);
+  }
+
+  // Clear all pitch events and atomically reset all player statistics and scoreboard metrics
+  async clearAllPitchEvents() {
+    if (!this.data) return;
+    const matchId = this.data.match.id;
+
+    // 1. Clear events from backend & local state
+    await api.clearEvents(matchId);
+    this.data.events = [];
+
+    // 2. Reset all player matrix stats in local state & database
+    for (const p of this.data.players) {
+      p.loss1 = 0;
+      p.loss2 = 0;
+      p.rec1 = 0;
+      p.rec2 = 0;
+      p.fl1 = 0;
+      p.fl2 = 0;
+      p.sh1 = 0;
+      p.sh2 = 0;
+      p.gl1 = 0;
+      p.gl2 = 0;
+      await api.updatePlayer(p.id, {
+        loss1: 0,
+        loss2: 0,
+        rec1: 0,
+        rec2: 0,
+        fl1: 0,
+        fl2: 0,
+        sh1: 0,
+        sh2: 0,
+        gl1: 0,
+        gl2: 0
+      });
+    }
+
+    // 3. Reset scores and fouls in scoreboard
+    this.data.match.homeScore1st = 0;
+    this.data.match.homeScore2nd = 0;
+    this.data.match.awayScore1st = 0;
+    this.data.match.awayScore2nd = 0;
+    this.data.match.homeFouls1st = 0;
+    this.data.match.homeFouls2nd = 0;
+    this.data.match.awayFouls1st = 0;
+    this.data.match.awayFouls2nd = 0;
+
+    await api.updateMatch(matchId, {
+      homeScore1st: 0,
+      homeScore2nd: 0,
+      awayScore1st: 0,
+      awayScore2nd: 0,
+      homeFouls1st: 0,
+      homeFouls2nd: 0,
+      awayFouls1st: 0,
+      awayFouls2nd: 0
+    });
+  }
+
+  // Recalculate all player stats, scoreboard scores, and fouls strictly from current pitch events
+  async recalculateAllStatsFromEvents() {
+    if (!this.data) return;
+    const matchId = this.data.match.id;
+    const evts = this.data.events || [];
+
+    // 1. Reset each player's stats accumulator
+    const playerStatsMap: Record<number, {
+      rec1: number; rec2: number;
+      loss1: number; loss2: number;
+      fl1: number; fl2: number;
+      sh1: number; sh2: number;
+      gl1: number; gl2: number;
+    }> = {};
+
+    for (const p of this.data.players) {
+      playerStatsMap[p.id] = {
+        rec1: 0, rec2: 0,
+        loss1: 0, loss2: 0,
+        fl1: 0, fl2: 0,
+        sh1: 0, sh2: 0,
+        gl1: 0, gl2: 0
+      };
+    }
+
+    let hScore1 = 0;
+    let hScore2 = 0;
+    let aScore1 = 0;
+    let aScore2 = 0;
+    let hFouls1 = 0;
+    let hFouls2 = 0;
+    let aFouls1 = 0;
+    let aFouls2 = 0;
+
+    for (const e of evts) {
+      const half = e.half === 1 ? 1 : 2;
+      const isHome = e.team === 'home';
+
+      // Player stats
+      if (isHome && e.playerNo) {
+        const player = this.data.players.find(p => Number(p.no) === Number(e.playerNo));
+        if (player && playerStatsMap[player.id]) {
+          const stats = playerStatsMap[player.id];
+          if (e.type === 'recovery') {
+            if (half === 1) stats.rec1++; else stats.rec2++;
+          } else if (e.type === 'turnover') {
+            if (half === 1) stats.loss1++; else stats.loss2++;
+          } else if (e.type === 'foul') {
+            if (half === 1) stats.fl1++; else stats.fl2++;
+          } else if (e.type === 'shot') {
+            if (half === 1) stats.sh1++; else stats.sh2++;
+            if (e.outcome === 'goal') {
+              if (half === 1) stats.gl1++; else stats.gl2++;
+            }
+          }
+        }
+      }
+
+      // Match fouls
+      if (e.type === 'foul') {
+        if (isHome) {
+          if (half === 1) hFouls1++; else hFouls2++;
+        } else {
+          if (half === 1) aFouls1++; else aFouls2++;
+        }
+      }
+
+      // Match goals
+      if (e.outcome === 'goal') {
+        if (isHome) {
+          if (half === 1) hScore1++; else hScore2++;
+        } else {
+          if (half === 1) aScore1++; else aScore2++;
+        }
+      }
+    }
+
+    // Apply to players
+    for (const p of this.data.players) {
+      const st = playerStatsMap[p.id];
+      if (st) {
+        Object.assign(p, st);
+        await api.updatePlayer(p.id, st);
+      }
+    }
+
+    // Apply to match
+    this.data.match.homeScore1st = hScore1;
+    this.data.match.homeScore2nd = hScore2;
+    this.data.match.awayScore1st = aScore1;
+    this.data.match.awayScore2nd = aScore2;
+    this.data.match.homeFouls1st = Math.min(5, hFouls1);
+    this.data.match.homeFouls2nd = Math.min(5, hFouls2);
+    this.data.match.awayFouls1st = Math.min(5, aFouls1);
+    this.data.match.awayFouls2nd = Math.min(5, aFouls2);
+
+    await api.updateMatch(matchId, {
+      homeScore1st: hScore1,
+      homeScore2nd: hScore2,
+      awayScore1st: aScore1,
+      awayScore2nd: aScore2,
+      homeFouls1st: Math.min(5, hFouls1),
+      homeFouls2nd: Math.min(5, hFouls2),
+      awayFouls1st: Math.min(5, aFouls1),
+      awayFouls2nd: Math.min(5, aFouls2)
+    });
   }
 
   // Pakets

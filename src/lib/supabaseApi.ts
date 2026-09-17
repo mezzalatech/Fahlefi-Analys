@@ -725,6 +725,17 @@ export const supabaseApi = {
     return { success: true };
   },
 
+  async clearEvents(matchId: number): Promise<any> {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error('Supabase client not available');
+
+    const { error } = await supabase.from('pitch_events').delete().eq('match_id', matchId);
+    if (error) throw new Error(error.message);
+
+    broadcastFutsalAction('events_cleared', { matchId });
+    return { success: true };
+  },
+
   // Pakets
   async savePakets(matchId: number, pakets: Array<{ paketIndex: number; code: string; playerNumbers: string }>): Promise<any> {
     const supabase = getSupabase();

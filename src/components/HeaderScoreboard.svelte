@@ -106,14 +106,26 @@
             </div>
             <div class="timer-actions">
               <button 
+                class="btn-icon btn-nudge-mini" 
+                onclick={() => matchStore.adjustTimer(-10)} 
+                title="Kurangi 10 Detik (-10s)">
+                -10s
+              </button>
+              <button 
                 class="btn-icon {matchStore.timerRunning ? 'btn-pause' : 'btn-play'}" 
                 onclick={() => matchStore.toggleTimer()} 
-                title="Start / Pause Waktu">
+                title="Start / Pause Waktu (Spasi)">
                 {#if matchStore.timerRunning}
                   <Pause size={18} />
                 {:else}
                   <Play size={18} />
                 {/if}
+              </button>
+              <button 
+                class="btn-icon btn-nudge-mini" 
+                onclick={() => matchStore.adjustTimer(10)} 
+                title="Tambah 10 Detik (+10s)">
+                +10s
               </button>
               <button 
                 class="btn-icon btn-reset" 
@@ -474,6 +486,24 @@
   .btn-reset {
     background: rgba(255, 255, 255, 0.1);
     color: #94a3b8;
+  }
+
+  .btn-nudge-mini {
+    background: rgba(56, 189, 248, 0.15);
+    color: #7dd3fc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 800;
+    padding: 0 4px;
+    width: auto;
+    min-width: 26px;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .btn-nudge-mini:hover {
+    background: #38bdf8;
+    color: #0b1320;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
   }
 
   .action-tools {

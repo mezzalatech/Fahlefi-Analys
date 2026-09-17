@@ -573,6 +573,17 @@ class LocalDatabase {
     return { success: true };
   }
 
+  async clearEvents(matchId: number): Promise<any> {
+    this.initStorage();
+    const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
+    const match = matches.find(m => m.match.id === matchId);
+    if (match) {
+      match.events = [];
+      localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+    }
+    return { success: true };
+  }
+
   // Pakets
   async savePakets(matchId: number, pakets: Array<{ paketIndex: number; code: string; playerNumbers: string }>): Promise<any> {
     this.initStorage();

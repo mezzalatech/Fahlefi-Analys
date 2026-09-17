@@ -36,13 +36,38 @@
     Share2,
     Smartphone,
     Presentation,
-    X
+    X,
+    Clock,
+    Play,
+    Pause,
+    RotateCcw,
+    Check,
+    Zap,
+    Plus,
+    Minus
   } from 'lucide-svelte';
 
   let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation'>('sheet');
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
   let showIpadInstallModal = $state<boolean>(false);
+  let showTimeSyncPopover = $state<boolean>(false);
+  let inputMinutes = $state<number>(20);
+  let inputSeconds = $state<number>(0);
+
+  function openTimeSyncPopover() {
+    if (matchStore.data) {
+      const total = matchStore.data.match.timerRemaining || 0;
+      inputMinutes = Math.floor(total / 60);
+      inputSeconds = total % 60;
+    }
+    showTimeSyncPopover = true;
+  }
+
+  function applyCustomTime() {
+    matchStore.setTimeByMinutesSeconds(inputMinutes, inputSeconds);
+    showTimeSyncPopover = false;
+  }
 
   function handleShareApp() {
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -267,25 +292,160 @@
       </nav>
 
       <!-- Match Timer & Half Controller in Toolbar (Clean & Distinct) -->
-      <div class="header-timer-pill">
-        <button 
-          type="button" 
-          class="btn-half-pill {matchStore.activeHalf === 1 ? 'half-active' : ''}" 
-          onclick={() => (matchStore.activeHalf = 1)}
-          title="Set Babak 1 Aktif">
-          1ºH Babak 1
-        </button>
-        <button 
-          type="button" 
-          class="btn-half-pill {matchStore.activeHalf === 2 ? 'half-active' : ''}" 
-          onclick={() => (matchStore.activeHalf = 2)}
-          title="Set Babak 2 Aktif">
-          2ºH Babak 2
-        </button>
-        <div class="timer-clock-display" onclick={() => matchStore.toggleTimer()} role="button" tabindex="0" title="Klik Spasi atau Tombol untuk Play/Pause">
-          <span class="clock-digits">{matchStore.formattedTime}</span>
-          <span class="clock-status-dot {matchStore.timerRunning ? 'dot-running' : 'dot-paused'}">●</span>
+      <div class="header-timer-pill-wrapper">
+        <div class="header-timer-pill">
+          <button 
+            type="button" 
+            class="btn-half-pill {matchStore.activeHalf === 1 ? 'half-active' : ''}" 
+            onclick={() => (matchStore.activeHalf = 1)}
+            title="Set Babak 1 Aktif">
+            1ºH Babak 1
+          </button>
+          <button 
+            type="button" 
+            class="btn-half-pill {matchStore.activeHalf === 2 ? 'half-active' : ''}" 
+            onclick={() => (matchStore.activeHalf = 2)}
+            title="Set Babak 2 Aktif">
+            2ºH Babak 2
+          </button>
+          
+          <!-- Clock Display (Click to open Time Sync Popover) -->
+          <div 
+            class="timer-clock-display {showTimeSyncPopover ? 'clock-open' : ''}" 
+            onclick={openTimeSyncPopover} 
+            role="button" 
+            tabindex="0" 
+            title="Klik untuk Pengaturan Waktu Cepat (Sinkron Meja Panitia)">
+            <Clock size={13} class="clock-icon text-cyan" />
+            <span class="clock-digits">{matchStore.formattedTime}</span>
+            <span class="clock-status-dot {matchStore.timerRunning ? 'dot-running' : 'dot-paused'}">●</span>
+          </div>
+
+          <!-- Play/Pause Toggle Button -->
+          <button 
+            type="button" 
+            class="btn-timer-toggle {matchStore.timerRunning ? 'is-running' : 'is-paused'}" 
+            onclick={() => matchStore.toggleTimer()} 
+            title={matchStore.timerRunning ? 'Pause Waktu (Pintasan: Spasi)' : 'Jalankan Waktu (Pintasan: Spasi)'}>
+            {#if matchStore.timerRunning}
+              <Pause size={13} />
+            {:else}
+              <Play size={13} />
+            {/if}
+          </button>
         </div>
+
+        <!-- Quick Time Sync Popover -->
+        {#if showTimeSyncPopover}
+          <div class="time-sync-backdrop" onclick={() => (showTimeSyncPopover = false)} role="presentation"></div>
+          <div class="time-sync-popover" role="dialog">
+            <div class="popover-header">
+              <div class="popover-title">
+                <Clock size={16} class="text-cyan" />
+                <span>Quick Time Sync (Waktu Bersih Futsal)</span>
+              </div>
+              <button type="button" class="btn-close-pop" onclick={() => (showTimeSyncPopover = false)}>
+                <X size={15} />
+              </button>
+            </div>
+
+            <div class="popover-body">
+              <!-- Current Running State & Play/Pause -->
+              <div class="sync-status-row">
+                <div class="sync-status-indicator">
+                  <span class="status-badge {matchStore.timerRunning ? 'badge-running' : 'badge-paused'}">
+                    {matchStore.timerRunning ? '▶ TIMER SEDANG BERJALAN' : '⏸ TIMER BERHENTI / PAUSED'}
+                  </span>
+                  <span class="hotkey-tip">Pintasan keyboard: Tekan <b>[Spasi]</b></span>
+                </div>
+                <button 
+                  type="button" 
+                  class="btn-sync-playpause {matchStore.timerRunning ? 'btn-pop-pause' : 'btn-pop-play'}" 
+                  onclick={() => matchStore.toggleTimer()}>
+                  {#if matchStore.timerRunning}
+                    <Pause size={14} /> <span>Pause</span>
+                  {:else}
+                    <Play size={14} /> <span>Mulai</span>
+                  {/if}
+                </button>
+              </div>
+
+              <!-- Manual Minute:Second Input -->
+              <div class="sync-input-card">
+                <label class="sync-card-label">Set Waktu Langsung (Menit : Detik):</label>
+                <div class="sync-digits-inputs">
+                  <div class="input-digit-group">
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="40" 
+                      class="time-num-input" 
+                      bind:value={inputMinutes} 
+                    />
+                    <span class="unit-lbl">MENIT</span>
+                  </div>
+                  <span class="colon-separator">:</span>
+                  <div class="input-digit-group">
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="59" 
+                      class="time-num-input" 
+                      bind:value={inputSeconds} 
+                    />
+                    <span class="unit-lbl">DETIK</span>
+                  </div>
+                  <button type="button" class="btn-apply-time" onclick={applyCustomTime}>
+                    <Check size={14} />
+                    <span>Terapkan</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Nudge Seconds (+/- Buttons) -->
+              <div class="sync-nudge-section">
+                <label class="sync-card-label">Penyesuaian Cepat Detik (Nudge Table Clock):</label>
+                <div class="nudge-buttons-grid">
+                  <button type="button" class="btn-nudge btn-nudge-minus" onclick={() => matchStore.adjustTimer(-60)} title="Kurangi 1 Menit">-1m</button>
+                  <button type="button" class="btn-nudge btn-nudge-minus" onclick={() => matchStore.adjustTimer(-30)} title="Kurangi 30 Detik">-30s</button>
+                  <button type="button" class="btn-nudge btn-nudge-minus" onclick={() => matchStore.adjustTimer(-10)} title="Kurangi 10 Detik">-10s</button>
+                  <button type="button" class="btn-nudge btn-nudge-minus" onclick={() => matchStore.adjustTimer(-5)} title="Kurangi 5 Detik">-5s</button>
+                  <button type="button" class="btn-nudge btn-nudge-plus" onclick={() => matchStore.adjustTimer(5)} title="Tambah 5 Detik">+5s</button>
+                  <button type="button" class="btn-nudge btn-nudge-plus" onclick={() => matchStore.adjustTimer(10)} title="Tambah 10 Detik">+10s</button>
+                  <button type="button" class="btn-nudge btn-nudge-plus" onclick={() => matchStore.adjustTimer(30)} title="Tambah 30 Detik">+30s</button>
+                  <button type="button" class="btn-nudge btn-nudge-plus" onclick={() => matchStore.adjustTimer(60)} title="Tambah 1 Menit">+1m</button>
+                </div>
+              </div>
+
+              <!-- Futsal Presets -->
+              <div class="sync-presets-section">
+                <label class="sync-card-label">Preset Standar Pertandingan Futsal:</label>
+                <div class="presets-buttons-grid">
+                  <button type="button" class="btn-preset" onclick={() => { matchStore.setTimer(1200); showTimeSyncPopover = false; }}>
+                    <span class="p-time">20:00</span>
+                    <span class="p-desc">Awal Babak</span>
+                  </button>
+                  <button type="button" class="btn-preset" onclick={() => { matchStore.setTimer(600); showTimeSyncPopover = false; }}>
+                    <span class="p-time">10:00</span>
+                    <span class="p-desc">Tengah Babak</span>
+                  </button>
+                  <button type="button" class="btn-preset" onclick={() => { matchStore.setTimer(300); showTimeSyncPopover = false; }}>
+                    <span class="p-time">05:00</span>
+                    <span class="p-desc">Fase Kritis</span>
+                  </button>
+                  <button type="button" class="btn-preset" onclick={() => { matchStore.setTimer(120); showTimeSyncPopover = false; }}>
+                    <span class="p-time">02:00</span>
+                    <span class="p-desc">Power Play</span>
+                  </button>
+                  <button type="button" class="btn-preset btn-preset-danger" onclick={() => { matchStore.setTimer(0); showTimeSyncPopover = false; }}>
+                    <span class="p-time">00:00</span>
+                    <span class="p-desc">Babak Habis</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        {/if}
       </div>
     </div>
   </header>
@@ -594,6 +754,12 @@
     transform: translateY(1px);
   }
 
+  .header-timer-pill-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
   .header-timer-pill {
     display: flex;
     align-items: center;
@@ -637,17 +803,55 @@
     gap: 6px;
     background: rgba(16, 28, 48, 0.95);
     border: 1px solid rgba(56, 189, 248, 0.4);
-    padding: 4px 12px;
+    padding: 4px 10px;
     min-height: 28px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     user-select: none;
     transition: all 0.15s;
   }
 
-  .timer-clock-display:hover, .timer-clock-display:active {
+  .timer-clock-display:hover, .timer-clock-display.clock-open {
     border-color: #38bdf8;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    background: rgba(24, 44, 76, 0.98);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-timer-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-timer-toggle.is-paused {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #10b981;
+  }
+
+  .btn-timer-toggle.is-paused:hover {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+  }
+
+  .btn-timer-toggle.is-running {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.5);
+    color: #f59e0b;
+  }
+
+  .btn-timer-toggle.is-running:hover {
+    background: #f59e0b;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
   }
 
   .clock-digits {
@@ -668,6 +872,317 @@
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
+  }
+
+  /* Quick Time Sync Popover Styles */
+  .time-sync-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  .time-sync-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 360px;
+    background: #0d1624;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.2);
+    z-index: 1001;
+    overflow: hidden;
+    animation: popFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes popFade {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(14, 26, 44, 0.95);
+    border-bottom: 1px solid rgba(156, 179, 204, 0.15);
+  }
+
+  .popover-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-close-pop {
+    background: transparent;
+    border: none;
+    color: #9cb3cc;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: all 0.15s;
+  }
+
+  .btn-close-pop:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .popover-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sync-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(18, 30, 48, 0.6);
+    border-radius: 8px;
+    border: 1px solid rgba(156, 179, 204, 0.12);
+  }
+
+  .sync-status-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .status-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  .badge-running { color: #10b981; }
+  .badge-paused { color: #f59e0b; }
+
+  .hotkey-tip {
+    font-size: 0.68rem;
+    color: #9cb3cc;
+  }
+
+  .btn-sync-playpause {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+  }
+
+  .btn-pop-play {
+    background: #10b981;
+    color: #ffffff;
+  }
+  .btn-pop-play:hover {
+    background: #059669;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+
+  .btn-pop-pause {
+    background: #f59e0b;
+    color: #0b1320;
+  }
+  .btn-pop-pause:hover {
+    background: #d97706;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+  }
+
+  .sync-card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #9cb3cc;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .sync-input-card {
+    background: rgba(14, 24, 38, 0.7);
+    border: 1px solid rgba(156, 179, 204, 0.15);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .sync-digits-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .input-digit-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+  }
+
+  .time-num-input {
+    width: 100%;
+    height: 36px;
+    background: #070d18;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .time-num-input:focus {
+    outline: none;
+    border-color: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  }
+
+  .unit-lbl {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .colon-separator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #7dd3fc;
+    margin-bottom: 12px;
+  }
+
+  .btn-apply-time {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 14px;
+    height: 36px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border: 1px solid #38bdf8;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-apply-time:hover {
+    background: #0284c7;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  }
+
+  .nudge-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .btn-nudge {
+    padding: 6px 0;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .btn-nudge-minus {
+    background: rgba(244, 63, 94, 0.12);
+    border-color: rgba(244, 63, 94, 0.3);
+    color: #fda4af;
+  }
+
+  .btn-nudge-minus:hover {
+    background: #f43f5e;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
+  }
+
+  .btn-nudge-plus {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+  }
+
+  .btn-nudge-plus:hover {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  }
+
+  .presets-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .btn-preset {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    background: rgba(18, 30, 48, 0.7);
+    border: 1px solid rgba(156, 179, 204, 0.15);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-preset:hover {
+    background: rgba(30, 52, 84, 0.9);
+    border-color: #38bdf8;
+    transform: translateY(-1px);
+  }
+
+  .btn-preset .p-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #ffffff;
+  }
+
+  .btn-preset .p-desc {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #9cb3cc;
+  }
+
+  .btn-preset-danger {
+    border-color: rgba(244, 63, 94, 0.3);
+  }
+  .btn-preset-danger:hover {
+    border-color: #f43f5e;
+    background: rgba(244, 63, 94, 0.2);
+  }
+  .btn-preset-danger .p-time {
+    color: #fda4af;
   }
 
   .compact-nav-tabs {

@@ -594,10 +594,8 @@
 
   // Delete all events
   async function deleteAllEvents() {
-    if (confirm(`PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA (${events.length}) tag pada lapangan?`)) {
-      for (const evt of events) {
-        await matchStore.deletePitchEvent(evt.id);
-      }
+    if (confirm(`PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA (${events.length}) tag pada lapangan? Seluruh statistik matrix pemain dan skor terkait akan direset bersih.`)) {
+      await matchStore.clearAllPitchEvents();
       showEventsManager = false;
       editingEvent = null;
     }
@@ -2360,6 +2358,17 @@
             <button type="button" class="btn-clear-all-tags" onclick={deleteAllEvents} disabled={events.length === 0}>
               <Trash2 size={15} />
               <span>Hapus Semua Tag ({events.length})</span>
+            </button>
+            <button 
+              type="button" 
+              class="btn-recalc-all-tags" 
+              onclick={async () => {
+                await matchStore.recalculateAllStatsFromEvents();
+                alert('Statistik pemain, fouls, dan skor telah dihitung ulang dari semua tag lapangan yang tersimpan!');
+              }} 
+              title="Hitung ulang seluruh statistik pemain dari tag lapangan">
+              <Sparkles size={14} class="text-amber" />
+              <span>Hitung Ulang Statistik</span>
             </button>
             <button type="button" class="btn-tag-cancel" onclick={() => (showEventsManager = false)}>
               Tutup

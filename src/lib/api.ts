@@ -528,6 +528,14 @@ export const api = {
     );
   },
 
+  async clearEvents(matchId: number): Promise<any> {
+    return executeWithCloudFallback(
+      () => supabaseApi.clearEvents(matchId),
+      () => fetch(`${API_BASE}/matches/${matchId}/events`, { method: 'DELETE' }),
+      () => localDb.clearEvents(matchId)
+    );
+  },
+
   async savePakets(matchId: number, pakets: Array<{ paketIndex: number; code: string; playerNumbers: string }>): Promise<any> {
     return executeWithCloudFallback(
       () => supabaseApi.savePakets(matchId, pakets),
