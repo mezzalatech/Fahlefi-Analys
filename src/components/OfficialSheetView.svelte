@@ -22,6 +22,39 @@
   let players = $derived(matchStore.data?.players || []);
   let events = $derived(matchStore.scopedEvents);
   let pakets = $derived(matchStore.scopedPakets);
+  let substitutions = $derived(matchStore.substitutions || []);
+
+  function parseSubNumbers(pNumbersStr: string): number[] {
+    try {
+      const parsed = JSON.parse(pNumbersStr);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function getPlayerNameByNo(no: number): string {
+    const p = players.find(item => item.no === no);
+    if (p && p.name?.trim()) return p.name.trim();
+    const mp = matchStore.masterPlayers.find(m => m.noPunggung === no);
+    if (mp && mp.name?.trim()) return mp.name.trim();
+    return '';
+  }
+
+  let chronologicalSubs = $derived.by(() => {
+    const subs = matchStore.substitutions || [];
+    return [...subs].sort((a, b) => {
+      if (a.half !== b.half) return a.half - b.half;
+      const parseSec = (str: string) => {
+        if (!str) return 0;
+        const parts = str.split(':').map(Number);
+        return ((parts[0] || 0) * 60) + (parts[1] || 0);
+      };
+      const tA = a.timerRemaining !== undefined ? a.timerRemaining : parseSec(a.timeStr);
+      const tB = b.timerRemaining !== undefined ? b.timerRemaining : parseSec(b.timeStr);
+      return tB - tA;
+    });
+  });
 
   // Timeouts parsed
   let timeouts = $derived.by(() => {
@@ -770,7 +803,7 @@
       <!-- PAKET Box (Coach presets + Dynamic On-Pitch Lineup) -->
       <div class="box-paket-container">
         <div class="paket-header">
-          <span>PAKET</span>
+          <span>PAKET & ROTASI</span>
           {#if matchStore.onPitchPlayers.length > 0}
             <span class="paket-onpitch-tag">
               Lapangan: {matchStore.onPitchPlayers.join('-')} 
@@ -809,6 +842,21 @@
             </div>
           {/each}
         </div>
+        {#if chronologicalSubs.length > 0}
+          <div class="paket-rot-footer">
+            <span class="rot-foot-title">Histori Rotasi Main:</span>
+            <div class="rot-foot-flow">
+              {#each chronologicalSubs.slice(-6) as s, sIdx}
+                <span class="rot-foot-badge {s.paketIndex ? 'is-pkt' : 'is-custom'}">
+                  {s.half === 1 ? '1ºH' : '2ºH'} {s.timeStr || '-'}: {s.paketIndex ? `P${s.paketIndex}` : 'Sub'}
+                </span>
+                {#if sIdx < Math.min(chronologicalSubs.length, 6) - 1}
+                  <span class="rot-foot-arrow">→</span>
+                {/if}
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
 
     </div>
@@ -981,6 +1029,75 @@
           {/each}
         </tbody>
       </table>
+    </div>
+
+    <!-- 3.5. LOG ROTASI & PERGANTIAN PAKET (MATCH 5-MAN ROTATION LOG) -->
+    <div class="doc-rotation-section">
+      <div class="rotation-section-header">
+        <div class="rot-hdr-left">
+          <span class="rot-hdr-title">LOG ROTASI & PERGANTIAN PAKET (5-MAN ROTATION TIMELINE)</span>
+          <span class="rot-hdr-badge">{chronologicalSubs.length} Rotasi Tercatat</span>
+        </div>
+        <div class="rot-hdr-right no-print">
+          <span class="rot-hdr-hint">Tercatat otomatis setiap kali deploy paket atau pergantian pemain di lapangan</span>
+        </div>
+      </div>
+
+      {#if chronologicalSubs.length === 0}
+        <div class="rotation-empty-banner">
+          <span>Belum ada catatan rotasi pada laga ini. Unit Starting 5 aktif sepanjang pertandingan.</span>
+        </div>
+      {:else}
+        <div class="rotation-grid-table">
+          <table class="doc-table rotation-doc-table">
+            <thead>
+              <tr class="tr-rot-head">
+                <th style="width: 32px;" class="text-center">NO</th>
+                <th style="width: 80px;" class="text-center">BABAK & WAKTU</th>
+                <th style="width: 125px;" class="text-center">PAKET / ROTASI</th>
+                <th>5 PEMAIN DI LAPANGAN</th>
+                <th style="width: 105px;" class="text-center">TIPE</th>
+                <th>KETERANGAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each chronologicalSubs as sub, sIdx (sub.id)}
+                {@const pNums = parseSubNumbers(sub.playerNumbers)}
+                <tr class="tr-rot-row {sub.paketIndex ? 'row-rot-paket' : 'row-rot-custom'}">
+                  <td class="text-center font-bold">{sIdx + 1}</td>
+                  <td class="text-center font-bold font-mono">
+                    <span class="badge-time-stamp">{sub.half === 1 ? '1ºH' : '2ºH'} {sub.timeStr || '-'}</span>
+                  </td>
+                  <td class="text-center">
+                    {#if sub.paketIndex}
+                      <span class="badge-rot-paket">PAKET {sub.paketIndex}</span>
+                    {:else}
+                      <span class="badge-rot-custom">SUB INDIVIDUAL</span>
+                    {/if}
+                  </td>
+                  <td class="td-rot-players">
+                    <div class="rot-players-wrap">
+                      {#each pNums as pNo}
+                        {@const pName = getPlayerNameByNo(pNo)}
+                        <span class="rot-chip-p" title={pName ? `#${pNo} ${pName}` : `#${pNo}`}>
+                          <strong class="p-digit">#{pNo}</strong>
+                          {#if pName}<span class="p-label">{pName}</span>{/if}
+                        </span>
+                      {/each}
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge-rot-type">
+                      {sub.type === 'PAKET_DEPLOY' ? 'Deploy Paket' : 'Ganti Pemain'}
+                    </span>
+                  </td>
+                  <td class="td-rot-note">{sub.note || '-'}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
     </div>
 
     <!-- 4. BOTTOM 4 PITCH BOARDS (TAMPILAN LAPANGAN LEBIH BESAR & LEGA) -->
@@ -2492,6 +2609,207 @@
   .pkt-dot-active {
     color: #059669;
     font-size: 8px;
+  }
+
+  /* PAKET Footer Rotation Summary */
+  .paket-rot-footer {
+    border-top: 1px dashed #cbd5e1;
+    padding: 2px 4px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .rot-foot-title {
+    font-size: 7px;
+    font-weight: bold;
+    color: #64748b;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .rot-foot-flow {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-wrap: nowrap;
+  }
+
+  .rot-foot-badge {
+    font-size: 7px;
+    font-family: monospace;
+    font-weight: bold;
+    padding: 1px 3px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .rot-foot-badge.is-pkt {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 0.5px solid #c7d2fe;
+  }
+
+  .rot-foot-badge.is-custom {
+    background: #ffedd5;
+    color: #9a3412;
+    border: 0.5px solid #fed7aa;
+  }
+
+  .rot-foot-arrow {
+    font-size: 7px;
+    color: #94a3b8;
+  }
+
+  /* 3.5. LOG ROTASI & PERGANTIAN PAKET SECTION */
+  .doc-rotation-section {
+    margin-bottom: 6px;
+    border: 1.5px solid #000000;
+    background: #ffffff;
+  }
+
+  .rotation-section-header {
+    background: #1e3a8a;
+    color: #ffffff;
+    padding: 2px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 8.5px;
+  }
+
+  .rot-hdr-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .rot-hdr-title {
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+
+  .rot-hdr-badge {
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 7.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #fef08a;
+  }
+
+  .rot-hdr-hint {
+    font-size: 7.5px;
+    color: #93c5fd;
+    font-style: italic;
+  }
+
+  .rotation-empty-banner {
+    padding: 4px 8px;
+    font-size: 8px;
+    color: #64748b;
+    font-style: italic;
+    background: #f8fafc;
+  }
+
+  .rotation-grid-table {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .rotation-doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+  }
+
+  .tr-rot-head th {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: bold;
+    padding: 2px 4px;
+    border: 0.8px solid #000000;
+  }
+
+  .tr-rot-row td {
+    padding: 2px 4px;
+    font-size: 8px;
+    border: 0.8px solid #cbd5e1;
+    color: #000000;
+  }
+
+  .row-rot-paket {
+    background: #ffffff;
+  }
+
+  .row-rot-custom {
+    background: #fffbeb;
+  }
+
+  .badge-time-stamp {
+    font-size: 8px;
+    font-weight: bold;
+    font-family: monospace;
+    color: #0369a1;
+  }
+
+  .badge-rot-paket {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 7.5px;
+    font-weight: bold;
+    border: 0.5px solid #bfdbfe;
+  }
+
+  .badge-rot-custom {
+    background: #fed7aa;
+    color: #9a3412;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 7.5px;
+    font-weight: bold;
+    border: 0.5px solid #fdba74;
+  }
+
+  .rot-players-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .rot-chip-p {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #f1f5f9;
+    border: 0.5px solid #cbd5e1;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 7.5px;
+  }
+
+  .rot-chip-p .p-digit {
+    color: #0284c7;
+  }
+
+  .rot-chip-p .p-label {
+    color: #334155;
+  }
+
+  .badge-rot-type {
+    font-size: 7.5px;
+    color: #475569;
+  }
+
+  .td-rot-note {
+    font-size: 7.5px;
+    color: #334155;
+    font-style: italic;
   }
 
   /* Player rows on-court highlights */
@@ -4733,6 +5051,72 @@
       margin-bottom: 3px !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
+    }
+
+    /* Rotation Log Section in Print */
+    .doc-rotation-section {
+      margin-bottom: 3px !important;
+      border: 1px solid #000000 !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    .rotation-section-header {
+      background: #1e3a8a !important;
+      color: #ffffff !important;
+      padding: 1.5px 4px !important;
+      font-size: 7.5px !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .rotation-empty-banner {
+      padding: 2px 4px !important;
+      font-size: 7px !important;
+      color: #334155 !important;
+    }
+
+    .tr-rot-head th {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      font-size: 7px !important;
+      padding: 1px 2px !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .tr-rot-row td {
+      font-size: 7px !important;
+      padding: 1px 2px !important;
+      line-height: 1.15 !important;
+      color: #000000 !important;
+    }
+
+    .badge-rot-paket {
+      background: #dbeafe !important;
+      color: #1e40af !important;
+      font-size: 6.5px !important;
+      padding: 0 2px !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .badge-rot-custom {
+      background: #fed7aa !important;
+      color: #9a3412 !important;
+      font-size: 6.5px !important;
+      padding: 0 2px !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .rot-chip-p {
+      background: #f1f5f9 !important;
+      border: 0.5px solid #94a3b8 !important;
+      font-size: 6.5px !important;
+      padding: 0 2px !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     .tr-player-data td {

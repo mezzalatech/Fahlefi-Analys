@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { db } from '../../db';
-import { matches, players, lineupPakets, pitchEvents } from '../../db/schema';
-import { eq } from 'drizzle-orm';
+import { matches, players, lineupPakets, pitchEvents, substitutions } from '../../db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { existsSync } from 'fs';
 
 export async function exportMatchToExcel(matchId: number): Promise<Buffer> {
@@ -12,6 +12,7 @@ export async function exportMatchToExcel(matchId: number): Promise<Buffer> {
 
   const matchPlayers = db.select().from(players).where(eq(players.matchId, matchId)).all();
   const matchPakets = db.select().from(lineupPakets).where(eq(lineupPakets.matchId, matchId)).all();
+  const matchSubs = db.select().from(substitutions).where(eq(substitutions.matchId, matchId)).orderBy(desc(substitutions.createdAt)).all();
 
   const templatePath = './Template Analysis.xlsx';
   const workbook = new ExcelJS.Workbook();
@@ -80,6 +81,48 @@ export async function exportMatchToExcel(matchId: number): Promise<Buffer> {
       .map((pkt) => `${pkt.paketIndex}. ${pkt.code}`)
       .join('\n');
     ws.getCell('AE4').value = paketStr;
+  }
+
+  // Add Log Rotasi Sheet if substitutions exist
+  if (matchSubs.length > 0) {
+    let subWs = workbook.getWorksheet('Log Rotasi Paket');
+    if (!subWs) {
+      subWs = workbook.addWorksheet('Log Rotasi Paket');
+    }
+    subWs.columns = [
+      { header: 'No', key: 'no', width: 8 },
+      { header: 'Babak', key: 'half', width: 12 },
+      { header: 'Waktu (Timer)', key: 'timeStr', width: 16 },
+      { header: 'Paket / Rotasi', key: 'paket', width: 22 },
+      { header: '5 Pemain di Lapangan', key: 'players', width: 30 },
+      { header: 'Tipe', key: 'type', width: 18 },
+      { header: 'Keterangan', key: 'note', width: 35 }
+    ];
+
+    // Style Header
+    const hRow = subWs.getRow(1);
+    hRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    hRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+
+    // Reverse to chronological order (earliest first)
+    const chronological = [...matchSubs].reverse();
+    chronological.forEach((sub, sIdx) => {
+      let pNumsText = sub.playerNumbers;
+      try {
+        const nums: number[] = JSON.parse(sub.playerNumbers);
+        pNumsText = nums.map(n => `#${n}`).join(', ');
+      } catch {}
+
+      subWs.addRow({
+        no: sIdx + 1,
+        half: `${sub.half === 1 ? '1ºH' : '2ºH'} Babak ${sub.half}`,
+        timeStr: sub.timeStr || '-',
+        paket: sub.paketIndex ? `Paket ${sub.paketIndex}` : 'Sub Individual',
+        players: pNumsText,
+        type: sub.type === 'PAKET_DEPLOY' ? 'Deploy Paket' : 'Ganti Pemain',
+        note: sub.note || '-'
+      });
+    });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
