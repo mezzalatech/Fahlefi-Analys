@@ -5,23 +5,6 @@ import { localDb } from './localDb';
 export const supabaseApi = {
   // Teams (Multi-Tenant Clubs)
   async getTeams(): Promise<Team[]> {
-    const supabase = getSupabase();
-    if (!supabase) return localDb.getTeams();
-
-    try {
-      const { data, error } = await supabase.from('teams').select('*').order('name', { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data.map(t => ({
-          id: t.id,
-          name: t.name,
-          shortName: t.short_name || t.name,
-          city: t.city || '',
-          logoUrl: t.logo_url || '/icon.png',
-          status: t.status || 'ACTIVE',
-          createdAt: t.created_at || new Date().toISOString()
-        }));
-      }
-    } catch {}
     return localDb.getTeams();
   },
 

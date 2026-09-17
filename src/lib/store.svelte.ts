@@ -351,9 +351,26 @@ class MatchStore {
     try {
       const savedUser = localStorage.getItem('ffta_current_user');
       const savedToken = localStorage.getItem('ffta_token');
+      const savedTeamId = localStorage.getItem('ffta_active_team_id');
+
       if (savedUser && savedToken) {
         this.currentUser = JSON.parse(savedUser);
-        if (this.currentUser?.teamId) {
+
+        // Auto-fix legacy stored user missing teamId
+        if (this.currentUser && !this.currentUser.teamId) {
+          if (this.currentUser.username?.toLowerCase().includes('nazara')) {
+            this.currentUser.teamId = 'team_nazara';
+            this.currentUser.teamName = 'Nazara FC';
+          } else {
+            this.currentUser.teamId = 'team_paser';
+            this.currentUser.teamName = 'Porprov Paser';
+          }
+          localStorage.setItem('ffta_current_user', JSON.stringify(this.currentUser));
+        }
+
+        if (savedTeamId) {
+          this.activeTeamId = savedTeamId;
+        } else if (this.currentUser?.teamId) {
           this.activeTeamId = this.currentUser.teamId;
         }
         this.showLoginModal = false;
@@ -373,7 +390,11 @@ class MatchStore {
       this.loadingTeams = true;
       const teams = await api.getTeams();
       this.teamsList = teams;
-      if (this.currentUser?.teamId) {
+      
+      const savedTeamId = localStorage.getItem('ffta_active_team_id');
+      if (savedTeamId && teams.some(t => t.id === savedTeamId)) {
+        this.activeTeamId = savedTeamId;
+      } else if (this.currentUser?.teamId) {
         this.activeTeamId = this.currentUser.teamId;
       } else if (!this.activeTeamId && teams.length > 0) {
         this.activeTeamId = teams[0].id;
@@ -389,6 +410,9 @@ class MatchStore {
   async switchTeam(teamId: string) {
     this.pauseTimer();
     this.activeTeamId = teamId;
+    try {
+      localStorage.setItem('ffta_active_team_id', teamId);
+    } catch {}
     this.activeTeam = this.teamsList.find(t => t.id === teamId) || null;
     await this.loadMasterPlayers(teamId);
     await this.loadMatchesList(teamId);
