@@ -236,12 +236,31 @@ class MatchStore {
             createdAt: newSub.createdAt || newSub.created_at
           };
           if (!this.substitutions.some(s => s.id === formattedSub.id)) {
-            this.substitutions.unshift(formattedSub);
+            this.substitutions = [formattedSub, ...this.substitutions];
           }
+          // Synchronize active on-pitch players & active paket tag!
+          try {
+            const parsed = JSON.parse(formattedSub.playerNumbers);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              this.onPitchPlayers = parsed;
+              this.activePaketIndex = formattedSub.paketIndex ?? null;
+            }
+          } catch {}
         }
       } else if (event === 'substitution_deleted') {
-        if (payload?.subId) {
-          this.substitutions = this.substitutions.filter(s => s.id !== payload.subId);
+        const subId = payload?.subId || payload?.id || payload?.old?.id;
+        if (subId) {
+          this.substitutions = this.substitutions.filter(s => s.id !== subId);
+          if (this.substitutions.length > 0) {
+            const latest = this.substitutions[0];
+            try {
+              const parsed = JSON.parse(latest.playerNumbers);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                this.onPitchPlayers = parsed;
+                this.activePaketIndex = latest.paketIndex ?? null;
+              }
+            } catch {}
+          }
         }
       }
 
@@ -535,12 +554,20 @@ class MatchStore {
         if (!Array.isArray(res.substitutions)) res.substitutions = [];
       }
       this.data = res;
-      if (res.substitutions) {
+      if (res.substitutions && res.substitutions.length > 0) {
         this.substitutions = res.substitutions;
+        const latestSub = res.substitutions[0];
+        try {
+          const parsed = JSON.parse(latestSub.playerNumbers);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.onPitchPlayers = parsed;
+            this.activePaketIndex = latestSub.paketIndex ?? null;
+          }
+        } catch {}
       } else {
-        this.loadSubstitutions(mId);
+        await this.loadSubstitutions(mId);
       }
-      // Auto-populate 5 players on pitch if empty for ultra-fast futsal tagging
+      // Auto-populate 5 players on pitch if still empty for ultra-fast futsal tagging
       if (this.onPitchPlayers.length === 0) {
         const firstPaket = res.pakets?.[0];
         if (firstPaket) {
@@ -581,6 +608,16 @@ class MatchStore {
     try {
       const subs = await api.getSubstitutions(mId);
       this.substitutions = subs;
+      if (subs && subs.length > 0) {
+        const latestSub = subs[0];
+        try {
+          const parsed = JSON.parse(latestSub.playerNumbers);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.onPitchPlayers = parsed;
+            this.activePaketIndex = latestSub.paketIndex ?? null;
+          }
+        } catch {}
+      }
     } catch (err) {
       console.error('Failed to load substitutions:', err);
     }
@@ -659,6 +696,16 @@ class MatchStore {
     try {
       await api.deleteSubstitution(this.data.match.id, subId);
       this.substitutions = this.substitutions.filter(s => s.id !== subId);
+      if (this.substitutions.length > 0) {
+        const latest = this.substitutions[0];
+        try {
+          const parsed = JSON.parse(latest.playerNumbers);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.onPitchPlayers = parsed;
+            this.activePaketIndex = latest.paketIndex ?? null;
+          }
+        } catch {}
+      }
     } catch (err) {
       console.error('Failed to delete substitution:', err);
     }
