@@ -579,15 +579,16 @@ class LocalDatabase {
     const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
     const match = matches.find(m => m.match.id === matchId);
     if (match) {
-      match.pakets = pakets.map((pkt, idx) => ({
-        id: idx + 1,
+      const formatted = pakets.map((pkt, idx) => ({
+        id: (pkt as any).id || idx + 1,
         matchId,
         paketIndex: pkt.paketIndex,
         code: pkt.code,
         playerNumbers: pkt.playerNumbers
       }));
+      match.pakets = formatted;
       localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
-      return { success: true };
+      return formatted;
     }
     throw new Error('Match not found');
   }

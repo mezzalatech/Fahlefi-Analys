@@ -22,7 +22,7 @@
 
   let rawPlayers = $derived(matchStore.data?.players || []);
   let activePaket = $derived(
-    matchStore.data?.pakets.find((p) => p.paketIndex === matchStore.activePaketIndex)
+    matchStore.data?.pakets?.find((p) => p.paketIndex === matchStore.activePaketIndex)
   );
 
   function handleSort(key: SortKey) {

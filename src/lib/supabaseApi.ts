@@ -741,11 +741,19 @@ export const supabaseApi = {
       player_numbers: pkt.playerNumbers
     }));
 
-    const { error } = await supabase.from('lineup_pakets').insert(rows);
-    if (error) throw new Error(error.message);
+    if (rows.length > 0) {
+      const { error } = await supabase.from('lineup_pakets').insert(rows);
+      if (error) throw new Error(error.message);
+    }
 
     broadcastFutsalAction('pakets_saved', { matchId, pakets });
-    return { success: true };
+    return rows.map((r) => ({
+      id: r.id,
+      matchId: r.match_id,
+      paketIndex: r.paket_index,
+      code: r.code,
+      playerNumbers: r.player_numbers
+    }));
   },
 
   // Substitutions

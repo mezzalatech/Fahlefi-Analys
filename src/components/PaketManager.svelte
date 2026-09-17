@@ -221,8 +221,10 @@
       isImporting = true;
       importErrorMsg = null;
       const res = await api.importPaketsFromExcel(matchStore.data.match.id, importFile);
-      if (res.pakets) {
+      if (res.pakets && Array.isArray(res.pakets)) {
         matchStore.data.pakets = res.pakets;
+      } else {
+        await matchStore.loadMatch(matchStore.data.match.id);
       }
       importSuccessMsg = res.message || 'Paket rotasi berhasil diimpor!';
       setTimeout(() => {

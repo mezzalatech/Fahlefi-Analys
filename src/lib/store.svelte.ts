@@ -83,13 +83,13 @@ class MatchStore {
   }
 
   get scopedEvents(): MatchData['events'] {
-    if (!this.data) return [];
+    if (!this.data || !Array.isArray(this.data.events)) return [];
     if (this.teamScope === 'all') return this.data.events;
     return this.data.events.filter(e => !e.teamScope || e.teamScope === this.teamScope);
   }
 
   get scopedPakets(): MatchData['pakets'] {
-    if (!this.data) return [];
+    if (!this.data || !Array.isArray(this.data.pakets)) return [];
     if (this.teamScope === 'all') return this.data.pakets;
     return this.data.pakets.filter(p => !p.teamScope || p.teamScope === this.teamScope);
   }
@@ -110,7 +110,6 @@ class MatchStore {
     }
 
     initRealtimeSync(async (event, payload) => {
-      console.log('⚡ Realtime sync received:', event, payload);
       this.cloudStatus = 'connected';
 
       // 1. Master player updates
@@ -126,11 +125,29 @@ class MatchStore {
       // 2. Match updates
       if (event === 'match_updated' || event.includes('_matches')) {
         const mId = payload?.matchId || payload?.new?.id;
-        if (mId === this.activeMatchId) {
-          if (payload?.data && this.data) {
+        if (mId === this.activeMatchId && this.data) {
+          if (payload?.data) {
             Object.assign(this.data.match, payload.data);
-          } else {
-            await this.loadMatch(this.activeMatchId);
+          } else if (payload?.new) {
+            const n = payload.new;
+            if (n.name !== undefined) this.data.match.name = n.name;
+            if (n.competition !== undefined) this.data.match.competition = n.competition;
+            if (n.date !== undefined) this.data.match.date = n.date;
+            if (n.time !== undefined) this.data.match.time = n.time;
+            if (n.venue !== undefined) this.data.match.venue = n.venue;
+            if (n.home_team !== undefined) this.data.match.homeTeam = n.home_team;
+            if (n.away_team !== undefined) this.data.match.awayTeam = n.away_team;
+            if (n.home_score_1st !== undefined) this.data.match.homeScore1st = n.home_score_1st;
+            if (n.home_score_2nd !== undefined) this.data.match.homeScore2nd = n.home_score_2nd;
+            if (n.away_score_1st !== undefined) this.data.match.awayScore1st = n.away_score_1st;
+            if (n.away_score_2nd !== undefined) this.data.match.awayScore2nd = n.away_score_2nd;
+            if (n.home_fouls_1st !== undefined) this.data.match.homeFouls1st = n.home_fouls_1st;
+            if (n.home_fouls_2nd !== undefined) this.data.match.homeFouls2nd = n.home_fouls_2nd;
+            if (n.away_fouls_1st !== undefined) this.data.match.awayFouls1st = n.away_fouls_1st;
+            if (n.away_fouls_2nd !== undefined) this.data.match.awayFouls2nd = n.away_fouls_2nd;
+            if (n.period !== undefined) this.data.match.period = n.period;
+            if (n.timer_remaining !== undefined && !this.timerRunning) this.data.match.timerRemaining = n.timer_remaining;
+            if (n.timeouts !== undefined) this.data.match.timeouts = n.timeouts;
           }
         }
       }
@@ -138,13 +155,29 @@ class MatchStore {
       // 3. Player stats updates
       if (event === 'player_stats_updated' || event.includes('_players')) {
         const pId = payload?.playerId || payload?.new?.id;
-        const pData = payload?.data || payload?.new;
-        if (this.data && pId && pData) {
+        if (this.data && pId) {
           const p = this.data.players.find(x => x.id === pId);
           if (p) {
-            Object.assign(p, pData);
-          } else {
-            await this.loadMatch(this.activeMatchId);
+            if (payload?.data) {
+              Object.assign(p, payload.data);
+            } else if (payload?.new) {
+              const n = payload.new;
+              if (n.no !== undefined) p.no = n.no;
+              if (n.name !== undefined) p.name = n.name;
+              if (n.is_gk !== undefined) p.isGk = n.is_gk;
+              if (n.yellow_cards !== undefined) p.yellowCards = n.yellow_cards;
+              if (n.red_cards !== undefined) p.redCards = n.red_cards;
+              if (n.loss_1 !== undefined) p.loss1 = n.loss_1;
+              if (n.loss_2 !== undefined) p.loss2 = n.loss_2;
+              if (n.rec_1 !== undefined) p.rec1 = n.rec_1;
+              if (n.rec_2 !== undefined) p.rec2 = n.rec_2;
+              if (n.fl_1 !== undefined) p.fl1 = n.fl_1;
+              if (n.fl_2 !== undefined) p.fl2 = n.fl_2;
+              if (n.sh_1 !== undefined) p.sh1 = n.sh_1;
+              if (n.sh_2 !== undefined) p.sh2 = n.sh_2;
+              if (n.gl_1 !== undefined) p.gl1 = n.gl_1;
+              if (n.gl_2 !== undefined) p.gl2 = n.gl_2;
+            }
           }
         }
       }
@@ -204,8 +237,26 @@ class MatchStore {
 
       // 6. Pakets
       if (event === 'pakets_saved' || event.includes('_lineup_pakets')) {
-        if (this.data && (payload?.matchId === this.activeMatchId || payload?.new?.match_id === this.activeMatchId)) {
-          await this.loadMatch(this.activeMatchId);
+        const mId = payload?.matchId || payload?.new?.match_id;
+        if (this.data && mId === this.activeMatchId) {
+          if (payload?.pakets && Array.isArray(payload.pakets)) {
+            this.data.pakets = payload.pakets;
+          } else if (payload?.new) {
+            const n = payload.new;
+            const existing = this.data.pakets.find(x => x.id === n.id || x.paketIndex === n.paket_index);
+            if (existing) {
+              if (n.code !== undefined) existing.code = n.code;
+              if (n.player_numbers !== undefined) existing.playerNumbers = n.player_numbers;
+            } else {
+              this.data.pakets.push({
+                id: n.id,
+                matchId: n.match_id,
+                paketIndex: n.paket_index,
+                code: n.code,
+                playerNumbers: n.player_numbers
+              });
+            }
+          }
         }
       }
 
@@ -467,6 +518,12 @@ class MatchStore {
       this.loading = true;
       this.error = null;
       const res = await api.getMatch(mId);
+      if (res) {
+        if (!Array.isArray(res.players)) res.players = [];
+        if (!Array.isArray(res.events)) res.events = [];
+        if (!Array.isArray(res.pakets)) res.pakets = [];
+        if (!Array.isArray(res.substitutions)) res.substitutions = [];
+      }
       this.data = res;
       if (res.substitutions) {
         this.substitutions = res.substitutions;
@@ -521,7 +578,7 @@ class MatchStore {
 
   // Deploy coach's preset paket to active pitch
   async deployPaket(paketIndex: number) {
-    if (!this.data) return;
+    if (!this.data || !Array.isArray(this.data.pakets)) return;
     const pkt = this.data.pakets.find(p => p.paketIndex === paketIndex);
     if (pkt) {
       try {
@@ -550,7 +607,7 @@ class MatchStore {
     }
 
     // Check if current onPitchPlayers matches any preset paket
-    if (this.data) {
+    if (this.data && Array.isArray(this.data.pakets)) {
       const matchPkt = this.data.pakets.find(p => {
         try {
           const pNums: number[] = JSON.parse(p.playerNumbers);
@@ -892,14 +949,22 @@ class MatchStore {
   }
 
   // Pakets
-  async savePakets(newPakets: Array<{ paketIndex: number; code: string; playerNumbers: string; teamScope?: string }>) {
+  async savePakets(newPakets: Array<{ id?: number; paketIndex: number; code: string; playerNumbers: string; teamScope?: string }>) {
     if (!this.data) return;
-    const scopedPakets = newPakets.map(p => ({
-      ...p,
+    const scopedPakets = newPakets.map((p, idx) => ({
+      id: p.id || idx + 1,
+      matchId: this.data!.match.id,
+      paketIndex: p.paketIndex,
+      code: p.code,
+      playerNumbers: p.playerNumbers,
       teamScope: p.teamScope || this.teamScope
     }));
-    const saved = await api.savePakets(this.data.match.id, scopedPakets);
-    this.data.pakets = saved;
+    const res = await api.savePakets(this.data.match.id, scopedPakets);
+    if (Array.isArray(res)) {
+      this.data.pakets = res;
+    } else {
+      this.data.pakets = scopedPakets;
+    }
   }
 
   triggerGoalCelebration() {
