@@ -151,8 +151,9 @@ export const supabaseApi = {
   },
 
   async getUsers(teamId?: string): Promise<User[]> {
+    const localUsers = await localDb.getUsers();
     const supabase = getSupabase();
-    if (!supabase) return localDb.getUsers(teamId);
+    if (!supabase) return teamId ? localUsers.filter(u => u.teamId === teamId) : localUsers;
 
     try {
       const { data, error } = await supabase
@@ -161,15 +162,21 @@ export const supabaseApi = {
         .order('created_at', { ascending: true });
 
       if (!error && data) {
-        let list = data.map(u => ({
-          id: u.id,
-          username: u.username,
-          email: u.email,
-          name: u.name,
-          role: u.role,
-          avatarUrl: u.avatar_url,
-          teamId: u.team_id || (u.username.includes('nazara') ? 'team_nazara' : (u.role === 'superadmin' ? undefined : 'team_paser'))
-        }));
+        let list = data.map(u => {
+          const localMatch = localUsers.find(lu => lu.id === u.id || lu.username.toLowerCase() === u.username.toLowerCase());
+          const resolvedTeamId = u.team_id || localMatch?.teamId || (u.username.includes('nazara') ? 'team_nazara' : (u.role === 'superadmin' ? undefined : 'team_paser'));
+          const resolvedTeamName = localMatch?.teamName || (resolvedTeamId === 'team_nazara' ? 'Nazara FC' : 'Porprov Paser');
+          return {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            name: u.name,
+            role: u.role,
+            avatarUrl: u.avatar_url,
+            teamId: u.role === 'superadmin' ? undefined : resolvedTeamId,
+            teamName: u.role === 'superadmin' ? 'Platform Owner' : resolvedTeamName
+          };
+        });
 
         if (teamId) {
           list = list.filter(u => u.teamId === teamId);
@@ -177,70 +184,29 @@ export const supabaseApi = {
         return list;
       }
     } catch {}
-    return localDb.getUsers(teamId);
+    return teamId ? localUsers.filter(u => u.teamId === teamId) : localUsers;
   },
 
   async createUser(userData: { username: string; email?: string; name: string; role: string; password?: string; teamId?: string }): Promise<User> {
+    // Always persist to localDb
+    const localCreated = await localDb.createUser(userData);
     const supabase = getSupabase();
-    if (!supabase) return localDb.createUser(userData);
+    if (!supabase) return localCreated;
 
     const cleanUsername = userData.username.trim().toLowerCase();
-    const id = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const row = {
+    const id = localCreated.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const row: any = {
       id,
       username: cleanUsername,
       email: userData.email || `${cleanUsername}@fahlefi.com`,
       name: userData.name.trim(),
       role: userData.role || 'player',
       password_hash: userData.password || `${cleanUsername}123`,
-      avatar_url: userData.role === 'coach' ? '/icon.png' : '',
-      team_id: userData.teamId || (userData.role === 'superadmin' ? null : 'team_paser')
+      avatar_url: userData.role === 'coach' ? '/icon.png' : ''
     };
 
     try {
-      const { data, error } = await supabase.from('users').insert(row).select().single();
-      if (!error && data) {
-        const user: User = {
-          id: data.id,
-          username: data.username,
-          email: data.email,
-          name: data.name,
-          role: data.role,
-          avatarUrl: data.avatar_url,
-          teamId: data.team_id
-        };
-        broadcastFutsalAction('user_created', user);
-        return user;
-      }
-    } catch {}
-    return localDb.createUser(userData);
-  },
-
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }): Promise<User> {
-    const supabase = getSupabase();
-    if (!supabase) return localDb.updateUser(id, userData);
-
-    const updates: any = {};
-    if (userData.username) updates.username = userData.username.trim().toLowerCase();
-    if (userData.email) updates.email = userData.email.trim();
-    if (userData.name) updates.name = userData.name.trim();
-    if (userData.role) updates.role = userData.role;
-    if (userData.password) updates.password_hash = userData.password;
-    if (userData.teamId !== undefined) updates.team_id = userData.teamId;
-
-    try {
-      let { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
-      
-      // If error (e.g. 400 Bad Request because team_id column does not exist on remote Supabase yet)
-      if (error && updates.team_id !== undefined) {
-        const { team_id, ...updatesWithoutTeam } = updates;
-        const retry = await supabase.from('users').update(updatesWithoutTeam).eq('id', id).select().single();
-        if (!retry.error && retry.data) {
-          data = retry.data;
-          error = null;
-        }
-      }
-
+      const { data, error } = await supabase.from('users').insert({ ...row, team_id: userData.teamId }).select().single();
       if (!error && data) {
         const user: User = {
           id: data.id,
@@ -251,12 +217,52 @@ export const supabaseApi = {
           avatarUrl: data.avatar_url,
           teamId: data.team_id || userData.teamId
         };
-        broadcastFutsalAction('user_updated', user);
-        try { localDb.updateUser(id, userData); } catch {}
+        broadcastFutsalAction('user_created', user);
         return user;
+      } else {
+        // Retry without team_id if column missing on remote
+        const retry = await supabase.from('users').insert(row).select().single();
+        if (!retry.error && retry.data) {
+          broadcastFutsalAction('user_created', localCreated);
+        }
       }
     } catch {}
-    return localDb.updateUser(id, userData);
+    return localCreated;
+  },
+
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }): Promise<User> {
+    // Always persist to localDb first so changes are immediate
+    let localUpdated: User;
+    try {
+      localUpdated = await localDb.updateUser(id, userData);
+    } catch {
+      localUpdated = {
+        id,
+        username: userData.username || 'user',
+        name: userData.name || 'User',
+        role: (userData.role as any) || 'coach',
+        teamId: userData.teamId
+      };
+    }
+
+    const supabase = getSupabase();
+    if (!supabase) return localUpdated;
+
+    const updates: any = {};
+    if (userData.username) updates.username = userData.username.trim().toLowerCase();
+    if (userData.email) updates.email = userData.email.trim();
+    if (userData.name) updates.name = userData.name.trim();
+    if (userData.role) updates.role = userData.role;
+    if (userData.password) updates.password_hash = userData.password;
+
+    try {
+      // First try update without team_id if remote table doesn't have it, or with team_id
+      const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
+      if (!error && data) {
+        broadcastFutsalAction('user_updated', localUpdated);
+      }
+    } catch {}
+    return localUpdated;
   },
 
   async deleteUser(id: string): Promise<any> {
