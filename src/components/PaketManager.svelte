@@ -332,7 +332,7 @@
 
   <!-- Pakets Grid -->
   <div class="pakets-grid">
-    {#each pakets as pkt (pkt.id)}
+    {#each pakets as pkt, pktIdx (pkt.id ? `pkt_${pkt.id}` : `pkt_idx_${pktIdx}`)}
       {@const nums = getPaketNumbers(pkt)}
       {@const isActive = matchStore.activePaketIndex === pkt.paketIndex}
       

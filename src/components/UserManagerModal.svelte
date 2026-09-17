@@ -279,7 +279,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each filteredUsers as user (user.id)}
+            {#each filteredUsers as user, uIdx (user.id ? `usr_${user.id}` : `usr_idx_${uIdx}`)}
               {@const roleInfo = getRoleInfo(user.role)}
               {@const isSelf = matchStore.currentUser?.id === user.id || matchStore.currentUser?.username === user.username}
               <tr class={isSelf ? 'row-self' : ''}>

@@ -908,7 +908,7 @@
         </thead>
 
         <tbody>
-          {#each allRows as item (item.no)}
+          {#each allRows as item, rIdx (`row_${item.no}_${rIdx}`)}
             {@const p = item.player}
             {@const isOnCourt = matchStore.onPitchPlayers.includes(item.no)}
             <tr class="tr-player-data {isOnCourt ? 'row-on-court' : ''} {recentlyUpdatedPlayerNo === item.no ? 'row-just-tagged' : ''}">
@@ -1061,7 +1061,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each chronologicalSubs as sub, sIdx (sub.id)}
+              {#each chronologicalSubs as sub, sIdx (sub.id ? `sub_${sub.id}` : `sub_idx_${sIdx}`)}
                 {@const pNums = parseSubNumbers(sub.playerNumbers)}
                 <tr class="tr-rot-row {sub.paketIndex ? 'row-rot-paket' : 'row-rot-custom'}">
                   <td class="text-center font-bold">{sIdx + 1}</td>

@@ -427,9 +427,38 @@ export const MONCONGBULO_SERI_2_DATA: SeriesPresentationData = {
 };
 
 /**
- * Extracts 4-5 outfield player names from pakets or players on the pitch
+ * Smart Player Callname / Nickname Helper
+ * Uses dedicated nickname if available, or strips generic Indonesian name prefixes (Muhammad, Moch, etc.)
  */
-function getOutfieldPaketNames(d: MatchData): string[] {
+export function getSmartPlayerCallname(fullName: string, nickname?: string): string {
+  if (nickname && nickname.trim()) {
+    return nickname.trim();
+  }
+  const cleanName = (fullName || '').trim();
+  if (!cleanName) return '';
+
+  const skipWords = new Set([
+    'muhammad', 'mochammad', 'moch', 'muh', 'mohammad', 'm.', 'm', 'md', 
+    'ahmad', 'achmad', 'nur', 'ali'
+  ]);
+
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0];
+
+  for (let i = 0; i < words.length; i++) {
+    const cleanWord = words[i].replace(/[^a-zA-Z0-9]/g, '');
+    if (cleanWord.length > 1 && !skipWords.has(cleanWord.toLowerCase())) {
+      return cleanWord;
+    }
+  }
+
+  return words[1] || words[0];
+}
+
+/**
+ * Extracts 4-5 outfield player nicknames from pakets or players on the pitch
+ */
+function getOutfieldPaketNames(d: MatchData, masterPlayers: any[] = []): string[] {
   // Check if there are defined pakets
   if (d.pakets && d.pakets.length > 0) {
     try {
@@ -438,7 +467,11 @@ function getOutfieldPaketNames(d: MatchData): string[] {
       if (numbers.length > 0) {
         return numbers.map(num => {
           const pl = d.players.find(x => x.no === num);
-          return pl ? (pl.name.split(' ')[0] || pl.name) : `#${num}`;
+          const mp = masterPlayers.find(x => x.noPunggung === num);
+          const nick = mp?.nickname || '';
+          const name = pl?.name || mp?.name || '';
+          const smart = getSmartPlayerCallname(name, nick);
+          return smart || `#${num}`;
         });
       }
     } catch {}
@@ -447,7 +480,12 @@ function getOutfieldPaketNames(d: MatchData): string[] {
   // Fallback: pick top 4 outfield players from team sheet
   const outfield = (d.players || []).filter(p => !p.isGk && (p.name || p.no)).slice(0, 4);
   if (outfield.length > 0) {
-    return outfield.map(p => p.name.split(' ')[0] || `P#${p.no}`);
+    return outfield.map(p => {
+      const mp = masterPlayers.find(x => x.noPunggung === p.no);
+      const nick = mp?.nickname || '';
+      const smart = getSmartPlayerCallname(p.name, nick);
+      return smart || `P#${p.no}`;
+    });
   }
   return ['Anchor', 'Flank Ki', 'Flank Ka', 'Pivot'];
 }
@@ -457,8 +495,18 @@ function getOutfieldPaketNames(d: MatchData): string[] {
  */
 export async function buildSeriesDataFromWorkspaceAsync(
   matchesList: any[],
-  currentMatchData?: MatchData | null
+  currentMatchData?: MatchData | null,
+  masterPlayersInput?: any[]
 ): Promise<SeriesPresentationData> {
+  let masterPlayers: any[] = masterPlayersInput || [];
+  if (!masterPlayers || masterPlayers.length === 0) {
+    try {
+      masterPlayers = await api.getMasterPlayers();
+    } catch {
+      masterPlayers = [];
+    }
+  }
+
   // If no matches list or only current match
   const matchesToProcess = (matchesList && matchesList.length > 0) 
     ? matchesList 
@@ -591,7 +639,7 @@ export async function buildSeriesDataFromWorkspaceAsync(
   // Extract tactical breakdown per match
   const tacticalMatches: MatchTacticalDetail[] = fullMatchesData.map((d, idx) => {
     const m = d.match;
-    const defaultPaket = getOutfieldPaketNames(d);
+    const defaultPaket = getOutfieldPaketNames(d, masterPlayers);
     
     // 1. Build Goals List (synthesize from players & events)
     const goalsList: MatchTacticalDetail['goals'] = [];
@@ -600,6 +648,7 @@ export async function buildSeriesDataFromWorkspaceAsync(
     // Add recorded events first
     recordedGoalEvents.forEach(e => {
       const scorerPlayer = d.players?.find(p => p.no === e.playerNo);
+      const mpScorer = masterPlayers.find(mp => mp.noPunggung === e.playerNo);
       let assistName = '';
       if (e.note && e.note.toLowerCase().includes('assist:')) {
         const ma = e.note.match(/assist:\s*([^,|]+)/i);
@@ -609,14 +658,28 @@ export async function buildSeriesDataFromWorkspaceAsync(
       let paketPlayers = defaultPaket;
       if (e.note && e.note.toLowerCase().includes('paket:')) {
         const mp = e.note.match(/paket:\s*\[?([^\]]+)\]?/i);
-        if (mp) paketPlayers = mp[1].split(',').map(s => s.trim());
+        if (mp) {
+          const raw = mp[1].split(',').map(s => s.trim());
+          paketPlayers = raw.map(token => {
+            const numMatch = token.match(/#?(\d+)/);
+            if (numMatch) {
+              const num = parseInt(numMatch[1]);
+              const pl = d.players.find(x => x.no === num);
+              const mpP = masterPlayers.find(x => x.noPunggung === num);
+              return getSmartPlayerCallname(pl?.name || mpP?.name || '', mpP?.nickname) || token;
+            }
+            const pl = d.players.find(x => x.name.toLowerCase() === token.toLowerCase());
+            const mpP = pl ? masterPlayers.find(x => x.noPunggung === pl.no) : masterPlayers.find(x => x.name.toLowerCase().includes(token.toLowerCase()));
+            return getSmartPlayerCallname(pl?.name || token, mpP?.nickname);
+          });
+        }
       }
 
       goalsList.push({
         id: e.id,
         half: e.half || 1,
         minute: e.timeStr || '-',
-        scorer: scorerPlayer?.name || (e.playerNo ? `No #${e.playerNo}` : 'Pencetak Gol'),
+        scorer: scorerPlayer?.name || mpScorer?.name || (e.playerNo ? `No #${e.playerNo}` : 'Pencetak Gol'),
         assist: assistName,
         process: e.note?.split('|')[0]?.trim() || 'Open Play Attack',
         paketPlayers
@@ -660,7 +723,21 @@ export async function buildSeriesDataFromWorkspaceAsync(
       let paketPlayers = defaultPaket;
       if (e.note && e.note.toLowerCase().includes('paket:')) {
         const mp = e.note.match(/paket:\s*\[?([^\]]+)\]?/i);
-        if (mp) paketPlayers = mp[1].split(',').map(s => s.trim());
+        if (mp) {
+          const raw = mp[1].split(',').map(s => s.trim());
+          paketPlayers = raw.map(token => {
+            const numMatch = token.match(/#?(\d+)/);
+            if (numMatch) {
+              const num = parseInt(numMatch[1]);
+              const pl = d.players.find(x => x.no === num);
+              const mpP = masterPlayers.find(x => x.noPunggung === num);
+              return getSmartPlayerCallname(pl?.name || mpP?.name || '', mpP?.nickname) || token;
+            }
+            const pl = d.players.find(x => x.name.toLowerCase() === token.toLowerCase());
+            const mpP = pl ? masterPlayers.find(x => x.noPunggung === pl.no) : masterPlayers.find(x => x.name.toLowerCase().includes(token.toLowerCase()));
+            return getSmartPlayerCallname(pl?.name || token, mpP?.nickname);
+          });
+        }
       }
       concededList.push({
         id: e.id,

@@ -4,7 +4,8 @@
   import { 
     MONCONGBULO_SERI_2_DATA, 
     buildSeriesDataFromWorkspaceAsync,
-    importMoncongbuloMatchesIntoApp 
+    importMoncongbuloMatchesIntoApp,
+    getSmartPlayerCallname
   } from '../lib/seriesData';
   import { 
     generatePptx, 
@@ -59,7 +60,11 @@
   async function refreshLiveWorkspaceData() {
     isLoadingData = true;
     try {
-      liveSeriesData = await buildSeriesDataFromWorkspaceAsync(matchStore.matchesList, matchStore.data);
+      liveSeriesData = await buildSeriesDataFromWorkspaceAsync(
+        matchStore.matchesList, 
+        matchStore.data,
+        matchStore.masterPlayers
+      );
     } catch (err) {
       console.error('Error compiling workspace series data:', err);
     } finally {
@@ -625,8 +630,8 @@
                         <span class="lineup-lbl">Paket Outfield di Lapangan:</span>
                         <div class="lineup-pills">
                           {#if g.paketPlayers && g.paketPlayers.length > 0}
-                            {#each g.paketPlayers as player}
-                              <span class="p-pill">{player}</span>
+                            {#each g.paketPlayers as player, pIdx (`${player}_${pIdx}`)}
+                              <span class="p-pill">{getSmartPlayerCallname(player)}</span>
                             {/each}
                           {:else}
                             <span class="text-muted text-xs">Standard Lineup</span>
@@ -671,8 +676,8 @@
                         <span class="lineup-lbl">Paket Pemain Bertahan:</span>
                         <div class="lineup-pills">
                           {#if c.paketPlayers && c.paketPlayers.length > 0}
-                            {#each c.paketPlayers as player}
-                              <span class="p-pill p-pill-con">{player}</span>
+                            {#each c.paketPlayers as player, pIdx (`${player}_${pIdx}`)}
+                              <span class="p-pill p-pill-con">{getSmartPlayerCallname(player)}</span>
                             {/each}
                           {:else}
                             <span class="text-muted text-xs">Standard Lineup</span>

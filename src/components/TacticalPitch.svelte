@@ -148,7 +148,7 @@
       <img src="/lapangan.png" alt="Lapangan Futsal" class="court-bg-img" />
 
       <!-- Rendered Events Markers -->
-      {#each filteredEvents as evt (evt.id)}
+      {#each filteredEvents as evt, evtIdx (evt.id ? `evt_${evt.id}` : `evt_idx_${evtIdx}`)}
         <div 
           class="pitch-marker {evt.outcome === 'goal' ? 'is-goal' : ''}" 
           style="left: {(evt.x / 800) * 100}%; top: {(evt.y / 480) * 100}%; --marker-color: {getMarkerColor(evt)}"

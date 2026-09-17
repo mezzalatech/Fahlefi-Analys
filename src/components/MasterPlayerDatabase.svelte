@@ -539,7 +539,7 @@
             </td>
           </tr>
         {:else}
-          {#each filteredPlayers as p (p.id)}
+          {#each filteredPlayers as p, pIdx (p.id ? `mp_${p.id}` : `mp_idx_${pIdx}`)}
             {@const posBadge = getPositionBadge(p.position)}
             <tr class="player-master-row">
               <!-- Frozen Column 1: No Punggung -->

@@ -370,7 +370,7 @@
       </thead>
 
       <tbody>
-        {#each displayedPlayers as player (player.id)}
+        {#each displayedPlayers as player, plIdx (player.id ? `pl_${player.id}` : `pl_idx_${plIdx}`)}
           <tr class="player-row {player.isGk ? 'is-gk-row' : ''}">
             <!-- Frozen Column 1: No -->
             <td class="td-sticky td-no">
