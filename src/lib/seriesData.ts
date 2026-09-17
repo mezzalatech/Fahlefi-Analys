@@ -622,8 +622,22 @@ export async function buildSeriesDataFromWorkspaceAsync(
         if (note.toLowerCase().includes('assist:')) {
           const matchAssist = note.match(/assist:\s*([^,|]+)/i);
           if (matchAssist && matchAssist[1]) {
-            const assistName = matchAssist[1].trim();
-            const foundP = Object.values(playerMap).find(pl => pl.name.toLowerCase().includes(assistName.toLowerCase()));
+            const rawAssist = matchAssist[1].trim();
+            const numMatch = rawAssist.match(/#?(\d+)/);
+            let foundP: PlayerStatRow | undefined;
+            if (numMatch) {
+              const num = parseInt(numMatch[1]);
+              foundP = playerMap[num] || Object.values(playerMap).find(pl => pl.no === num);
+            }
+            if (!foundP) {
+              foundP = Object.values(playerMap).find(pl => {
+                const plName = pl.name.toLowerCase();
+                const raw = rawAssist.toLowerCase();
+                return plName.includes(raw) || 
+                       raw.includes(plName) ||
+                       getSmartPlayerCallname(pl.name).toLowerCase() === raw;
+              });
+            }
             if (foundP) {
               foundP.assistsPerMatch[matchNo] = (foundP.assistsPerMatch[matchNo] || 0) + 1;
               foundP.totalAssists += 1;

@@ -228,6 +228,59 @@
     return '';
   }
 
+  // Goal & Assist Quick Fast Modal State
+  let goalAssistModalEvent = $state<any | null>(null);
+  let goalAssistSelectedNo = $state<number | null>(null);
+  let goalAssistSelectedProcess = $state<string>('Counter Attack');
+  let goalAssistCustomNote = $state<string>('');
+
+  function openGoalAssistDialog(evt: any) {
+    goalAssistModalEvent = evt;
+    goalAssistSelectedNo = null;
+    goalAssistSelectedProcess = 'Counter Attack';
+    goalAssistCustomNote = '';
+    
+    if (evt.note) {
+      const ma = evt.note.match(/assist:\s*([^,|]+)/i);
+      if (ma) {
+        const assistStr = ma[1].trim();
+        const numMatch = assistStr.match(/#?(\d+)/);
+        if (numMatch) {
+          goalAssistSelectedNo = parseInt(numMatch[1]);
+        } else {
+          const found = players.find(p => p.name.toLowerCase().includes(assistStr.toLowerCase()));
+          if (found) goalAssistSelectedNo = found.no;
+        }
+      }
+      const proc = evt.note.split('|')[0]?.trim();
+      if (proc && !proc.toLowerCase().startsWith('shot')) {
+        goalAssistSelectedProcess = proc;
+      }
+    }
+  }
+
+  async function saveGoalAssist() {
+    if (!goalAssistModalEvent) return;
+    const evtId = goalAssistModalEvent.id;
+    let assistName = '';
+    if (goalAssistSelectedNo) {
+      assistName = getPlayerShortName(goalAssistSelectedNo);
+    }
+
+    const outfieldOnPitch = (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5])
+      .map(n => getPlayerShortName(n))
+      .filter(Boolean);
+
+    const processName = goalAssistSelectedProcess || 'Counter Attack';
+    const updatedNote = `${processName}${assistName ? ` | Assist: ${assistName}` : ''}${outfieldOnPitch.length > 0 ? ` | Paket: [${outfieldOnPitch.join(', ')}]` : ''}${goalAssistCustomNote ? ` | ${goalAssistCustomNote}` : ''}`;
+
+    await matchStore.updatePitchEvent(evtId, {
+      note: updatedNote
+    });
+
+    goalAssistModalEvent = null;
+  }
+
   function isPlayerGk(pNo: number): boolean {
     const pObj = players.find(x => x.no === pNo);
     const masterP = matchStore.masterPlayers.find(mp => mp.noPunggung === pNo);
@@ -414,6 +467,10 @@
         eventId: evt ? evt.id : `sh_t_${Date.now()}`,
         playerNo
       });
+
+      if (outcome === 'goal') {
+        openGoalAssistDialog(evt || { id: `sh_t_${Date.now()}`, playerNo, half, timeStr: matchStore.formattedTime, note: `Shot Tim (goal)${playerNo ? ` oleh #${playerNo}` : ''}` });
+      }
     } else if (category === 'shot_lawan') {
       const outcome = activeShotLawanOutcome;
       const evt = await matchStore.addPitchEvent({
@@ -1135,6 +1192,17 @@
             </div>
           </div>
           <div class="hud-notif-actions">
+            {#if tagNotification.type === 'goal' && tagNotification.eventId}
+              {@const goalEvt = events.find(e => e.id === tagNotification.eventId)}
+              <button 
+                type="button" 
+                class="btn-hud-assist" 
+                onclick={() => openGoalAssistDialog(goalEvt || { id: tagNotification.eventId, playerNo: tagNotification.playerNo, timeStr: tagNotification.timeStr })} 
+                title="Input Pemberi Assist & Skema Serangan Gol">
+                <Zap size={13} />
+                <span>+ Assist & Skema</span>
+              </button>
+            {/if}
             <button type="button" class="btn-hud-undo" onclick={undoLastTag} title="Batalkan aksi ini (revert statistik Matrix & Skor)">
               <Undo2 size={13} />
               <span>Batalkan</span>
@@ -1784,6 +1852,7 @@
                 <th>5 PEMAIN DI LAPANGAN</th>
                 <th style="width: 105px;" class="text-center">TIPE</th>
                 <th>KETERANGAN</th>
+                <th style="width: 45px;" class="text-center no-print">AKSI</th>
               </tr>
             </thead>
             <tbody>
@@ -1818,6 +1887,15 @@
                     </span>
                   </td>
                   <td class="td-rot-note">{sub.note || '-'}</td>
+                  <td class="text-center no-print">
+                    <button 
+                      type="button" 
+                      class="btn-del-rot" 
+                      onclick={() => matchStore.deleteSubstitution(sub.id)} 
+                      title="Hapus catatan rotasi ini (permanen & tidak masuk laporan)">
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
                 </tr>
               {/each}
             </tbody>
@@ -1825,6 +1903,136 @@
         </div>
       {/if}
     </div>
+
+    <!-- 4.8. MODAL CEPAT INPUT ASSIST & SKEMA GOL TIM KITA -->
+    {#if goalAssistModalEvent}
+      {@const scorerNo = goalAssistModalEvent.playerNo}
+      {@const scorerName = scorerNo ? getPlayerShortName(scorerNo) : 'Pencetak Gol'}
+      <div class="goal-assist-modal-overlay no-print" onclick={() => (goalAssistModalEvent = null)} role="presentation">
+        <div class="goal-assist-dialog" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1">
+          <div class="ga-header">
+            <div class="ga-title-wrap">
+              <span class="ga-icon">⚽</span>
+              <div>
+                <h4 class="ga-title">INPUT ASSIST & SKEMA GOL</h4>
+                <p class="ga-subtitle">{goalAssistModalEvent.half === 1 ? '1ºH Babak 1' : '2ºH Babak 2'} • Waktu {goalAssistModalEvent.timeStr || '-'}</p>
+              </div>
+            </div>
+            <button type="button" class="btn-ga-close" onclick={() => (goalAssistModalEvent = null)}>
+              <X size={16} />
+            </button>
+          </div>
+
+          <div class="ga-body">
+            <!-- Scorer Info Banner -->
+            <div class="ga-scorer-card">
+              <span class="lbl-scorer">Pencetak Gol (Scorer):</span>
+              <div class="val-scorer">
+                <strong class="sc-badge">#{scorerNo || '?'}</strong>
+                <span class="sc-name">{scorerName}</span>
+              </div>
+            </div>
+
+            <!-- Section 1: Assist Provider (1-Tap Selection) -->
+            <div class="ga-section">
+              <div class="ga-section-header-flex">
+                <label class="ga-section-label" for="sel-bench-assist">
+                  <span>Pemberi Assist (Klik 1-Tap):</span>
+                  <span class="ga-label-hint">Pemain On-Pitch</span>
+                </label>
+              </div>
+              <div class="ga-assist-pills">
+                <button 
+                  type="button" 
+                  class="btn-assist-chip chip-none {goalAssistSelectedNo === null ? 'chip-selected' : ''}" 
+                  onclick={() => (goalAssistSelectedNo = null)}>
+                  🚫 Tanpa Assist / Solo
+                </button>
+                {#each (matchStore.onPitchPlayers.length > 0 ? matchStore.onPitchPlayers : [1, 2, 3, 4, 5]) as pNo}
+                  {#if pNo !== scorerNo}
+                    {@const pName = getPlayerShortName(pNo)}
+                    <button 
+                      type="button" 
+                      class="btn-assist-chip {goalAssistSelectedNo === pNo ? 'chip-selected' : ''}" 
+                      onclick={() => (goalAssistSelectedNo = pNo)}>
+                      <span class="chip-no">#{pNo}</span>
+                      <span class="chip-name">{pName}</span>
+                    </button>
+                  {/if}
+                {/each}
+              </div>
+
+              <!-- Other Squad Players Dropdown if assist was from bench sub -->
+              <div class="ga-other-assist">
+                <label for="sel-bench-assist" class="lbl-other-ast">Atau pilih dari pemain skuad / cadangan:</label>
+                <select id="sel-bench-assist" class="sel-other-ast" bind:value={goalAssistSelectedNo}>
+                  <option value={null}>-- Tanpa Assist / Solo --</option>
+                  {#each allRows as item}
+                    {#if item.player && item.no !== scorerNo}
+                      <option value={item.no}>#{item.no} - {item.player.name}</option>
+                    {/if}
+                  {/each}
+                </select>
+              </div>
+            </div>
+
+            <!-- Section 2: Tactical Process / Skema Serangan (1-Tap Selection) -->
+            <div class="ga-section">
+              <div class="ga-section-header-flex">
+                <span class="ga-section-label">
+                  <span>Skema / Proses Serangan:</span>
+                  <span class="ga-label-hint">Otomatis masuk ke laporan seri PPTX</span>
+                </span>
+              </div>
+              <div class="ga-process-grid">
+                {#each [
+                  'Counter Attack',
+                  'At Positional',
+                  'Fast Attack',
+                  'Free Kick',
+                  'Corner Kick',
+                  'Kick In Dekat',
+                  'Anti Pressing',
+                  'Power Play',
+                  'Def Power Play',
+                  'Penalty / 10m',
+                  'Rebound'
+                ] as proc}
+                  <button 
+                    type="button" 
+                    class="btn-proc-chip {goalAssistSelectedProcess === proc ? 'proc-selected' : ''}" 
+                    onclick={() => (goalAssistSelectedProcess = proc)}>
+                    {proc}
+                  </button>
+                {/each}
+              </div>
+            </div>
+
+            <!-- Section 3: Optional Additional Note -->
+            <div class="ga-section">
+              <label class="ga-section-label" for="ga-note-inp">
+                <span>Catatan Tambahan (Opsional):</span>
+              </label>
+              <input 
+                id="ga-note-inp"
+                class="ga-note-input" 
+                bind:value={goalAssistCustomNote} 
+                placeholder="Contoh: chip shot melewati kiper, umpan silang mendatar..." />
+            </div>
+          </div>
+
+          <div class="ga-footer">
+            <button type="button" class="btn-ga-cancel" onclick={() => (goalAssistModalEvent = null)}>
+              Tutup
+            </button>
+            <button type="button" class="btn-ga-save" onclick={saveGoalAssist}>
+              <CheckCircle2 size={16} />
+              <span>Simpan Assist & Skema</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <!-- 5. MODAL EDIT & HAPUS TAG (INTERAKTIF & TERINTEGRASI PEMAIN) -->
     {#if editingEvent}
@@ -2829,6 +3037,365 @@
     font-size: 7.5px;
     color: #334155;
     font-style: italic;
+  }
+
+  .btn-del-rot {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 4px;
+    padding: 2px 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .btn-del-rot:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .btn-hud-assist {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    font-size: 0.72rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+    animation: pulse 1.5s infinite;
+  }
+
+  .btn-hud-assist:hover {
+    background: #059669;
+  }
+
+  /* ==========================================================
+     FAST GOAL & ASSIST DIALOG STYLES
+     ========================================================== */
+  .goal-assist-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(8, 14, 26, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+  }
+
+  .goal-assist-dialog {
+    background: #101c2e;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    color: #f8fafc;
+    overflow: hidden;
+    animation: fadeInScale 0.2s ease-out;
+  }
+
+  .ga-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: #16263d;
+    border-bottom: 1px solid #1e3a5f;
+  }
+
+  .ga-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ga-icon {
+    font-size: 1.5rem;
+  }
+
+  .ga-title {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0;
+    color: #38bdf8;
+    letter-spacing: 0.03em;
+  }
+
+  .ga-subtitle {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .btn-ga-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+
+  .btn-ga-close:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .ga-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+
+  .ga-scorer-card {
+    background: #0d1522;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .lbl-scorer {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  .val-scorer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sc-badge {
+    background: #0284c7;
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: monospace;
+  }
+
+  .sc-name {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #f8fafc;
+  }
+
+  .ga-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ga-section-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ga-section-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .ga-label-hint {
+    font-size: 0.72rem;
+    color: #38bdf8;
+    font-weight: normal;
+  }
+
+  .ga-assist-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .btn-assist-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #142236;
+    border: 1px solid #1e3a5f;
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-assist-chip:hover {
+    border-color: #38bdf8;
+    background: #1b2f4a;
+  }
+
+  .btn-assist-chip.chip-selected {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  }
+
+  .chip-no {
+    color: #7dd3fc;
+    font-weight: 800;
+  }
+
+  .chip-selected .chip-no {
+    color: #ffffff;
+  }
+
+  .btn-assist-chip.chip-none {
+    background: #1e293b;
+    border-style: dashed;
+    color: #94a3b8;
+  }
+
+  .btn-assist-chip.chip-none.chip-selected {
+    background: #475569;
+    border-color: #94a3b8;
+    color: #ffffff;
+  }
+
+  .ga-other-assist {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .lbl-other-ast {
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+
+  .sel-other-ast {
+    background: #0b1320;
+    border: 1px solid #1e3a5f;
+    border-radius: 5px;
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    padding: 5px 8px;
+    outline: none;
+  }
+
+  .ga-process-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .btn-proc-chip {
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: #142236;
+    border: 1px solid #1e3a5f;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+
+  .btn-proc-chip:hover {
+    border-color: #38bdf8;
+    background: #1b2f4a;
+    color: #ffffff;
+  }
+
+  .btn-proc-chip.proc-selected {
+    background: #059669;
+    border-color: #34d399;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+  }
+
+  .ga-note-input {
+    background: #0b1320;
+    border: 1px solid #1e3a5f;
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: #f8fafc;
+    font-size: 0.8rem;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ga-note-input:focus {
+    border-color: #38bdf8;
+  }
+
+  .ga-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    padding: 0.85rem 1.25rem;
+    background: #142236;
+    border-top: 1px solid #1e3a5f;
+  }
+
+  .btn-ga-cancel {
+    padding: 7px 14px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-ga-cancel:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+  }
+
+  .btn-ga-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 6px;
+    background: #0284c7;
+    border: 1px solid #38bdf8;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-ga-save:hover {
+    background: #0369a1;
   }
 
   /* Player rows on-court highlights */
