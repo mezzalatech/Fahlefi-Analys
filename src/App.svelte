@@ -14,6 +14,7 @@
   import AnalyticsModal from './components/AnalyticsModal.svelte';
   import MatchConfigModal from './components/MatchConfigModal.svelte';
   import CloudSyncModal from './components/CloudSyncModal.svelte';
+  import SeriesPresentationView from './components/SeriesPresentationView.svelte';
   import { 
     FileText, 
     Table, 
@@ -34,10 +35,11 @@
     RefreshCw,
     Share2,
     Smartphone,
+    Presentation,
     X
   } from 'lucide-svelte';
 
-  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db'>('sheet');
+  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation'>('sheet');
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
   let showIpadInstallModal = $state<boolean>(false);
@@ -254,6 +256,14 @@
           <Database size={14} />
           <span>Database Master</span>
         </button>
+
+        <button 
+          class="tab-btn tab-btn-highlight {currentView === 'presentation' ? 'active' : ''}" 
+          onclick={() => (currentView = 'presentation')}
+          title="Buka Deck Presentasi Evaluasi Seri & Export PowerPoint (.pptx)">
+          <Presentation size={14} class="text-emerald" />
+          <span>Presentasi Seri (PPTX)</span>
+        </button>
       </nav>
 
       <!-- Match Timer & Half Controller in Toolbar (Clean & Distinct) -->
@@ -307,6 +317,8 @@
           <SubstitutionTimeline />
         {:else if currentView === 'master_db'}
           <MasterPlayerDatabase />
+        {:else if currentView === 'presentation'}
+          <SeriesPresentationView />
         {/if}
       </div>
     {/if}
