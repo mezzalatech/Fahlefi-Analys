@@ -1031,75 +1031,6 @@
       </table>
     </div>
 
-    <!-- 3.5. LOG ROTASI & PERGANTIAN PAKET (MATCH 5-MAN ROTATION LOG) -->
-    <div class="doc-rotation-section">
-      <div class="rotation-section-header">
-        <div class="rot-hdr-left">
-          <span class="rot-hdr-title">LOG ROTASI & PERGANTIAN PAKET (5-MAN ROTATION TIMELINE)</span>
-          <span class="rot-hdr-badge">{chronologicalSubs.length} Rotasi Tercatat</span>
-        </div>
-        <div class="rot-hdr-right no-print">
-          <span class="rot-hdr-hint">Tercatat otomatis setiap kali deploy paket atau pergantian pemain di lapangan</span>
-        </div>
-      </div>
-
-      {#if chronologicalSubs.length === 0}
-        <div class="rotation-empty-banner">
-          <span>Belum ada catatan rotasi pada laga ini. Unit Starting 5 aktif sepanjang pertandingan.</span>
-        </div>
-      {:else}
-        <div class="rotation-grid-table">
-          <table class="doc-table rotation-doc-table">
-            <thead>
-              <tr class="tr-rot-head">
-                <th style="width: 32px;" class="text-center">NO</th>
-                <th style="width: 80px;" class="text-center">BABAK & WAKTU</th>
-                <th style="width: 125px;" class="text-center">PAKET / ROTASI</th>
-                <th>5 PEMAIN DI LAPANGAN</th>
-                <th style="width: 105px;" class="text-center">TIPE</th>
-                <th>KETERANGAN</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each chronologicalSubs as sub, sIdx (sub.id ? `sub_${sub.id}` : `sub_idx_${sIdx}`)}
-                {@const pNums = parseSubNumbers(sub.playerNumbers)}
-                <tr class="tr-rot-row {sub.paketIndex ? 'row-rot-paket' : 'row-rot-custom'}">
-                  <td class="text-center font-bold">{sIdx + 1}</td>
-                  <td class="text-center font-bold font-mono">
-                    <span class="badge-time-stamp">{sub.half === 1 ? '1ºH' : '2ºH'} {sub.timeStr || '-'}</span>
-                  </td>
-                  <td class="text-center">
-                    {#if sub.paketIndex}
-                      <span class="badge-rot-paket">PAKET {sub.paketIndex}</span>
-                    {:else}
-                      <span class="badge-rot-custom">SUB INDIVIDUAL</span>
-                    {/if}
-                  </td>
-                  <td class="td-rot-players">
-                    <div class="rot-players-wrap">
-                      {#each pNums as pNo}
-                        {@const pName = getPlayerNameByNo(pNo)}
-                        <span class="rot-chip-p" title={pName ? `#${pNo} ${pName}` : `#${pNo}`}>
-                          <strong class="p-digit">#{pNo}</strong>
-                          {#if pName}<span class="p-label">{pName}</span>{/if}
-                        </span>
-                      {/each}
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <span class="badge-rot-type">
-                      {sub.type === 'PAKET_DEPLOY' ? 'Deploy Paket' : 'Ganti Pemain'}
-                    </span>
-                  </td>
-                  <td class="td-rot-note">{sub.note || '-'}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
-    </div>
-
     <!-- 4. BOTTOM 4 PITCH BOARDS (TAMPILAN LAPANGAN LEBIH BESAR & LEGA) -->
     <div class="pitch-section-container">
       <div class="pitch-section-toolbar no-print">
@@ -1807,6 +1738,93 @@
         </div>
       </div>
     {/if}
+
+    <!-- 4.5. LOG ROTASI & PERGANTIAN PAKET (HALAMAN 2 KHUSUS PRINT & DOKUMEN LANJUTAN) -->
+    <div class="doc-rotation-section">
+      <!-- Print Banner for Page 2 -->
+      <div class="print-page2-banner print-only">
+        <div class="p2-banner-top">
+          <div class="p2-left-brand">
+            <span class="p2-brand-name">FAHLEFI FUTSAL ANALYTICS</span>
+            <span class="p2-brand-sub">OFFICIAL MATCH ROTATION & SUBSTITUTION REPORT</span>
+          </div>
+          <div class="p2-right-match">
+            <span class="p2-match-name">{match.competition || 'MATCH REPORT'} — {match.name || 'Match Analysis'}</span>
+            <span class="p2-match-meta">{match.date || ''} {match.time ? `• ${match.time}` : ''} {match.venue ? `• ${match.venue}` : ''}</span>
+          </div>
+        </div>
+        <div class="p2-banner-score">
+          <span class="p2-score-lbl">SKOR PERTANDINGAN:</span>
+          <span class="p2-score-val">{match.homeTeam || 'Tim Home'} {(match.homeScore1st || 0) + (match.homeScore2nd || 0)} - {(match.awayScore1st || 0) + (match.awayScore2nd || 0)} {match.awayTeam || 'Tim Away'}</span>
+        </div>
+      </div>
+
+      <div class="rotation-section-header">
+        <div class="rot-hdr-left">
+          <span class="rot-hdr-title">LOG ROTASI & PERGANTIAN PAKET (5-MAN ROTATION TIMELINE)</span>
+          <span class="rot-hdr-badge">{chronologicalSubs.length} Rotasi Tercatat</span>
+        </div>
+        <div class="rot-hdr-right no-print">
+          <span class="rot-hdr-hint">Tercatat otomatis setiap kali deploy paket atau pergantian pemain di lapangan (Halaman 2 Print)</span>
+        </div>
+      </div>
+
+      {#if chronologicalSubs.length === 0}
+        <div class="rotation-empty-banner">
+          <span>Belum ada catatan rotasi pada laga ini. Unit Starting 5 aktif sepanjang pertandingan.</span>
+        </div>
+      {:else}
+        <div class="rotation-grid-table">
+          <table class="doc-table rotation-doc-table">
+            <thead>
+              <tr class="tr-rot-head">
+                <th style="width: 32px;" class="text-center">NO</th>
+                <th style="width: 80px;" class="text-center">BABAK & WAKTU</th>
+                <th style="width: 125px;" class="text-center">PAKET / ROTASI</th>
+                <th>5 PEMAIN DI LAPANGAN</th>
+                <th style="width: 105px;" class="text-center">TIPE</th>
+                <th>KETERANGAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each chronologicalSubs as sub, sIdx (sub.id ? `sub_${sub.id}` : `sub_idx_${sIdx}`)}
+                {@const pNums = parseSubNumbers(sub.playerNumbers)}
+                <tr class="tr-rot-row {sub.paketIndex ? 'row-rot-paket' : 'row-rot-custom'}">
+                  <td class="text-center font-bold">{sIdx + 1}</td>
+                  <td class="text-center font-bold font-mono">
+                    <span class="badge-time-stamp">{sub.half === 1 ? '1ºH' : '2ºH'} {sub.timeStr || '-'}</span>
+                  </td>
+                  <td class="text-center">
+                    {#if sub.paketIndex}
+                      <span class="badge-rot-paket">PAKET {sub.paketIndex}</span>
+                    {:else}
+                      <span class="badge-rot-custom">SUB INDIVIDUAL</span>
+                    {/if}
+                  </td>
+                  <td class="td-rot-players">
+                    <div class="rot-players-wrap">
+                      {#each pNums as pNo}
+                        {@const pName = getPlayerNameByNo(pNo)}
+                        <span class="rot-chip-p" title={pName ? `#${pNo} ${pName}` : `#${pNo}`}>
+                          <strong class="p-digit">#{pNo}</strong>
+                          {#if pName}<span class="p-label">{pName}</span>{/if}
+                        </span>
+                      {/each}
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge-rot-type">
+                      {sub.type === 'PAKET_DEPLOY' ? 'Deploy Paket' : 'Ganti Pemain'}
+                    </span>
+                  </td>
+                  <td class="td-rot-note">{sub.note || '-'}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+    </div>
 
     <!-- 5. MODAL EDIT & HAPUS TAG (INTERAKTIF & TERINTEGRASI PEMAIN) -->
     {#if editingEvent}
@@ -2658,14 +2676,15 @@
     border: 0.5px solid #fed7aa;
   }
 
-  .rot-foot-arrow {
-    font-size: 7px;
-    color: #94a3b8;
+  /* PRINT UTILITY (Screen hidden) */
+  .print-only {
+    display: none;
   }
 
-  /* 3.5. LOG ROTASI & PERGANTIAN PAKET SECTION */
+  /* 4.5. LOG ROTASI & PERGANTIAN PAKET SECTION */
   .doc-rotation-section {
-    margin-bottom: 6px;
+    margin-top: 14px;
+    margin-bottom: 8px;
     border: 1.5px solid #000000;
     background: #ffffff;
   }
@@ -5053,12 +5072,75 @@
       break-inside: avoid !important;
     }
 
-    /* Rotation Log Section in Print */
+    .print-only {
+      display: block !important;
+    }
+
+    /* Rotation Log Section in Print - ALWAYS ON PAGE 2 */
     .doc-rotation-section {
-      margin-bottom: 3px !important;
+      page-break-before: always !important;
+      break-before: page !important;
+      margin-top: 4mm !important;
       border: 1px solid #000000 !important;
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
+      page-break-inside: auto !important;
+      break-inside: auto !important;
+    }
+
+    .print-page2-banner {
+      border-bottom: 1px solid #000000 !important;
+      background: #0f172a !important;
+      color: #ffffff !important;
+      padding: 3px 6px !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .p2-banner-top {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      margin-bottom: 2px !important;
+    }
+
+    .p2-left-brand {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+
+    .p2-brand-name {
+      font-weight: 800 !important;
+      font-size: 8.5px !important;
+      color: #38bdf8 !important;
+    }
+
+    .p2-brand-sub {
+      font-size: 7px !important;
+      color: #94a3b8 !important;
+    }
+
+    .p2-right-match {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+
+    .p2-match-name {
+      font-weight: bold !important;
+      font-size: 8px !important;
+    }
+
+    .p2-match-meta {
+      font-size: 7px !important;
+      color: #cbd5e1 !important;
+    }
+
+    .p2-banner-score {
+      font-size: 7.5px !important;
+      background: rgba(255, 255, 255, 0.15) !important;
+      padding: 1px 5px !important;
+      display: inline-block !important;
+      border-radius: 2px !important;
     }
 
     .rotation-section-header {
