@@ -433,10 +433,18 @@ class MatchStore {
     this.showLoginModal = false;
 
     await this.loadTeams();
-    await this.loadMasterPlayers();
-    await this.loadMatchesList();
+    this.activeTeam = this.teamsList.find(t => t.id === this.activeTeamId) || null;
+    await this.loadMasterPlayers(this.activeTeamId);
+    await this.loadMatchesList(this.activeTeamId);
+
     if (this.matchesList.length > 0) {
       await this.switchMatch(this.matchesList[0].id);
+    } else {
+      await this.createNewMatch({
+        name: `Match Analisis ${this.currentTeamName}`,
+        homeTeam: this.currentTeamName,
+        awayTeam: 'Lawan'
+      });
     }
     return res.user;
   }
@@ -650,12 +658,31 @@ class MatchStore {
 
   // Load Match & Subs
   async loadMatch(matchId?: number) {
-    const mId = matchId ?? this.activeMatchId;
+    let mId = matchId ?? this.activeMatchId;
     this.activeMatchId = mId;
     try {
       this.loading = true;
       this.error = null;
-      const res = await api.getMatch(mId);
+      let res = await api.getMatch(mId);
+
+      // Strict confidentiality: if match belongs to another team, load this team's match
+      if (!this.isSuperAdmin && res?.match?.teamId && this.activeTeamId && res.match.teamId !== this.activeTeamId) {
+        await this.loadMatchesList(this.activeTeamId);
+        if (this.matchesList.length > 0) {
+          mId = this.matchesList[0].id;
+          this.activeMatchId = mId;
+          localStorage.setItem('ffta_active_match_id', mId.toString());
+          res = await api.getMatch(mId);
+        } else {
+          await this.createNewMatch({
+            name: `Match Analisis ${this.currentTeamName}`,
+            homeTeam: this.currentTeamName,
+            awayTeam: 'Lawan'
+          });
+          return;
+        }
+      }
+
       if (res) {
         if (!Array.isArray(res.players)) res.players = [];
         if (!Array.isArray(res.events)) res.events = [];
@@ -698,13 +725,13 @@ class MatchStore {
           this.onPitchPlayers = res.players.slice(0, 5).map((p: any) => p.no);
         }
       }
-      await this.loadMasterPlayers();
+      await this.loadMasterPlayers(this.activeTeamId);
       // Auto-populate match roster from master players if empty or all names blank
       const hasNamedPlayers = this.data?.players?.some(p => Boolean(p.name?.trim()));
       if (!hasNamedPlayers && this.masterPlayers.length > 0) {
         await this.syncSquadFromMaster(mId);
       }
-      this.loadMatchesList();
+      await this.loadMatchesList(this.activeTeamId);
     } catch (err: any) {
       this.error = err.message || 'Failed to load match';
     } finally {
