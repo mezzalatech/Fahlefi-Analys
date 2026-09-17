@@ -615,10 +615,6 @@
         <span class="sheet-title-main">LEMBAR ANALISIS PERTANDINGAN RESMI</span>
       </div>
       <div class="toolbar-action-buttons">
-        <button type="button" class="btn-tool-action btn-tool-match" onclick={() => (matchStore.showMatchManagerModal = true)} title="Kelola Arsip & Ganti Pertandingan">
-          <Trophy size={14} class="text-cyan" />
-          <span>Ganti Laga (#{match?.id || 1})</span>
-        </button>
         <button type="button" class="btn-tool-action btn-tool-cfg" onclick={() => (showConfigModal = true)} title="Pengaturan Laga (Judul, Turnamen, Venue, Tim, Tanggal)">
           <Settings size={14} class="text-emerald" />
           <span>Pengaturan Laga</span>

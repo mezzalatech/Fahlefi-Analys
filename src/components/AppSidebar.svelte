@@ -31,9 +31,10 @@
     isOpen: boolean;
     onClose: () => void;
     onOpenIpadInstall?: () => void;
+    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation') => void;
   }
 
-  let { isOpen, onClose, onOpenIpadInstall } = $props<Props>();
+  let { isOpen, onClose, onOpenIpadInstall, onSelectView } = $props<Props>();
 
   let showTeamDropdown = $state<boolean>(false);
 
@@ -204,7 +205,7 @@
     <button 
       type="button" 
       class="nav-menu-btn" 
-      onclick={() => { matchStore.activeTab = 'master_db'; onClose(); }}>
+      onclick={() => { if (onSelectView) onSelectView('master_db'); onClose(); }}>
       <Database size={17} class="text-purple-400" />
       <div class="menu-label-wrap">
         <span class="menu-primary-label">Database Master Pemain</span>

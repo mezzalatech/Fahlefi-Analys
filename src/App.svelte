@@ -164,86 +164,45 @@
         </button>
       </div>
 
-      <!-- User Profile & RBAC Switcher & Quick Actions -->
+      <!-- User Profile & Compact Cloud Status (Managerial actions housed in Sidebar) -->
       <div class="header-right-group user-auth-section">
-        <!-- Super Admin Portal Button -->
-        {#if matchStore.isSuperAdmin}
-          <button 
-            type="button" 
-            class="btn-superadmin-console" 
-            onclick={() => (matchStore.showSuperAdminModal = true)}
-            title="Buka Portal Super Admin (Kelola Tim & Akun Global)">
-            <Crown size={14} class="text-amber-400" />
-            <span class="superadmin-btn-text">Super Admin Portal</span>
-          </button>
-        {/if}
-
-        <!-- Cloud Realtime Sync Pill Button -->
+        <!-- Cloud Realtime Sync Pill Button (Compact) -->
         <button 
           type="button" 
           class="cloud-sync-pill status-{matchStore.cloudStatus}" 
           onclick={() => (matchStore.showCloudSyncModal = true)}
-          title="Status Real-Time Cloud: Klik untuk menghubungkan MacBook & iPad">
+          title="Status Real-Time Cloud: Klik untuk pengaturan koneksi">
           {#if matchStore.cloudStatus === 'connected'}
             <span class="live-dot-ping"></span>
-            <Cloud size={14} class="text-emerald" />
-            <span class="cloud-pill-label">Cloud Realtime</span>
+            <Cloud size={13} class="text-emerald" />
+            <span class="cloud-pill-label">Live</span>
             {#if matchStore.cloudLatency}
               <span class="cloud-ms">{matchStore.cloudLatency}ms</span>
             {/if}
           {:else if matchStore.cloudStatus === 'connecting'}
-            <RefreshCw size={14} class="text-amber spin" />
-            <span class="cloud-pill-label">Connecting...</span>
+            <RefreshCw size={13} class="text-amber spin" />
+            <span class="cloud-pill-label">Sync...</span>
           {:else if matchStore.cloudStatus === 'offline'}
-            <CloudOff size={14} class="text-rose" />
-            <span class="cloud-pill-label">Cloud Offline</span>
+            <CloudOff size={13} class="text-rose" />
+            <span class="cloud-pill-label">Offline</span>
           {:else}
-            <CloudOff size={14} class="text-slate" />
-            <span class="cloud-pill-label">⚡ Sinkron Realtime</span>
+            <CloudOff size={13} class="text-slate" />
+            <span class="cloud-pill-label">Offline</span>
           {/if}
         </button>
 
-        {#if !matchStore.isSuperAdmin && (matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin')}
-          <button 
-            type="button" 
-            class="btn-user-manager-nav" 
-            onclick={() => (matchStore.showUserManagerModal = true)}
-            title="Kelola Akun, Kredensial, & Hak Akses Pengguna Tim">
-            <UserCog size={15} class="text-cyan" />
-            <span class="user-mgr-label">Staf Tim</span>
-          </button>
-        {/if}
-
+        <!-- User Profile Pill Button (Click to open sidebar drawer) -->
         <button 
+          type="button"
           class="user-profile-btn" 
-          onclick={() => (matchStore.showLoginModal = true)}
-          title="Klik untuk ganti hak akses / profil">
+          onclick={() => (showSidebar = true)}
+          title="Buka Menu Samping & Pengaturan Akun">
           <span class="user-role-tag {userRoleBadge.class}">
             <span>{userRoleBadge.icon}</span>
             <span>{userRoleBadge.label}</span>
           </span>
           <span class="user-display-name">{matchStore.currentUser?.name || 'Masuk Akun'}</span>
         </button>
-
-        <!-- Share / Install to iPad Button -->
-        <button 
-          type="button" 
-          class="btn-share-header" 
-          onclick={handleShareApp} 
-          title="Pasang ke Layar Utama iPad / Bagikan Link">
-          <Share2 size={13} class="text-cyan" />
-          <span class="share-header-label">Pasang di iPad</span>
-        </button>
-
-        {#if matchStore.currentUser}
-          <button 
-            type="button" 
-            class="btn-logout-header" 
-            onclick={() => matchStore.logout()} 
-            title="Keluar / Ganti Akun">
-            <LogOut size={14} />
-          </button>
-        {/if}
       </div>
     </div>
 
@@ -499,6 +458,7 @@
     isOpen={showSidebar} 
     onClose={() => (showSidebar = false)} 
     onOpenIpadInstall={() => (showIpadInstallModal = true)} 
+    onSelectView={(v) => (currentView = v)}
   />
 
   <!-- Modals -->
