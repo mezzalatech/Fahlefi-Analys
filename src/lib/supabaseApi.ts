@@ -121,16 +121,25 @@ export const supabaseApi = {
       throw new Error('Kata sandi salah.');
     }
 
+    const localUsers = await localDb.getUsers();
+    const localMatch = localUsers.find(lu => lu.id === targetUser.id || lu.username.toLowerCase() === cleanUsername);
+    const teams = await localDb.getTeams();
+
     // Determine resolved teamId and teamName
-    let resolvedTeamId = targetUser.team_id;
-    let resolvedTeamName = targetUser.team_name;
+    let resolvedTeamId = targetUser.team_id || localMatch?.teamId;
+    let resolvedTeamName = localMatch?.teamName || targetUser.team_name;
 
     if (!resolvedTeamId && targetUser.role !== 'superadmin') {
-      resolvedTeamId = targetUser.username.includes('nazara') ? 'team_nazara' : 'team_paser';
+      resolvedTeamId = cleanUsername.includes('nazara') ? 'team_nazara' : 'team_paser';
     }
 
-    if (resolvedTeamId && !resolvedTeamName) {
-      resolvedTeamName = resolvedTeamId === 'team_nazara' ? 'Nazara FC' : 'Porprov Paser';
+    if (resolvedTeamId) {
+      const matchedTeam = teams.find(t => t.id === resolvedTeamId);
+      if (matchedTeam) {
+        resolvedTeamName = matchedTeam.name;
+      } else if (!resolvedTeamName) {
+        resolvedTeamName = resolvedTeamId === 'team_nazara' ? 'Nazara FC' : 'Porprov Paser';
+      }
     }
 
     const authUser: User = {
