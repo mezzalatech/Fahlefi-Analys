@@ -73,7 +73,7 @@
 {/if}
 
 <!-- Slide-out Sidebar Drawer -->
-<aside class="app-sidebar-drawer {isOpen ? 'sidebar-open' : ''}" aria-hidden={!isOpen}>
+<aside class="app-sidebar-drawer {isOpen ? 'sidebar-open' : ''}" inert={!isOpen ? true : undefined}>
   <!-- Sidebar Header -->
   <div class="sidebar-header">
     <div class="brand-group">

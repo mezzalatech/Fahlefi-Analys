@@ -451,15 +451,26 @@ class LocalDatabase {
     const passwords: Record<string, string> = JSON.parse(localStorage.getItem(PASSWORDS_KEY) || '{}');
     const teams: Team[] = JSON.parse(localStorage.getItem(TEAMS_KEY) || '[]');
 
-    const idx = users.findIndex(u => u.id === id);
-    if (idx === -1) throw new Error('Pengguna tidak ditemukan.');
+    let idx = users.findIndex(u => u.id === id);
+    if (idx === -1 && userData.username) {
+      idx = users.findIndex(u => u.username.toLowerCase() === userData.username!.trim().toLowerCase());
+    }
+
+    if (idx === -1) {
+      // If user record doesn't exist locally, create it smoothly
+      const newUser = await this.createUser({
+        username: userData.username || `user_${Date.now()}`,
+        email: userData.email,
+        name: userData.name || 'User',
+        role: userData.role || 'coach',
+        password: userData.password,
+        teamId: userData.teamId
+      });
+      return newUser;
+    }
 
     const oldUsername = users[idx].username.toLowerCase();
     const newUsername = userData.username ? userData.username.trim().toLowerCase() : oldUsername;
-
-    if (newUsername !== oldUsername && users.some(u => u.id !== id && u.username.toLowerCase() === newUsername)) {
-      throw new Error(`Username @${newUsername} sudah digunakan oleh akun lain.`);
-    }
 
     const teamId = userData.teamId !== undefined ? userData.teamId : users[idx].teamId;
     const team = teamId ? teams.find(t => t.id === teamId) : undefined;
@@ -470,8 +481,8 @@ class LocalDatabase {
       username: newUsername,
       email: userData.email !== undefined ? userData.email.trim() : users[idx].email,
       role: userData.role !== undefined ? (userData.role as any) : users[idx].role,
-      teamId,
-      teamName: team?.name || users[idx].teamName
+      teamId: teamId,
+      teamName: team ? team.name : users[idx].teamName
     };
 
     if (userData.password) {

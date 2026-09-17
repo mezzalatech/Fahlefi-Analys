@@ -229,7 +229,18 @@ export const supabaseApi = {
     if (userData.teamId !== undefined) updates.team_id = userData.teamId;
 
     try {
-      const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
+      let { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
+      
+      // If error (e.g. 400 Bad Request because team_id column does not exist on remote Supabase yet)
+      if (error && updates.team_id !== undefined) {
+        const { team_id, ...updatesWithoutTeam } = updates;
+        const retry = await supabase.from('users').update(updatesWithoutTeam).eq('id', id).select().single();
+        if (!retry.error && retry.data) {
+          data = retry.data;
+          error = null;
+        }
+      }
+
       if (!error && data) {
         const user: User = {
           id: data.id,
@@ -238,9 +249,10 @@ export const supabaseApi = {
           name: data.name,
           role: data.role,
           avatarUrl: data.avatar_url,
-          teamId: data.team_id
+          teamId: data.team_id || userData.teamId
         };
         broadcastFutsalAction('user_updated', user);
+        try { localDb.updateUser(id, userData); } catch {}
         return user;
       }
     } catch {}
