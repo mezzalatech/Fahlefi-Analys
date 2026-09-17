@@ -121,17 +121,19 @@
           <div class="team-active-name">{matchStore.currentTeamName}</div>
         </div>
 
-        <button 
-          type="button" 
-          class="btn-team-switch-toggle" 
-          onclick={() => (showTeamDropdown = !showTeamDropdown)}
-          title="Ganti Ruang Kerja Tim">
-          <ArrowRightLeft size={13} />
-        </button>
+        {#if matchStore.isSuperAdmin}
+          <button 
+            type="button" 
+            class="btn-team-switch-toggle" 
+            onclick={() => (showTeamDropdown = !showTeamDropdown)}
+            title="Ganti Ruang Kerja Tim (Khusus Super Admin)">
+            <ArrowRightLeft size={13} />
+          </button>
+        {/if}
       </div>
 
-      <!-- Quick Team Switcher Dropdown -->
-      {#if showTeamDropdown}
+      <!-- Quick Team Switcher Dropdown (Super Admin Only) -->
+      {#if showTeamDropdown && matchStore.isSuperAdmin}
         <div class="team-dropdown-menu">
           <div class="dropdown-head">PILIH RUANG KERJA TIM:</div>
           {#each matchStore.teamsList as t}

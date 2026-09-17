@@ -412,6 +412,10 @@ class MatchStore {
   }
 
   async switchTeam(teamId: string) {
+    if (!this.isSuperAdmin && this.currentUser?.teamId && teamId !== this.currentUser.teamId) {
+      console.warn('Akses Ditolak: Hanya Super Admin yang diizinkan berpindah ruang kerja tim.');
+      return;
+    }
     this.pauseTimer();
     this.activeTeamId = teamId;
     try {
