@@ -842,10 +842,10 @@ class MatchStore {
     const newVal = Math.max(0, currentVal + delta);
     (player as any)[field] = newVal;
 
-    // Check if goal was scored
-    if (field.startsWith('gl') && delta > 0) {
+    // Check if goal was scored or reverted -> sync to scoreboard
+    if (field.startsWith('gl')) {
       const half = field === 'gl1' ? 1 : 2;
-      await this.updateScore('home', half, 1);
+      await this.updateScore('home', half, delta);
     }
 
     // Check if foul was updated -> sync to home fouls scoreboard
@@ -874,9 +874,19 @@ class MatchStore {
     const half = (event.half === 1 ? 1 : 2) as 1 | 2;
     const halfKey = event.half === 1 ? '1' : '2';
 
-    // Synchronize to Player Matrix Stats if home player is assigned
+    // 1. Synchronize to Player Matrix Stats if home player is assigned
     if (event.team === 'home' && event.playerNo) {
-      const player = this.data.players.find((p) => p.no === event.playerNo);
+      let player = this.data.players.find((p) => p.no === event.playerNo);
+      if (!player) {
+        const masterP = this.masterPlayers.find(mp => mp.noPunggung === event.playerNo);
+        player = await api.addPlayer(this.data.match.id, {
+          no: event.playerNo,
+          name: masterP?.name || `Pemain #${event.playerNo}`,
+          isGk: masterP?.position === 'GK' ? 1 : 0
+        });
+        this.data.players = [...this.data.players, player];
+      }
+
       if (player) {
         if (event.type === 'recovery') {
           await this.updatePlayerStat(player.id, `rec${halfKey}`, 1);
@@ -891,14 +901,24 @@ class MatchStore {
           }
         }
       }
-    } else if (event.type === 'foul') {
-      await this.incrementFoul(event.team === 'home' ? 'home' : 'away', half);
-    } else if (event.outcome === 'goal') {
-      // Goal celebration & score update
-      this.triggerGoalCelebration();
-      const team = event.team === 'home' ? 'home' : 'away';
-      await this.updateScore(team, half, 1);
     }
+
+    // 2. Synchronize fouls to scoreboard if foul without player or away foul
+    if (event.type === 'foul') {
+      if (event.team === 'away' || !event.playerNo) {
+        await this.incrementFoul(event.team === 'home' ? 'home' : 'away', half);
+      }
+    }
+
+    // 3. Synchronize score to scoreboard if goal without player or away goal
+    if (event.outcome === 'goal') {
+      this.triggerGoalCelebration();
+      if (event.team === 'away' || !event.playerNo) {
+        const team = event.team === 'home' ? 'home' : 'away';
+        await this.updateScore(team, half, 1);
+      }
+    }
+
     return newEvent;
   }
 
@@ -930,9 +950,12 @@ class MatchStore {
           }
         }
       }
-    } else if (oldEvt.type === 'foul') {
+    }
+
+    if (oldEvt.type === 'foul' && (oldEvt.team === 'away' || !oldEvt.playerNo)) {
       await this.decrementFoul(oldEvt.team === 'home' ? 'home' : 'away', oldHalf);
-    } else if (oldEvt.outcome === 'goal') {
+    }
+    if (oldEvt.outcome === 'goal' && (oldEvt.team === 'away' || !oldEvt.playerNo)) {
       const team = oldEvt.team === 'home' ? 'home' : 'away';
       await this.updateScore(team, oldHalf, -1);
     }
@@ -942,7 +965,17 @@ class MatchStore {
     const newHalfKey = newEvt.half === 1 ? '1' : '2';
 
     if (newEvt.team === 'home' && newEvt.playerNo) {
-      const newPlayer = this.data.players.find((p) => p.no === newEvt.playerNo);
+      let newPlayer = this.data.players.find((p) => p.no === newEvt.playerNo);
+      if (!newPlayer) {
+        const masterP = this.masterPlayers.find(mp => mp.noPunggung === newEvt.playerNo);
+        newPlayer = await api.addPlayer(this.data.match.id, {
+          no: newEvt.playerNo,
+          name: masterP?.name || `Pemain #${newEvt.playerNo}`,
+          isGk: masterP?.position === 'GK' ? 1 : 0
+        });
+        this.data.players = [...this.data.players, newPlayer];
+      }
+
       if (newPlayer) {
         if (newEvt.type === 'recovery') {
           await this.updatePlayerStat(newPlayer.id, `rec${newHalfKey}`, 1);
@@ -957,12 +990,17 @@ class MatchStore {
           }
         }
       }
-    } else if (newEvt.type === 'foul') {
+    }
+
+    if (newEvt.type === 'foul' && (newEvt.team === 'away' || !newEvt.playerNo)) {
       await this.incrementFoul(newEvt.team === 'home' ? 'home' : 'away', newHalf);
-    } else if (newEvt.outcome === 'goal') {
+    }
+    if (newEvt.outcome === 'goal') {
       this.triggerGoalCelebration();
-      const team = newEvt.team === 'home' ? 'home' : 'away';
-      await this.updateScore(team, newHalf, 1);
+      if (newEvt.team === 'away' || !newEvt.playerNo) {
+        const team = newEvt.team === 'home' ? 'home' : 'away';
+        await this.updateScore(team, newHalf, 1);
+      }
     }
 
     Object.assign(evt, partial);
@@ -973,10 +1011,12 @@ class MatchStore {
     if (!this.data) return;
     const evt = this.data.events.find((e) => e.id === eventId);
     
-    // Reverse player stat if associated
+    // Reverse player stat & score & fouls if associated
     if (evt) {
       const half = (evt.half === 1 ? 1 : 2) as 1 | 2;
       const halfKey = evt.half === 1 ? '1' : '2';
+
+      // 1. Revert Player Matrix Stats
       if (evt.team === 'home' && evt.playerNo) {
         const player = this.data.players.find((p) => p.no === evt.playerNo);
         if (player) {
@@ -993,11 +1033,21 @@ class MatchStore {
             }
           }
         }
-      } else if (evt.type === 'foul') {
-        await this.decrementFoul(evt.team === 'home' ? 'home' : 'away', half);
-      } else if (evt.outcome === 'goal') {
-        const team = evt.team === 'home' ? 'home' : 'away';
-        await this.updateScore(team, half, -1);
+      }
+
+      // 2. Revert scoreboard fouls
+      if (evt.type === 'foul') {
+        if (evt.team === 'away' || !evt.playerNo) {
+          await this.decrementFoul(evt.team === 'home' ? 'home' : 'away', half);
+        }
+      }
+
+      // 3. Revert scoreboard score
+      if (evt.outcome === 'goal') {
+        if (evt.team === 'away' || !evt.playerNo) {
+          const team = evt.team === 'home' ? 'home' : 'away';
+          await this.updateScore(team, half, -1);
+        }
       }
     }
 
