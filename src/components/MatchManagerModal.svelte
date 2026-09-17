@@ -43,7 +43,7 @@
   onMount(() => {
     formHomeTeam = matchStore.currentTeamName;
     formName = `Match Analysis ${matchStore.currentTeamName}`;
-    matchStore.loadMatchesList();
+    matchStore.loadMatchesList(matchStore.activeTeamId);
   });
 
   async function handleCreateMatch(e: Event) {

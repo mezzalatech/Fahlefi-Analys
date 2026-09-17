@@ -509,7 +509,7 @@ class LocalDatabase {
     const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
 
     if (teamId && teamId !== 'ALL') {
-      players = players.filter(p => !p.teamId || p.teamId === teamId);
+      players = players.filter(p => (p.teamId || 'team_paser') === teamId);
     }
 
     return players.map(p => {
@@ -524,7 +524,8 @@ class LocalDatabase {
       let subAppearances = 0;
 
       // Filter matches by same team if player has teamId
-      const relevantMatches = p.teamId ? matches.filter(m => m.match.teamId === p.teamId) : matches;
+      const targetTeam = p.teamId || 'team_paser';
+      const relevantMatches = matches.filter(m => (m.match.teamId || 'team_paser') === targetTeam);
 
       for (const m of relevantMatches) {
         const mp = m.players.find(x => x.no === p.noPunggung);
@@ -616,7 +617,7 @@ class LocalDatabase {
     this.initStorage();
     const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
     if (teamId && teamId !== 'ALL') {
-      return matches.filter(m => !m.match.teamId || m.match.teamId === teamId).map(m => m.match);
+      return matches.filter(m => (m.match.teamId || 'team_paser') === teamId).map(m => m.match);
     }
     return matches.map(m => m.match);
   }

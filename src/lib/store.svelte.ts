@@ -655,21 +655,21 @@ class MatchStore {
       homeTeam: matchData.homeTeam || this.currentTeamName
     };
     const created = await api.createMatch(payload, this.activeTeamId);
-    await this.loadMatchesList();
+    await this.loadMatchesList(this.activeTeamId);
     await this.switchMatch(created.id);
     return created;
   }
 
   async duplicateMatch(matchId: number) {
     const duplicated = await api.duplicateMatch(matchId);
-    await this.loadMatchesList();
+    await this.loadMatchesList(this.activeTeamId);
     await this.switchMatch(duplicated.id);
     return duplicated;
   }
 
   async deleteMatch(matchId: number) {
     await api.deleteMatch(matchId);
-    await this.loadMatchesList();
+    await this.loadMatchesList(this.activeTeamId);
     if (this.activeMatchId === matchId) {
       const nextMatch = this.matchesList[0];
       if (nextMatch) {
