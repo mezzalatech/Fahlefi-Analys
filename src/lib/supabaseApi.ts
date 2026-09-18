@@ -215,7 +215,7 @@ export const supabaseApi = {
     };
 
     try {
-      const { data, error } = await supabase.from('users').insert({ ...row, team_id: userData.teamId }).select().single();
+      const { data, error } = await supabase.from('users').insert(row).select().single();
       if (!error && data) {
         const user: User = {
           id: data.id,
@@ -228,12 +228,6 @@ export const supabaseApi = {
         };
         broadcastFutsalAction('user_created', user);
         return user;
-      } else {
-        // Retry without team_id if column missing on remote
-        const retry = await supabase.from('users').insert(row).select().single();
-        if (!retry.error && retry.data) {
-          broadcastFutsalAction('user_created', localCreated);
-        }
       }
     } catch {}
     return localCreated;
@@ -381,7 +375,6 @@ export const supabaseApi = {
     const id = player.id || `mp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const row = {
       id,
-      team_id: player.teamId || 'team_paser',
       no_punggung: Number(player.noPunggung) || 1,
       name: player.name || 'Pemain Baru',
       nickname: player.nickname || '',
@@ -394,14 +387,7 @@ export const supabaseApi = {
     };
 
     try {
-      let { data, error } = await supabase.from('master_players').insert(row).select().single();
-      if (error && (error.code === 'PGRST204' || error.message.includes('team_id'))) {
-        const { team_id, ...rowNoTeam } = row;
-        const retryRes = await supabase.from('master_players').insert(rowNoTeam).select().single();
-        data = retryRes.data;
-        error = retryRes.error;
-      }
-
+      const { data, error } = await supabase.from('master_players').insert(row).select().single();
       if (!error && data) {
         const created: MasterPlayer = {
           id: data.id,
@@ -428,7 +414,6 @@ export const supabaseApi = {
     if (!supabase) return localDb.updateMasterPlayer(id, partial);
 
     const updates: any = {};
-    if (partial.teamId !== undefined) updates.team_id = partial.teamId;
     if (partial.noPunggung !== undefined) updates.no_punggung = Number(partial.noPunggung);
     if (partial.name !== undefined) updates.name = partial.name;
     if (partial.nickname !== undefined) updates.nickname = partial.nickname;
@@ -440,14 +425,7 @@ export const supabaseApi = {
     if (partial.status !== undefined) updates.status = partial.status;
 
     try {
-      let { data, error } = await supabase.from('master_players').update(updates).eq('id', id).select().single();
-      if (error && (error.code === 'PGRST204' || error.message.includes('team_id'))) {
-        const { team_id, ...updatesNoTeam } = updates;
-        const retryRes = await supabase.from('master_players').update(updatesNoTeam).eq('id', id).select().single();
-        data = retryRes.data;
-        error = retryRes.error;
-      }
-
+      const { data, error } = await supabase.from('master_players').update(updates).eq('id', id).select().single();
       if (!error && data) {
         const updated: MasterPlayer = {
           id: data.id,
@@ -642,7 +620,6 @@ export const supabaseApi = {
 
       const row = {
         id: newId,
-        team_id: resolvedTeamId,
         name: matchData.name || `Match #${newId}`,
         competition: matchData.competition || 'Futsal League',
         date: matchData.date || new Date().toISOString().split('T')[0],
@@ -663,13 +640,7 @@ export const supabaseApi = {
         timeouts: JSON.stringify({ home1: false, home2: false, away1: false, away2: false })
       };
 
-      let { data: createdMatch, error } = await supabase.from('matches').insert(row).select().single();
-      if (error && (error.code === 'PGRST204' || error.message.includes('team_id'))) {
-        const { team_id, ...rowNoTeam } = row;
-        const retryRes = await supabase.from('matches').insert(rowNoTeam).select().single();
-        createdMatch = retryRes.data;
-        error = retryRes.error;
-      }
+      const { data: createdMatch, error } = await supabase.from('matches').insert(row).select().single();
 
       if (!error && createdMatch) {
         // Auto-populate players only from this team's master players
