@@ -11,12 +11,24 @@ export function getStoredSupabaseConfig() {
   const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY;
 
-  const storedUrl = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_URL_KEY) || '' : '';
-  const storedKey = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_KEY_KEY) || '' : '';
+  let storedUrl = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_URL_KEY) || '' : '';
+  let storedKey = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_KEY_KEY) || '' : '';
+
+  // Auto-heal known typos (e.g. qdngyotxpwgbsuauzlde -> qdnqyotxpwgbsuauzlde)
+  if (storedUrl.includes('qdngyotxpwgbsuauzlde')) {
+    storedUrl = storedUrl.replace('qdngyotxpwgbsuauzlde', 'qdnqyotxpwgbsuauzlde');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SUPABASE_URL_KEY, storedUrl);
+    }
+  }
+
+  // If stored URL is empty or invalid, fallback to default
+  const effectiveUrl = (storedUrl || envUrl || DEFAULT_SUPABASE_URL).trim();
+  const effectiveKey = (storedKey || envKey || DEFAULT_SUPABASE_KEY).trim();
 
   return {
-    url: (storedUrl || envUrl).trim(),
-    key: (storedKey || envKey).trim(),
+    url: effectiveUrl,
+    key: effectiveKey,
     source: storedUrl ? 'custom' : (envUrl ? 'default' : 'none')
   };
 }
@@ -144,7 +156,7 @@ export function initRealtimeSync(onAnyChange?: (event: string, payload: any) => 
   });
 
   // 2. Postgres Changes Realtime (Automatic database replication across devices)
-  const tables = ['master_players', 'matches', 'players', 'pitch_events', 'lineup_pakets', 'substitutions', 'users'];
+  const tables = ['teams', 'master_players', 'matches', 'players', 'pitch_events', 'lineup_pakets', 'substitutions', 'users'];
   tables.forEach(table => {
     realtimeChannel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload: any) => {
       broadcastListeners.forEach(listener => {
@@ -499,14 +511,17 @@ ALTER TABLE public.master_players ADD COLUMN IF NOT EXISTS team_id TEXT DEFAULT 
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS team_id TEXT DEFAULT 'team_paser';
 
 -- AKTIFKAN REALTIME REPLICATION UNTUK SEMUA TABEL
-ALTER PUBLICATION supabase_realtime ADD TABLE public.teams;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.master_players;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.matches;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.players;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.pitch_events;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.lineup_pakets;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.substitutions;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
+DO $$
+BEGIN
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.teams; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.master_players; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.matches; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.players; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.pitch_events; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.lineup_pakets; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.substitutions; EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.users; EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
 
 -- AKTIFKAN AKSES PUBLIK ANON (Untuk App Futsal)
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
@@ -517,6 +532,15 @@ ALTER TABLE public.pitch_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lineup_pakets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.substitutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read/write teams" ON public.teams;
+DROP POLICY IF EXISTS "Allow public read/write master_players" ON public.master_players;
+DROP POLICY IF EXISTS "Allow public read/write matches" ON public.matches;
+DROP POLICY IF EXISTS "Allow public read/write players" ON public.players;
+DROP POLICY IF EXISTS "Allow public read/write pitch_events" ON public.pitch_events;
+DROP POLICY IF EXISTS "Allow public read/write lineup_pakets" ON public.lineup_pakets;
+DROP POLICY IF EXISTS "Allow public read/write substitutions" ON public.substitutions;
+DROP POLICY IF EXISTS "Allow public read/write users" ON public.users;
 
 CREATE POLICY "Allow public read/write teams" ON public.teams FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write master_players" ON public.master_players FOR ALL USING (true) WITH CHECK (true);
