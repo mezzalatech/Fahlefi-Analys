@@ -17,6 +17,11 @@
   import MatchConfigModal from './components/MatchConfigModal.svelte';
   import CloudSyncModal from './components/CloudSyncModal.svelte';
   import SeriesPresentationView from './components/SeriesPresentationView.svelte';
+  import AiTacticalInsightsModal from './components/AiTacticalInsightsModal.svelte';
+  import VideoAnalysisPlayer from './components/VideoAnalysisPlayer.svelte';
+  import PdfReportView from './components/PdfReportView.svelte';
+  import BenchTouchView from './components/BenchTouchView.svelte';
+  import PassingPressureMap from './components/PassingPressureMap.svelte';
   import { 
     FileText, 
     Table, 
@@ -48,13 +53,19 @@
     Plus,
     Minus,
     Building2,
-    Menu
+    Menu,
+    Bot,
+    Video,
+    Activity,
+    Printer,
+    Sparkles
   } from 'lucide-svelte';
 
-  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation'>('sheet');
+  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network'>('sheet');
   let showSidebar = $state<boolean>(false);
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
+  let showAiTacticalModal = $state<boolean>(false);
   let showIpadInstallModal = $state<boolean>(false);
   let showTimeSyncPopover = $state<boolean>(false);
   let inputMinutes = $state<number>(20);
@@ -164,8 +175,19 @@
         </button>
       </div>
 
-      <!-- User Profile & Compact Cloud Status (Managerial actions housed in Sidebar) -->
+      <!-- User Profile, AI Insights & Compact Cloud Status -->
       <div class="header-right-group user-auth-section">
+        <!-- AI Tactical Insights Header Button -->
+        <button 
+          type="button" 
+          class="btn-header-ai-pill" 
+          onclick={() => (showAiTacticalModal = true)}
+          title="Buka Asisten AI Taktik & Ringkasan Pertandingan">
+          <Bot size={14} class="text-cyan animate-pulse" />
+          <span class="ai-header-btn-label">AI Insights</span>
+          <span class="ai-spark-tag"><Sparkles size={10} /></span>
+        </button>
+
         <!-- Cloud Realtime Sync Pill Button (Compact) -->
         <button 
           type="button" 
@@ -217,10 +239,11 @@
         </button>
 
         <button 
-          class="tab-btn {currentView === 'matrix' ? 'active' : ''}" 
-          onclick={() => (currentView = 'matrix')}>
-          <Table size={14} />
-          <span>Matrix Pemain</span>
+          class="tab-btn {currentView === 'bench_touch' ? 'active' : ''}" 
+          onclick={() => (currentView = 'bench_touch')}
+          title="Mode Cepat Sentuh Khusus iPad di Bench Pelatih">
+          <Zap size={14} class="text-amber" />
+          <span>Bench Touch (iPad)</span>
         </button>
 
         <button 
@@ -228,6 +251,21 @@
           onclick={() => (currentView = 'pitch')}>
           <MapPin size={14} />
           <span>Papan Taktik</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'passing_network' ? 'active' : ''}" 
+          onclick={() => (currentView = 'passing_network')}
+          title="Peta Alur Operan 5-Man & Tekanan Zona">
+          <Activity size={14} class="text-cyan" />
+          <span>Passing & Pressure</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'matrix' ? 'active' : ''}" 
+          onclick={() => (currentView = 'matrix')}>
+          <Table size={14} />
+          <span>Matrix Pemain</span>
         </button>
 
         <button 
@@ -241,7 +279,23 @@
           class="tab-btn {currentView === 'substitutions' ? 'active' : ''}" 
           onclick={() => (currentView = 'substitutions')}>
           <ArrowRightLeft size={14} />
-          <span>Rotasi & Substitusi</span>
+          <span>Rotasi</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'video' ? 'active' : ''}" 
+          onclick={() => (currentView = 'video')}
+          title="Sinkronisasi Video Pertandingan & Tagging">
+          <Video size={14} class="text-rose" />
+          <span>Video Sync</span>
+        </button>
+
+        <button 
+          class="tab-btn {currentView === 'pdf_report' ? 'active' : ''}" 
+          onclick={() => (currentView = 'pdf_report')}
+          title="Laporan Pertandingan Resmi Siap Cetak PDF">
+          <Printer size={14} class="text-emerald" />
+          <span>PDF Report</span>
         </button>
 
         <button 
@@ -256,7 +310,7 @@
           onclick={() => (currentView = 'presentation')}
           title="Buka Deck Presentasi Evaluasi Seri & Export PowerPoint (.pptx)">
           <Presentation size={14} class="text-emerald" />
-          <span>Presentasi Seri (PPTX)</span>
+          <span>Presentasi PPTX</span>
         </button>
       </nav>
 
@@ -436,14 +490,22 @@
       <div class="tab-content-area">
         {#if currentView === 'sheet'}
           <OfficialSheetView />
+        {:else if currentView === 'bench_touch'}
+          <BenchTouchView />
         {:else if currentView === 'matrix'}
           <StatsTable />
         {:else if currentView === 'pitch'}
           <TacticalPitch />
+        {:else if currentView === 'passing_network'}
+          <PassingPressureMap />
         {:else if currentView === 'pakets'}
           <PaketManager />
         {:else if currentView === 'substitutions'}
           <SubstitutionTimeline />
+        {:else if currentView === 'video'}
+          <VideoAnalysisPlayer />
+        {:else if currentView === 'pdf_report'}
+          <PdfReportView />
         {:else if currentView === 'master_db'}
           <MasterPlayerDatabase />
         {:else if currentView === 'presentation'}
@@ -458,10 +520,15 @@
     isOpen={showSidebar} 
     onClose={() => (showSidebar = false)} 
     onOpenIpadInstall={() => (showIpadInstallModal = true)} 
+    onOpenAiInsights={() => (showAiTacticalModal = true)}
     onSelectView={(v) => (currentView = v)}
   />
 
   <!-- Modals -->
+  {#if showAiTacticalModal}
+    <AiTacticalInsightsModal onClose={() => (showAiTacticalModal = false)} />
+  {/if}
+
   {#if matchStore.showMatchManagerModal}
     <MatchManagerModal onClose={() => (matchStore.showMatchManagerModal = false)} />
   {/if}
@@ -1295,6 +1362,42 @@
     font-weight: 700;
     border-color: #38bdf8;
     box-shadow: 0 2px 12px rgba(56, 189, 248, 0.35);
+  }
+
+  /* AI Header Button */
+  .btn-header-ai-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    height: 34px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(14, 165, 233, 0.1));
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    color: #ffffff;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+  }
+
+  .btn-header-ai-pill:hover {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(14, 165, 233, 0.2));
+    border-color: #00e5ff;
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .ai-header-btn-label {
+    letter-spacing: 0.02em;
+  }
+
+  .ai-spark-tag {
+    color: #00e5ff;
+    display: flex;
+    align-items: center;
   }
 
   /* Cloud Sync Pill */

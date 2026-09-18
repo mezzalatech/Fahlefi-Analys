@@ -24,17 +24,23 @@
     Layers, 
     UserCheck,
     ArrowRightLeft,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Bot,
+    Video,
+    FileText,
+    Zap,
+    Sparkles
   } from 'lucide-svelte';
 
   interface Props {
     isOpen: boolean;
     onClose: () => void;
     onOpenIpadInstall?: () => void;
-    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation') => void;
+    onOpenAiInsights?: () => void;
+    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network') => void;
   }
 
-  let { isOpen, onClose, onOpenIpadInstall, onSelectView } = $props<Props>();
+  let { isOpen, onClose, onOpenIpadInstall, onOpenAiInsights, onSelectView } = $props<Props>();
 
   let showTeamDropdown = $state<boolean>(false);
 
@@ -214,19 +220,71 @@
       <ChevronRight size={15} class="menu-arrow" />
     </button>
 
-    <!-- Cloud Realtime Sync -->
+    <div class="nav-category-title mt-4">FITUR & ANALISIS LANJUTAN</div>
+
+    <!-- AI Tactical Insights -->
+    <button 
+      type="button" 
+      class="nav-menu-btn btn-ai-highlight" 
+      onclick={() => { if (onOpenAiInsights) onOpenAiInsights(); onClose(); }}>
+      <Bot size={17} class="text-cyan-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label flex-row-align">🤖 AI Tactical Assistant <span class="badge-mini-ai">PRO</span></span>
+        <span class="menu-sub-label">Metrik net-rating paket, zona turnover, & briefing</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
+
+    <!-- Video Analysis & Sync -->
     <button 
       type="button" 
       class="nav-menu-btn" 
-      onclick={() => { matchStore.showCloudSyncModal = true; onClose(); }}>
-      <Cloud size={17} class="text-emerald-400" />
+      onclick={() => { if (onSelectView) onSelectView('video'); onClose(); }}>
+      <Video size={17} class="text-rose-400" />
       <div class="menu-label-wrap">
-        <span class="menu-primary-label">Sinkronisasi Cloud Real-Time</span>
-        <span class="menu-sub-label">Hubungkan MacBook & iPad di lapangan</span>
+        <span class="menu-primary-label">Video Analysis & Sync Tagging</span>
+        <span class="menu-sub-label">Putar rekaman YouTube/MP4 & lompat ke aksi</span>
       </div>
-      <span class="cloud-status-chip status-{matchStore.cloudStatus}">
-        {matchStore.cloudStatus === 'connected' ? 'Live' : 'Offline'}
-      </span>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
+
+    <!-- Coach Bench Touch Mode -->
+    <button 
+      type="button" 
+      class="nav-menu-btn" 
+      onclick={() => { if (onSelectView) onSelectView('bench_touch'); onClose(); }}>
+      <Zap size={17} class="text-amber-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label">Coach Bench Touch Mode (iPad)</span>
+        <span class="menu-sub-label">1-Tap rotasi paket & fast-logging di bench</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
+
+    <!-- Passing Network & Pressure Map -->
+    <button 
+      type="button" 
+      class="nav-menu-btn" 
+      onclick={() => { if (onSelectView) onSelectView('passing_network'); onClose(); }}>
+      <Activity size={17} class="text-emerald-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label">Passing Network & Zone Pressure</span>
+        <span class="menu-sub-label">Peta alur bola 5-man & 3rd-zone block analysis</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
+
+    <!-- Professional PDF Match Report -->
+    <button 
+      type="button" 
+      class="nav-menu-btn" 
+      onclick={() => { if (onSelectView) onSelectView('pdf_report'); onClose(); }}>
+      <FileText size={17} class="text-indigo-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label">Official PDF Match Dossier</span>
+        <span class="menu-sub-label">Dokumen siap cetak & share via WhatsApp</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
     </button>
 
     <div class="nav-category-title mt-4">AKUN & APLIKASI</div>
@@ -724,5 +782,31 @@
 
   .ml-auto {
     margin-left: auto;
+  }
+
+  .btn-ai-highlight {
+    background: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.25);
+  }
+
+  .btn-ai-highlight:hover {
+    background: rgba(0, 229, 255, 0.16);
+    border-color: rgba(0, 229, 255, 0.45);
+  }
+
+  .flex-row-align {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .badge-mini-ai {
+    background: linear-gradient(135deg, #00e5ff, #38bdf8);
+    color: #040914;
+    font-size: 0.58rem;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
   }
 </style>
