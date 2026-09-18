@@ -20,7 +20,7 @@
   let loading = $state<boolean>(true);
 
   let topScorer = $derived<PlayerSeriesStat | null>(summary?.playerStats[0] || null);
-  let topRecoveryPlayer = $derived<PlayerSeriesStat | null>(() => {
+  let topRecoveryPlayer = $derived.by<PlayerSeriesStat | null>(() => {
     if (!summary?.playerStats || summary.playerStats.length === 0) return null;
     return [...summary.playerStats].sort((a, b) => b.totalRecoveries - a.totalRecoveries)[0] || null;
   });
@@ -115,8 +115,8 @@
           {/if}
 
           <!-- Top Recovery -->
-          {#if topRecoveryPlayer()}
-            {@const topRec = topRecoveryPlayer()}
+          {#if topRecoveryPlayer}
+            {@const topRec = topRecoveryPlayer}
             <div class="podium-card emerald">
               <span class="badge-award green">🛡️ TOP BALL WINNER</span>
               <div class="p-jersey">#{topRec.no}</div>

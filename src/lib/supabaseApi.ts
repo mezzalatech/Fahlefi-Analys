@@ -394,11 +394,18 @@ export const supabaseApi = {
     };
 
     try {
-      const { data, error } = await supabase.from('master_players').insert(row).select().single();
+      let { data, error } = await supabase.from('master_players').insert(row).select().single();
+      if (error && (error.code === 'PGRST204' || error.message.includes('team_id'))) {
+        const { team_id, ...rowNoTeam } = row;
+        const retryRes = await supabase.from('master_players').insert(rowNoTeam).select().single();
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+
       if (!error && data) {
         const created: MasterPlayer = {
           id: data.id,
-          teamId: data.team_id,
+          teamId: data.team_id || player.teamId || 'team_paser',
           noPunggung: data.no_punggung,
           name: data.name,
           nickname: data.nickname || '',
@@ -433,11 +440,18 @@ export const supabaseApi = {
     if (partial.status !== undefined) updates.status = partial.status;
 
     try {
-      const { data, error } = await supabase.from('master_players').update(updates).eq('id', id).select().single();
+      let { data, error } = await supabase.from('master_players').update(updates).eq('id', id).select().single();
+      if (error && (error.code === 'PGRST204' || error.message.includes('team_id'))) {
+        const { team_id, ...updatesNoTeam } = updates;
+        const retryRes = await supabase.from('master_players').update(updatesNoTeam).eq('id', id).select().single();
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+
       if (!error && data) {
         const updated: MasterPlayer = {
           id: data.id,
-          teamId: data.team_id,
+          teamId: data.team_id || partial.teamId || 'team_paser',
           noPunggung: data.no_punggung,
           name: data.name,
           nickname: data.nickname || '',
@@ -501,7 +515,11 @@ export const supabaseApi = {
         }));
 
         if (teamId) {
-          list = list.filter(m => m.teamId === teamId);
+          const filtered = list.filter(m => m.teamId === teamId);
+          const hasMultipleTeams = list.some(m => m.teamId && m.teamId !== 'team_paser');
+          if (filtered.length > 0 || hasMultipleTeams) {
+            list = filtered;
+          }
         }
         return list;
       }
@@ -645,7 +663,14 @@ export const supabaseApi = {
         timeouts: JSON.stringify({ home1: false, home2: false, away1: false, away2: false })
       };
 
-      const { data: createdMatch, error } = await supabase.from('matches').insert(row).select().single();
+      let { data: createdMatch, error } = await supabase.from('matches').insert(row).select().single();
+      if (error && (error.code === 'PGRST204' || error.message.includes('team_id'))) {
+        const { team_id, ...rowNoTeam } = row;
+        const retryRes = await supabase.from('matches').insert(rowNoTeam).select().single();
+        createdMatch = retryRes.data;
+        error = retryRes.error;
+      }
+
       if (!error && createdMatch) {
         // Auto-populate players only from this team's master players
         const master = await this.getMasterPlayers(resolvedTeamId);
@@ -695,18 +720,21 @@ export const supabaseApi = {
         }
 
         // Default pakets
+        const top5Nos = master.slice(0, 5).map(p => p.noPunggung);
         const defaultPakets = [
-          { id: newId * 10 + 1, match_id: newId, paket_index: 0, code: 'PAKET 1 (STARTING)', player_numbers: JSON.stringify([1, 2, 3, 4, 5]) },
-          { id: newId * 10 + 2, match_id: newId, paket_index: 1, code: 'PAKET 2 (ROTASI A)', player_numbers: JSON.stringify([1, 6, 7, 8, 9]) },
-          { id: newId * 10 + 3, match_id: newId, paket_index: 2, code: 'PAKET 3 (ROTASI B)', player_numbers: JSON.stringify([2, 10, 11, 12, 13]) },
-          { id: newId * 10 + 4, match_id: newId, paket_index: 3, code: 'PAKET 4 (POWER PLAY)', player_numbers: JSON.stringify([1, 3, 4, 7, 9]) }
+          { id: newId * 10 + 1, match_id: newId, paket_index: 0, code: 'PAKET 1 (STARTING)', player_numbers: JSON.stringify(top5Nos.length > 0 ? top5Nos : [1, 2, 3, 4, 5]) },
+          { id: newId * 10 + 2, match_id: newId, paket_index: 1, code: 'PAKET 2 (ROTASI A)', player_numbers: JSON.stringify(master.slice(1, 6).map(p => p.noPunggung)) },
+          { id: newId * 10 + 3, match_id: newId, paket_index: 2, code: 'PAKET 3 (ROTASI B)', player_numbers: JSON.stringify(master.slice(2, 7).map(p => p.noPunggung)) },
+          { id: newId * 10 + 4, match_id: newId, paket_index: 3, code: 'PAKET 4 (POWER PLAY)', player_numbers: JSON.stringify(top5Nos.length > 0 ? top5Nos : [1, 2, 3, 4, 5]) }
         ];
         await supabase.from('lineup_pakets').insert(defaultPakets);
 
         broadcastFutsalAction('match_created', { matchId: newId });
         return { id: newId, ...matchData, teamId: resolvedTeamId };
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Supabase createMatch error:', err);
+    }
     return localDb.createMatch(matchData, resolvedTeamId);
   },
 

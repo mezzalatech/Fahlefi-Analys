@@ -50,7 +50,7 @@ class MatchStore {
   timerRunning = $state<boolean>(false);
   private timerInterval: any = null;
   activeHalf = $state<number>(1);
-  activeTab = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db'>('sheet');
+  currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament'>('sheet');
   activePaketIndex = $state<number | null>(null);
   onPitchPlayers = $state<number[]>([]);
 
@@ -671,6 +671,7 @@ class MatchStore {
     };
     const created = await api.createMatch(payload, this.activeTeamId);
     await this.loadMatchesList(this.activeTeamId);
+    this.currentView = 'sheet';
     await this.switchMatch(created.id);
     return created;
   }

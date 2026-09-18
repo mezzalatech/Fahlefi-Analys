@@ -40,6 +40,8 @@
     Trophy, 
     Shield, 
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Cloud,
     CloudOff,
     RefreshCw,
@@ -65,7 +67,7 @@
     Award
   } from 'lucide-svelte';
 
-  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament'>('sheet');
+  let navTabsContainer: HTMLElement | null = $state(null);
   let showSidebar = $state<boolean>(false);
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
@@ -75,6 +77,25 @@
   let showTimeSyncPopover = $state<boolean>(false);
   let inputMinutes = $state<number>(20);
   let inputSeconds = $state<number>(0);
+
+  function scrollTabs(delta: number) {
+    if (navTabsContainer) {
+      navTabsContainer.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  }
+
+  $effect(() => {
+    // When view changes, auto-scroll the active tab into view
+    const _view = matchStore.currentView;
+    if (navTabsContainer) {
+      setTimeout(() => {
+        const activeBtn = navTabsContainer?.querySelector('.tab-btn.active') as HTMLElement;
+        if (activeBtn) {
+          activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      }, 50);
+    }
+  });
 
   function openTimeSyncPopover() {
     if (matchStore.data) {
@@ -235,97 +256,117 @@
 
     <!-- Bottom Row: Navigation Tabs & Match Clock Toolbar -->
     <div class="header-bottom-row">
-      <nav class="compact-nav-tabs">
+      <div class="nav-tabs-scroll-wrapper">
         <button 
-          class="tab-btn {currentView === 'sheet' ? 'active' : ''}" 
-          onclick={() => (currentView = 'sheet')}>
-          <FileText size={14} />
-          <span>Lembar Dokumen</span>
+          type="button" 
+          class="nav-scroll-btn btn-scroll-left" 
+          onclick={() => scrollTabs(-200)} 
+          title="Geser Tab ke Kiri"
+          aria-label="Scroll left">
+          <ChevronLeft size={16} />
         </button>
 
-        <button 
-          class="tab-btn {currentView === 'bench_touch' ? 'active' : ''}" 
-          onclick={() => (currentView = 'bench_touch')}
-          title="Mode Cepat Sentuh Khusus iPad di Bench Pelatih">
-          <Zap size={14} class="text-amber" />
-          <span>Bench Touch (iPad)</span>
-        </button>
+        <nav class="compact-nav-tabs" bind:this={navTabsContainer}>
+          <button 
+            class="tab-btn {matchStore.currentView === 'sheet' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'sheet')}>
+            <FileText size={14} />
+            <span>Lembar Dokumen</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'bench_touch' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'bench_touch')}
+            title="Mode Cepat Sentuh Khusus iPad di Bench Pelatih">
+            <Zap size={14} class="text-amber" />
+            <span>Bench Touch (iPad)</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'pitch' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'pitch')}>
+            <MapPin size={14} />
+            <span>Papan Taktik</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'passing_network' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'passing_network')}
+            title="Peta Alur Operan 5-Man & Tekanan Zona">
+            <Activity size={14} class="text-cyan" />
+            <span>Passing & Pressure</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'matrix' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'matrix')}>
+            <Table size={14} />
+            <span>Matrix Pemain</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'pakets' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'pakets')}>
+            <Users size={14} />
+            <span>Paket 5-Man</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'substitutions' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'substitutions')}>
+            <ArrowRightLeft size={14} />
+            <span>Rotasi</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'video' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'video')}
+            title="Sinkronisasi Video Pertandingan & Tagging">
+            <Video size={14} class="text-rose" />
+            <span>Video Sync</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'tournament' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'tournament')}
+            title="Dashboard Akumulasi Turnamen & Seri Laga">
+            <Award size={14} class="text-amber" />
+            <span>Seri Turnamen</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'pdf_report' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'pdf_report')}
+            title="Laporan Pertandingan Resmi Siap Cetak PDF">
+            <Printer size={14} class="text-emerald" />
+            <span>PDF Report</span>
+          </button>
+
+          <button 
+            class="tab-btn {matchStore.currentView === 'master_db' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'master_db')}>
+            <Database size={14} />
+            <span>Database Master</span>
+          </button>
+
+          <button 
+            class="tab-btn tab-btn-highlight {matchStore.currentView === 'presentation' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'presentation')}
+            title="Buka Deck Presentasi Evaluasi Seri & Export PowerPoint (.pptx)">
+            <Presentation size={14} class="text-emerald" />
+            <span>Presentasi PPTX</span>
+          </button>
+        </nav>
 
         <button 
-          class="tab-btn {currentView === 'pitch' ? 'active' : ''}" 
-          onclick={() => (currentView = 'pitch')}>
-          <MapPin size={14} />
-          <span>Papan Taktik</span>
+          type="button" 
+          class="nav-scroll-btn btn-scroll-right" 
+          onclick={() => scrollTabs(200)} 
+          title="Geser Tab ke Kanan"
+          aria-label="Scroll right">
+          <ChevronRight size={16} />
         </button>
-
-        <button 
-          class="tab-btn {currentView === 'passing_network' ? 'active' : ''}" 
-          onclick={() => (currentView = 'passing_network')}
-          title="Peta Alur Operan 5-Man & Tekanan Zona">
-          <Activity size={14} class="text-cyan" />
-          <span>Passing & Pressure</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'matrix' ? 'active' : ''}" 
-          onclick={() => (currentView = 'matrix')}>
-          <Table size={14} />
-          <span>Matrix Pemain</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'pakets' ? 'active' : ''}" 
-          onclick={() => (currentView = 'pakets')}>
-          <Users size={14} />
-          <span>Paket 5-Man</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'substitutions' ? 'active' : ''}" 
-          onclick={() => (currentView = 'substitutions')}>
-          <ArrowRightLeft size={14} />
-          <span>Rotasi</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'video' ? 'active' : ''}" 
-          onclick={() => (currentView = 'video')}
-          title="Sinkronisasi Video Pertandingan & Tagging">
-          <Video size={14} class="text-rose" />
-          <span>Video Sync</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'tournament' ? 'active' : ''}" 
-          onclick={() => (currentView = 'tournament')}
-          title="Dashboard Akumulasi Turnamen & Seri Laga">
-          <Award size={14} class="text-amber" />
-          <span>Seri Turnamen</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'pdf_report' ? 'active' : ''}" 
-          onclick={() => (currentView = 'pdf_report')}
-          title="Laporan Pertandingan Resmi Siap Cetak PDF">
-          <Printer size={14} class="text-emerald" />
-          <span>PDF Report</span>
-        </button>
-
-        <button 
-          class="tab-btn {currentView === 'master_db' ? 'active' : ''}" 
-          onclick={() => (currentView = 'master_db')}>
-          <Database size={14} />
-          <span>Database Master</span>
-        </button>
-
-        <button 
-          class="tab-btn tab-btn-highlight {currentView === 'presentation' ? 'active' : ''}" 
-          onclick={() => (currentView = 'presentation')}
-          title="Buka Deck Presentasi Evaluasi Seri & Export PowerPoint (.pptx)">
-          <Presentation size={14} class="text-emerald" />
-          <span>Presentasi PPTX</span>
-        </button>
-      </nav>
+      </div>
 
       <!-- Match Timer & Half Controller in Toolbar (Clean & Distinct) -->
       <div class="header-timer-pill-wrapper">
@@ -501,29 +542,29 @@
     {:else}
       <!-- Tab Panels -->
       <div class="tab-content-area">
-        {#if currentView === 'sheet'}
+        {#if matchStore.currentView === 'sheet'}
           <OfficialSheetView />
-        {:else if currentView === 'bench_touch'}
+        {:else if matchStore.currentView === 'bench_touch'}
           <BenchTouchView />
-        {:else if currentView === 'matrix'}
+        {:else if matchStore.currentView === 'matrix'}
           <StatsTable />
-        {:else if currentView === 'pitch'}
+        {:else if matchStore.currentView === 'pitch'}
           <TacticalPitch />
-        {:else if currentView === 'passing_network'}
+        {:else if matchStore.currentView === 'passing_network'}
           <PassingPressureMap />
-        {:else if currentView === 'pakets'}
+        {:else if matchStore.currentView === 'pakets'}
           <PaketManager />
-        {:else if currentView === 'substitutions'}
+        {:else if matchStore.currentView === 'substitutions'}
           <SubstitutionTimeline />
-        {:else if currentView === 'video'}
+        {:else if matchStore.currentView === 'video'}
           <VideoAnalysisPlayer />
-        {:else if currentView === 'tournament'}
+        {:else if matchStore.currentView === 'tournament'}
           <TournamentDashboardView />
-        {:else if currentView === 'pdf_report'}
+        {:else if matchStore.currentView === 'pdf_report'}
           <PdfReportView />
-        {:else if currentView === 'master_db'}
+        {:else if matchStore.currentView === 'master_db'}
           <MasterPlayerDatabase />
-        {:else if currentView === 'presentation'}
+        {:else if matchStore.currentView === 'presentation'}
           <SeriesPresentationView />
         {/if}
       </div>
@@ -540,7 +581,7 @@
     onOpenIpadInstall={() => (showIpadInstallModal = true)} 
     onOpenAiInsights={() => (showAiTacticalModal = true)}
     onOpenCloudProvisioner={() => (showCloudProvisionerModal = true)}
-    onSelectView={(v) => (currentView = v)}
+    onSelectView={(v) => (matchStore.currentView = v)}
   />
 
   <!-- Modals -->
@@ -1337,6 +1378,38 @@
     color: #fda4af;
   }
 
+  .nav-tabs-scroll-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+  }
+
+  .nav-scroll-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 36px;
+    background: rgba(14, 25, 42, 0.95);
+    border: 1px solid rgba(156, 179, 204, 0.25);
+    border-radius: 7px;
+    color: #9cb3cc;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    z-index: 2;
+  }
+
+  .nav-scroll-btn:hover {
+    color: #ffffff;
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+  }
+
   .compact-nav-tabs {
     display: flex;
     gap: 6px;
@@ -1345,13 +1418,29 @@
     border-radius: 10px;
     border: 1px solid rgba(156, 179, 204, 0.18);
     overflow-x: auto;
+    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     flex: 1;
     min-width: 0;
   }
 
   .compact-nav-tabs::-webkit-scrollbar {
-    display: none;
+    height: 3px;
+    display: block;
+  }
+
+  .compact-nav-tabs::-webkit-scrollbar-track {
+    background: rgba(8, 14, 24, 0.3);
+    border-radius: 3px;
+  }
+
+  .compact-nav-tabs::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.35);
+    border-radius: 3px;
+  }
+
+  .compact-nav-tabs::-webkit-scrollbar-thumb:hover {
+    background: rgba(56, 189, 248, 0.7);
   }
 
   .compact-nav-tabs .tab-btn {
@@ -1359,7 +1448,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 6px 13px;
     min-height: 36px;
     border-radius: 7px;
     font-size: 0.78rem;
@@ -1370,7 +1459,7 @@
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    flex: 1;
+    flex-shrink: 0;
   }
 
   .compact-nav-tabs .tab-btn:hover {
@@ -2020,13 +2109,13 @@
       gap: 8px;
     }
 
-    .compact-nav-tabs {
+    .nav-tabs-scroll-wrapper {
       width: 100%;
       flex: none;
       order: 1;
     }
 
-    .header-timer-pill {
+    .header-timer-pill-wrapper {
       width: 100%;
       justify-content: center;
       order: 2;

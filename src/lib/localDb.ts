@@ -104,27 +104,22 @@ export const INITIAL_USER_PASSWORDS: Record<string, string> = {
 };
 
 export const INITIAL_MASTER_PLAYERS: MasterPlayer[] = [
-  // Porprov Paser Squad
-  { id: 'mp_paser_1', teamId: 'team_paser', noPunggung: 1, name: 'M. Rizky Pratama', nickname: 'Rizky', position: 'GK', dominantFoot: 'KANAN', height: 182, weight: 74, status: 'ACTIVE' },
-  { id: 'mp_paser_2', teamId: 'team_paser', noPunggung: 2, name: 'Dimas Aldi Setiawan', nickname: 'Dimas', position: 'GK', dominantFoot: 'KANAN', height: 180, weight: 72, status: 'ACTIVE' },
-  { id: 'mp_paser_3', teamId: 'team_paser', noPunggung: 3, name: 'Aldo Bagus Prasetyo', nickname: 'Aldo', position: 'ANCHOR', dominantFoot: 'KANAN', height: 176, weight: 69, status: 'ACTIVE' },
-  { id: 'mp_paser_4', teamId: 'team_paser', noPunggung: 4, name: 'Galang Tri Wicaksono', nickname: 'Galang', position: 'ANCHOR', dominantFoot: 'KIRI', height: 178, weight: 70, status: 'ACTIVE' },
-  { id: 'mp_paser_5', teamId: 'team_paser', noPunggung: 5, name: 'Rian Syahputra', nickname: 'Rian', position: 'ANCHOR', dominantFoot: 'KANAN', height: 175, weight: 68, status: 'ACTIVE' },
-  { id: 'mp_paser_6', teamId: 'team_paser', noPunggung: 6, name: 'Ibnu Hibban', nickname: 'Ibnu', position: 'FLANK_LEFT', dominantFoot: 'KIRI', height: 172, weight: 65, status: 'ACTIVE' },
-  { id: 'mp_paser_7', teamId: 'team_paser', noPunggung: 7, name: 'Ryan Maulana', nickname: 'Ryan', position: 'FLANK_RIGHT', dominantFoot: 'KANAN', height: 174, weight: 66, status: 'ACTIVE' },
-  { id: 'mp_paser_8', teamId: 'team_paser', noPunggung: 8, name: 'M. Zikri Ramadhan', nickname: 'Zikri', position: 'PIVOT', dominantFoot: 'KANAN', height: 179, weight: 75, status: 'ACTIVE' },
-  { id: 'mp_paser_9', teamId: 'team_paser', noPunggung: 9, name: 'Fikri Haikal', nickname: 'Fikri', position: 'PIVOT', dominantFoot: 'KIRI', height: 181, weight: 76, status: 'ACTIVE' },
-  { id: 'mp_paser_10', teamId: 'team_paser', noPunggung: 10, name: 'Reza Fahlefi', nickname: 'Reza', position: 'FLANK_LEFT', dominantFoot: 'KIRI', height: 173, weight: 67, status: 'ACTIVE' },
-  { id: 'mp_paser_11', teamId: 'team_paser', noPunggung: 11, name: 'Bagas Aditya', nickname: 'Bagas', position: 'FLANK_RIGHT', dominantFoot: 'KANAN', height: 170, weight: 64, status: 'ACTIVE' },
-  { id: 'mp_paser_12', teamId: 'team_paser', noPunggung: 12, name: 'Fajar Nugraha', nickname: 'Fajar', position: 'PLAYER', dominantFoot: 'KANAN', height: 175, weight: 68, status: 'ACTIVE' },
-  { id: 'mp_paser_13', teamId: 'team_paser', noPunggung: 13, name: 'Rangga Saputra', nickname: 'Rangga', position: 'PLAYER', dominantFoot: 'KANAN', height: 177, weight: 70, status: 'ACTIVE' },
-  { id: 'mp_paser_14', teamId: 'team_paser', noPunggung: 14, name: 'Dedi Kurniawan', nickname: 'Dedi', position: 'PLAYER', dominantFoot: 'KIRI', height: 174, weight: 68, status: 'ACTIVE' },
-  { id: 'mp_paser_15', teamId: 'team_paser', noPunggung: 15, name: 'Ilham Ramadhan', nickname: 'Ilham', position: 'PLAYER', dominantFoot: 'KANAN', height: 176, weight: 69, status: 'ACTIVE' },
-  { id: 'mp_paser_16', teamId: 'team_paser', noPunggung: 16, name: 'Wahyu Hidayat', nickname: 'Wahyu', position: 'PLAYER', dominantFoot: 'KANAN', height: 173, weight: 66, status: 'ACTIVE' },
-  { id: 'mp_paser_17', teamId: 'team_paser', noPunggung: 17, name: 'Agus Triono', nickname: 'Agus', position: 'PLAYER', dominantFoot: 'KANAN', height: 175, weight: 67, status: 'ACTIVE' },
-  { id: 'mp_paser_18', teamId: 'team_paser', noPunggung: 18, name: 'Hendra Gunawan', nickname: 'Hendra', position: 'PLAYER', dominantFoot: 'KANAN', height: 176, weight: 70, status: 'ACTIVE' },
-  { id: 'mp_paser_19', teamId: 'team_paser', noPunggung: 19, name: 'Bima Satria', nickname: 'Bima', position: 'PLAYER', dominantFoot: 'KIRI', height: 174, weight: 68, status: 'ACTIVE' },
-  { id: 'mp_paser_20', teamId: 'team_paser', noPunggung: 20, name: 'Teguh Prakoso', nickname: 'Teguh', position: 'PLAYER', dominantFoot: 'KANAN', height: 178, weight: 71, status: 'ACTIVE' },
+  // Porprov Paser Official Squad (15 Players)
+  { id: 'mp_1789522350661_prv0', teamId: 'team_paser', noPunggung: 1, name: 'Muhammad Galang Ramadhan Akbar', nickname: 'Galang', position: 'ANCHOR', dominantFoot: 'KANAN', height: 162, weight: 54, status: 'ACTIVE' },
+  { id: 'mp_1789522350871_c2zs', teamId: 'team_paser', noPunggung: 2, name: 'Rakha Ahmadin Maulid', nickname: 'Rakha', position: 'FLANK_RIGHT', dominantFoot: 'KIRI', height: 167, weight: 62, status: 'ACTIVE' },
+  { id: 'mp_1789522351029_0u5y', teamId: 'team_paser', noPunggung: 3, name: 'Rasya Rahmadan', nickname: 'Sakur', position: 'FLANK_LEFT', dominantFoot: 'KANAN', height: 169, weight: 54, status: 'ACTIVE' },
+  { id: 'mp_1789522351187_xrti', teamId: 'team_paser', noPunggung: 4, name: 'M Tsaqif Alkautsar Rahman', nickname: 'Aqif', position: 'ANCHOR', dominantFoot: 'KANAN', height: 170, weight: 68, status: 'ACTIVE' },
+  { id: 'mp_1789522351355_xnt2', teamId: 'team_paser', noPunggung: 5, name: 'Aderian Rizqon Toyba', nickname: 'Rizqon', position: 'PIVOT', dominantFoot: 'KANAN', height: 161, weight: 48, status: 'ACTIVE' },
+  { id: 'mp_1789522351524_3oj2', teamId: 'team_paser', noPunggung: 6, name: 'Muhammad Afghan Trihartanto', nickname: 'Afgan', position: 'FLANK_LEFT', dominantFoot: 'KANAN', height: 161, weight: 50, status: 'ACTIVE' },
+  { id: 'mp_1789522351690_r3r6', teamId: 'team_paser', noPunggung: 7, name: 'Bintang Yakusa Sugiarto', nickname: 'Bintang', position: 'FLANK_RIGHT', dominantFoot: 'KIRI', height: 168, weight: 60, status: 'ACTIVE' },
+  { id: 'mp_1789522351852_yxqs', teamId: 'team_paser', noPunggung: 8, name: 'Arya Alfiansyah', nickname: 'Arya Pivot', position: 'PIVOT', dominantFoot: 'KIRI', height: 163, weight: 65, status: 'ACTIVE' },
+  { id: 'mp_1789522355201_3lgl', teamId: 'team_paser', noPunggung: 9, name: 'Muhammad Arya Firjatullah Al Malik', nickname: 'Arya', position: 'FLANK_RIGHT', dominantFoot: 'KIRI', height: 161, weight: 52, status: 'ACTIVE' },
+  { id: 'mp_1789522352172_uc1h', teamId: 'team_paser', noPunggung: 10, name: 'Muhammad Arifin Nurcahyo', nickname: 'Arifin', position: 'GK', dominantFoot: 'KANAN', height: 173, weight: 64, status: 'ACTIVE' },
+  { id: 'mp_1789522352338_2mic', teamId: 'team_paser', noPunggung: 11, name: 'Zevano Adelio Wibowo', nickname: 'Zevano', position: 'GK', dominantFoot: 'KANAN', height: 177, weight: 80, status: 'ACTIVE' },
+  { id: 'mp_1789522352500_blhc', teamId: 'team_paser', noPunggung: 12, name: 'Muhammad Pahrul Zaini', nickname: 'Pahrul', position: 'FLANK_LEFT', dominantFoot: 'KANAN', height: 165, weight: 65, status: 'ACTIVE' },
+  { id: 'mp_1789522352662_jvnb', teamId: 'team_paser', noPunggung: 13, name: 'Dwi Maulana Muhammad Ibrahim Rumy', nickname: 'Ibra', position: 'PIVOT', dominantFoot: 'KANAN', height: 177, weight: 61, status: 'ACTIVE' },
+  { id: 'mp_1789522352832_nvma', teamId: 'team_paser', noPunggung: 14, name: 'Hari Akmal Risqullah', nickname: 'Akmal', position: 'GK', dominantFoot: 'KANAN', height: 169, weight: 73, status: 'ACTIVE' },
+  { id: 'mp_1789522352995_76m0', teamId: 'team_paser', noPunggung: 15, name: 'Muhammad Wirawan', nickname: 'Wirawan', position: 'FLANK_RIGHT', dominantFoot: 'KIRI', height: 165, weight: 55, status: 'ACTIVE' },
 
   // Nazara FC Squad
   { id: 'mp_nazara_1', teamId: 'team_nazara', noPunggung: 1, name: 'Aditya Nazara', nickname: 'Adit', position: 'GK', dominantFoot: 'KANAN', height: 181, weight: 73, status: 'ACTIVE' },
@@ -687,7 +682,7 @@ class LocalDatabase {
     const teamMaster = allMaster.filter(p => p.teamId === effectiveTeamId);
 
     const squad = teamMaster.map((p, idx) => ({
-      id: idx + 1,
+      id: newId * 1000 + (idx + 1),
       matchId: newId,
       no: p.noPunggung,
       name: p.name,
@@ -823,7 +818,8 @@ class LocalDatabase {
     const m = matches.find(x => x.match.id === matchId);
     if (!m) throw new Error('Match tidak ditemukan.');
 
-    const newId = m.players.length > 0 ? Math.max(...m.players.map(p => p.id)) + 1 : 1;
+    const maxExisting = m.players.length > 0 ? Math.max(...m.players.map(p => p.id)) : 0;
+    const newId = maxExisting >= matchId * 1000 ? maxExisting + 1 : matchId * 1000 + m.players.length + 1;
     const newPlayer = {
       ...data,
       id: newId,
