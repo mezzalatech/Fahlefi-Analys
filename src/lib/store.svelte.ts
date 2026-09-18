@@ -1,5 +1,6 @@
 import { api, type MatchData, type User, type MasterPlayer, type SubstitutionLog, type Team } from './api';
 import confetti from 'canvas-confetti';
+import { HapticEngine } from './haptic';
 import { 
   initRealtimeSync, 
   testSupabaseConnection, 
@@ -860,6 +861,7 @@ class MatchStore {
         ...subData
       });
       this.substitutions = [newSub, ...this.substitutions];
+      HapticEngine.triggerSubstitution();
     } catch (err) {
       console.error('Failed to log substitution:', err);
     }
@@ -1435,6 +1437,7 @@ class MatchStore {
 
   triggerGoalCelebration() {
     try {
+      HapticEngine.triggerGoal();
       confetti({
         particleCount: 80,
         spread: 70,

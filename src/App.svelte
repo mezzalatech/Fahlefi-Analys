@@ -22,6 +22,9 @@
   import PdfReportView from './components/PdfReportView.svelte';
   import BenchTouchView from './components/BenchTouchView.svelte';
   import PassingPressureMap from './components/PassingPressureMap.svelte';
+  import TournamentDashboardView from './components/TournamentDashboardView.svelte';
+  import VoiceTaggingOverlay from './components/VoiceTaggingOverlay.svelte';
+  import CloudProvisionerModal from './components/CloudProvisionerModal.svelte';
   import { 
     FileText, 
     Table, 
@@ -58,14 +61,16 @@
     Video,
     Activity,
     Printer,
-    Sparkles
+    Sparkles,
+    Award
   } from 'lucide-svelte';
 
-  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network'>('sheet');
+  let currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament'>('sheet');
   let showSidebar = $state<boolean>(false);
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
   let showAiTacticalModal = $state<boolean>(false);
+  let showCloudProvisionerModal = $state<boolean>(false);
   let showIpadInstallModal = $state<boolean>(false);
   let showTimeSyncPopover = $state<boolean>(false);
   let inputMinutes = $state<number>(20);
@@ -291,6 +296,14 @@
         </button>
 
         <button 
+          class="tab-btn {currentView === 'tournament' ? 'active' : ''}" 
+          onclick={() => (currentView = 'tournament')}
+          title="Dashboard Akumulasi Turnamen & Seri Laga">
+          <Award size={14} class="text-amber" />
+          <span>Seri Turnamen</span>
+        </button>
+
+        <button 
           class="tab-btn {currentView === 'pdf_report' ? 'active' : ''}" 
           onclick={() => (currentView = 'pdf_report')}
           title="Laporan Pertandingan Resmi Siap Cetak PDF">
@@ -504,6 +517,8 @@
           <SubstitutionTimeline />
         {:else if currentView === 'video'}
           <VideoAnalysisPlayer />
+        {:else if currentView === 'tournament'}
+          <TournamentDashboardView />
         {:else if currentView === 'pdf_report'}
           <PdfReportView />
         {:else if currentView === 'master_db'}
@@ -515,18 +530,26 @@
     {/if}
   </main>
 
+  <!-- Floating Voice Tagging Overlay (Always active for fast hands-free tagging) -->
+  <VoiceTaggingOverlay />
+
   <!-- App Sidebar Drawer -->
   <AppSidebar 
     isOpen={showSidebar} 
     onClose={() => (showSidebar = false)} 
     onOpenIpadInstall={() => (showIpadInstallModal = true)} 
     onOpenAiInsights={() => (showAiTacticalModal = true)}
+    onOpenCloudProvisioner={() => (showCloudProvisionerModal = true)}
     onSelectView={(v) => (currentView = v)}
   />
 
   <!-- Modals -->
   {#if showAiTacticalModal}
     <AiTacticalInsightsModal onClose={() => (showAiTacticalModal = false)} />
+  {/if}
+
+  {#if showCloudProvisionerModal}
+    <CloudProvisionerModal onClose={() => (showCloudProvisionerModal = false)} />
   {/if}
 
   {#if matchStore.showMatchManagerModal}

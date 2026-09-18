@@ -37,10 +37,11 @@
     onClose: () => void;
     onOpenIpadInstall?: () => void;
     onOpenAiInsights?: () => void;
-    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network') => void;
+    onOpenCloudProvisioner?: () => void;
+    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament') => void;
   }
 
-  let { isOpen, onClose, onOpenIpadInstall, onOpenAiInsights, onSelectView } = $props<Props>();
+  let { isOpen, onClose, onOpenIpadInstall, onOpenAiInsights, onOpenCloudProvisioner, onSelectView } = $props<Props>();
 
   let showTeamDropdown = $state<boolean>(false);
 
@@ -274,6 +275,19 @@
       <ChevronRight size={15} class="menu-arrow" />
     </button>
 
+    <!-- Tournament Series Dashboard -->
+    <button 
+      type="button" 
+      class="nav-menu-btn" 
+      onclick={() => { if (onSelectView) onSelectView('tournament'); onClose(); }}>
+      <Trophy size={17} class="text-amber-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label">Dashboard Seri Turnamen</span>
+        <span class="menu-sub-label">Akumulasi multi-match, leaderboard, & load pemain</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
+
     <!-- Professional PDF Match Report -->
     <button 
       type="button" 
@@ -283,6 +297,19 @@
       <div class="menu-label-wrap">
         <span class="menu-primary-label">Official PDF Match Dossier</span>
         <span class="menu-sub-label">Dokumen siap cetak & share via WhatsApp</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
+
+    <!-- Cloud Health Diagnostics & Provisioner -->
+    <button 
+      type="button" 
+      class="nav-menu-btn" 
+      onclick={() => { if (onOpenCloudProvisioner) onOpenCloudProvisioner(); onClose(); }}>
+      <Cloud size={17} class="text-emerald-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label">Diagnostik Database Cloud</span>
+        <span class="menu-sub-label">Cek 8 tabel Supabase & 1-klik perbaikan schema</span>
       </div>
       <ChevronRight size={15} class="menu-arrow" />
     </button>
