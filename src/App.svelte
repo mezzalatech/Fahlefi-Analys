@@ -21,7 +21,6 @@
   import VideoAnalysisPlayer from './components/VideoAnalysisPlayer.svelte';
   import PdfReportView from './components/PdfReportView.svelte';
   import BenchTouchView from './components/BenchTouchView.svelte';
-  import PassingPressureMap from './components/PassingPressureMap.svelte';
   import TournamentDashboardView from './components/TournamentDashboardView.svelte';
   import VoiceTaggingOverlay from './components/VoiceTaggingOverlay.svelte';
   import CloudProvisionerModal from './components/CloudProvisionerModal.svelte';

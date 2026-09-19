@@ -6,12 +6,8 @@
     X, 
     Flame, 
     MapPin, 
-    Share2, 
     Activity, 
-    Printer,
-    Layers,
-    Users,
-    Sparkles
+    Printer
   } from 'lucide-svelte';
 
   let pitchRef: HTMLDivElement;
@@ -19,8 +15,8 @@
   let showModal = $state<boolean>(false);
   let clickCoords = $state<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Main View Mode inside Tactical Pitch
-  let activeTabMode = $state<'pins' | 'heatmap' | 'passing'>('pins');
+  // 2 View Modes: Pins (Titik Kejadian) & True Thermal Heatmap
+  let activeTabMode = $state<'pins' | 'heatmap'>('pins');
 
   function handlePrint() {
     window.print();
@@ -56,84 +52,6 @@
       if (heatmapFilter !== 'all' && e.type !== heatmapFilter) return false;
       return true;
     });
-  });
-
-  // ==================== PASSING NETWORK LOGIC ====================
-  interface PlayerNode {
-    id: number;
-    no: number;
-    name: string;
-    role: string;
-    x: number;
-    y: number;
-    touches: number;
-  }
-
-  let nodes = $derived<PlayerNode[]>(() => {
-    const onPitch = matchStore.onPitchPlayers;
-    const activeSquad = players.filter(p => onPitch.includes(p.no));
-    const displayPlayers = (activeSquad.length >= 4 ? activeSquad : players.slice(0, 5)).slice(0, 5);
-
-    let gkPlayer = displayPlayers.find(p => p.isGk === 1);
-    let outfieldPlayers = displayPlayers.filter(p => p !== gkPlayer);
-
-    if (!gkPlayer && displayPlayers.length > 0) {
-      gkPlayer = displayPlayers[0];
-      outfieldPlayers = displayPlayers.slice(1);
-    }
-
-    const tacticalRoles = [
-      { role: 'ANC', x: 280, y: 240 },
-      { role: 'FL-L', x: 440, y: 110 },
-      { role: 'FL-R', x: 440, y: 370 },
-      { role: 'PIV', x: 620, y: 240 }
-    ];
-
-    const result: PlayerNode[] = [];
-
-    if (gkPlayer) {
-      const touches = (gkPlayer.rec1 || 0) + (gkPlayer.rec2 || 0) + (gkPlayer.sh1 || 0) + (gkPlayer.sh2 || 0) + (gkPlayer.loss1 || 0) + (gkPlayer.loss2 || 0);
-      result.push({
-        id: gkPlayer.id,
-        no: gkPlayer.no,
-        name: gkPlayer.name,
-        role: 'GK',
-        x: 95,
-        y: 240,
-        touches: Math.max(5, touches)
-      });
-    }
-
-    outfieldPlayers.forEach((p, idx) => {
-      const pos = tacticalRoles[idx] || { role: `FP-${idx + 1}`, x: 320 + idx * 50, y: 160 + (idx % 2 === 0 ? -60 : 60) };
-      const touches = (p.rec1 || 0) + (p.rec2 || 0) + (p.sh1 || 0) + (p.sh2 || 0) + (p.loss1 || 0) + (p.loss2 || 0);
-      result.push({
-        id: p.id,
-        no: p.no,
-        name: p.name,
-        role: pos.role,
-        x: pos.x,
-        y: pos.y,
-        touches: Math.max(5, touches)
-      });
-    });
-
-    return result;
-  });
-
-  let links = $derived(() => {
-    const nodeList = nodes;
-    const linkList: Array<{ source: PlayerNode; target: PlayerNode; weight: number }> = [];
-
-    for (let i = 0; i < nodeList.length; i++) {
-      for (let j = i + 1; j < nodeList.length; j++) {
-        const p1 = nodeList[i];
-        const p2 = nodeList[j];
-        const weight = Math.min(8, Math.max(1, Math.round((p1.touches + p2.touches) / 6)));
-        linkList.push({ source: p1, target: p2, weight });
-      }
-    }
-    return linkList;
   });
 
   // ==================== TRUE THERMAL HEATMAP ENGINE ====================
@@ -181,15 +99,14 @@
     const aCtx = alphaCanvas.getContext('2d', { willReadFrequently: true });
     if (!aCtx) return;
 
-    const radius = 50;
+    const radius = 55;
 
     evts.forEach((ev) => {
-      // Scale x, y to 800 x 480
       const x = Math.max(10, Math.min(width - 10, ev.x));
       const y = Math.max(10, Math.min(height - 10, ev.y));
 
       const radial = aCtx.createRadialGradient(x, y, 0, x, y, radius);
-      const intensity = ev.type === 'shot' ? (ev.outcome === 'goal' ? 0.65 : 0.5) : 0.4;
+      const intensity = ev.type === 'shot' ? (ev.outcome === 'goal' ? 0.7 : 0.5) : 0.4;
       radial.addColorStop(0, `rgba(0, 0, 0, ${intensity})`);
       radial.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
@@ -211,17 +128,15 @@
         data[i] = palette[pIdx];         // R
         data[i + 1] = palette[pIdx + 1]; // G
         data[i + 2] = palette[pIdx + 2]; // B
-        data[i + 3] = Math.min(255, Math.round(alpha * 1.5)); // Boosted opacity for clarity
+        data[i + 3] = Math.min(255, Math.round(alpha * 1.5)); // Boosted opacity
       }
     }
 
     ctx.putImageData(imgData, 0, 0);
   }
 
-  // Reactive effect to render heatmap when data or mode changes
   $effect(() => {
     if (activeTabMode === 'heatmap') {
-      // Small tick timeout to ensure canvas is attached to DOM
       setTimeout(() => {
         renderThermalHeatmap();
       }, 30);
@@ -274,26 +189,24 @@
 </script>
 
 <div class="pitch-section glass-card">
-  <!-- Top Unified Mode Selector & Header -->
+  <!-- Top Header & Mode Bar -->
   <div class="pitch-header-box">
     <div class="header-main-title">
       <div class="title-with-icon">
         <Activity size={22} class="text-cyan" />
         <div>
-          <h2 class="section-title">Papan Taktik, Heatmap & Passing Network</h2>
+          <h2 class="section-title">Papan Taktik & Thermal Heatmap</h2>
           <span class="pitch-tip">
             {#if activeTabMode === 'pins'}
               Mode Plotting: Klik / Ketuk lapangan untuk mencatat aksi tembakan, recovery, & turnover
-            {:else if activeTabMode === 'heatmap'}
-              Mode Heatmap: Gradasi termal densitas sebaran aksi pemain di lapangan secara presisi
             {:else}
-              Mode Passing Network: Visualisasi distribusi dan keterhubungan operan 5-Man Unit aktif
+              Mode Heatmap: Gradasi termal densitas sebaran aksi pemain di lapangan secara presisi
             {/if}
           </span>
         </div>
       </div>
 
-      <!-- Mode Selector Segmented Tabs -->
+      <!-- 2 Mode Segmented Tabs -->
       <div class="segmented-mode-bar">
         <button 
           type="button" 
@@ -311,15 +224,6 @@
           title="Mode Heatmap Termal Nyata">
           <Flame size={14} />
           <span>Thermal Heatmap</span>
-        </button>
-
-        <button 
-          type="button" 
-          class="seg-btn {activeTabMode === 'passing' ? 'active-seg active-pass' : ''}" 
-          onclick={() => (activeTabMode = 'passing')}
-          title="Mode Passing Matrix 5-Man">
-          <Users size={14} />
-          <span>Passing Matrix</span>
         </button>
       </div>
     </div>
@@ -357,7 +261,7 @@
             class="pill-btn {filterType === 'turnover' ? 'active' : ''}" 
             onclick={() => (filterType = 'turnover')}>Loss</button>
         </div>
-      {:else if activeTabMode === 'heatmap'}
+      {:else}
         <div class="filter-group">
           <span class="filter-label">Kategori Heatmap:</span>
           <button 
@@ -384,7 +288,6 @@
 
   <!-- Interactive Pitch Container -->
   <div class="pitch-wrapper">
-    <!-- Futsal Field Container (800 x 480 Aspect Ratio) -->
     <div 
       class="futsal-court {activeTabMode === 'pins' ? 'court-clickable' : ''}" 
       bind:this={pitchRef} 
@@ -396,7 +299,7 @@
       <!-- Real Futsal Court Background Image -->
       <img src="/lapangan.png" alt="Lapangan Futsal" class="court-bg-img" />
 
-      <!-- ==================== MODE 1: PINS (TITIK KEJADIAN) ==================== -->
+      <!-- MODE 1: PINS (TITIK KEJADIAN) -->
       {#if activeTabMode === 'pins'}
         {#each filteredEvents as evt, evtIdx (evt.id ? `evt_${evt.id}` : `evt_idx_${evtIdx}`)}
           <div 
@@ -432,43 +335,14 @@
           </div>
         {/each}
 
-      <!-- ==================== MODE 2: TRUE THERMAL HEATMAP ==================== -->
-      {:else if activeTabMode === 'heatmap'}
+      <!-- MODE 2: TRUE THERMAL HEATMAP -->
+      {:else}
         <canvas bind:this={heatmapCanvasRef} class="thermal-heatmap-canvas"></canvas>
         {#if heatmapEvents.length === 0}
           <div class="empty-heatmap-notice">
             <span>Belum ada data kejadian untuk kategori heatmap ini.</span>
           </div>
         {/if}
-
-      <!-- ==================== MODE 3: PASSING MATRIX 5-MAN ==================== -->
-      {:else if activeTabMode === 'passing'}
-        <svg viewBox="0 0 800 480" class="tactical-passing-svg">
-          <!-- Passing Interconnection Lines -->
-          {#each links as link}
-            <line 
-              x1={link.source.x} 
-              y1={link.source.y} 
-              x2={link.target.x} 
-              y2={link.target.y} 
-              stroke="#00e5ff" 
-              stroke-width={link.weight} 
-              stroke-opacity={0.35 + (link.weight * 0.08)} 
-              stroke-dasharray={link.weight < 2 ? "4 4" : "none"}
-            />
-          {/each}
-
-          <!-- Player Positional Nodes -->
-          {#each nodes as node}
-            <g class="player-node-group" transform="translate({node.x}, {node.y})">
-              <circle class="node-glow" cx="0" cy="0" r={20 + (node.touches * 0.35)} fill="rgba(0, 229, 255, 0.15)" stroke="#00e5ff" stroke-width="2" />
-              <circle class="node-core" cx="0" cy="0" r="16" fill="#040914" stroke="#ffffff" stroke-width="2" />
-              <text class="node-num" x="0" y="5" font-size="11" font-weight="900" fill="#00e5ff" text-anchor="middle">#{node.no}</text>
-              <rect class="node-badge-rect" x="-42" y="22" width="84" height="17" rx="4" fill="rgba(4, 9, 20, 0.9)" stroke="rgba(255,255,255,0.25)" />
-              <text class="node-badge-text" x="0" y="34" font-size="8.5" font-weight="700" fill="#ffffff" text-anchor="middle">{node.role} • {node.name.split(' ')[0]}</text>
-            </g>
-          {/each}
-        </svg>
       {/if}
     </div>
   </div>
@@ -482,16 +356,12 @@
       <div class="legend-item"><span class="leg-dot" style="background: #f59e0b;"></span> <span>Blocked</span></div>
       <div class="legend-item"><span class="leg-dot" style="background: #06b6d4;"></span> <span>Recovery</span></div>
       <div class="legend-item"><span class="leg-dot" style="background: #f43f5e;"></span> <span>Turnover</span></div>
-    {:else if activeTabMode === 'heatmap'}
+    {:else}
       <div class="thermal-legend-group">
         <span class="therm-lbl">Densitas Rendah (Dingin)</span>
         <div class="thermal-color-bar"></div>
         <span class="therm-lbl font-bold text-rose-400">Densitas Tinggi (Hotspot Panas)</span>
       </div>
-    {:else}
-      <div class="legend-item"><span class="leg-line thick"></span> <span>Frekuensi Distribusi Tinggi</span></div>
-      <div class="legend-item"><span class="leg-line dash"></span> <span>Alur Distribusi Sekunder</span></div>
-      <div class="legend-item"><span class="leg-dot cyan"></span> <span>Posisi Unit 5-Man Lapangan</span></div>
     {/if}
   </div>
 
@@ -633,7 +503,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 6px 14px;
     font-size: 0.78rem;
     font-weight: 600;
     color: #94a3b8;
@@ -659,11 +529,6 @@
   .seg-btn.active-heat {
     background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
     box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
-  }
-
-  .seg-btn.active-pass {
-    background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
-    box-shadow: 0 2px 10px rgba(6, 182, 212, 0.4);
   }
 
   .pitch-filters-bar {
@@ -791,42 +656,6 @@
     font-size: 0.85rem;
     font-weight: 600;
     z-index: 6;
-  }
-
-  /* PASSING NETWORK SVG OVERLAY */
-  .tactical-passing-svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 8;
-  }
-
-  .player-node-group {
-    cursor: pointer;
-  }
-
-  .player-node-group .node-glow,
-  .player-node-group .node-core,
-  .player-node-group .node-badge-rect {
-    transition: all 0.2s ease-out;
-  }
-
-  .player-node-group:hover .node-glow {
-    fill: rgba(0, 229, 255, 0.35);
-    stroke: #38bdf8;
-    stroke-width: 3;
-    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
-  }
-
-  .player-node-group:hover .node-core {
-    fill: #0c1e3d;
-    stroke: #38bdf8;
-  }
-
-  .player-node-group:hover .node-badge-rect {
-    stroke: #00e5ff;
-    fill: rgba(8, 18, 38, 0.95);
   }
 
   /* PINS MARKER STYLES */
@@ -959,17 +788,6 @@
     height: 10px;
     border-radius: 50%;
   }
-
-  .leg-dot.cyan { background: #00e5ff; }
-
-  .leg-line {
-    width: 20px;
-    height: 3px;
-    background: #00e5ff;
-    display: inline-block;
-  }
-  .leg-line.thick { height: 5px; }
-  .leg-line.dash { border-top: 2px dashed #00e5ff; background: transparent; }
 
   /* Thermal Legend Bar */
   .thermal-legend-group {

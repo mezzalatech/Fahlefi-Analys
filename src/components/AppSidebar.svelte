@@ -262,15 +262,15 @@
       <ChevronRight size={15} class="menu-arrow" />
     </button>
 
-    <!-- Tactical Pitch, Heatmap & Passing Network -->
+    <!-- Tactical Pitch & True Thermal Heatmap -->
     <button 
       type="button" 
       class="nav-menu-btn" 
       onclick={() => { if (onSelectView) onSelectView('pitch'); onClose(); }}>
       <Activity size={17} class="text-emerald-400" />
       <div class="menu-label-wrap">
-        <span class="menu-primary-label">Papan Taktik, Heatmap & Passing</span>
-        <span class="menu-sub-label">Plotting aksi, True Thermal Heatmap & Passing Matrix 5-Man</span>
+        <span class="menu-primary-label">Papan Taktik & Thermal Heatmap</span>
+        <span class="menu-sub-label">Plotting aksi pemain & analisis densitas True Heatmap</span>
       </div>
       <ChevronRight size={15} class="menu-arrow" />
     </button>
