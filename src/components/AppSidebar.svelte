@@ -249,19 +249,6 @@
       <ChevronRight size={15} class="menu-arrow" />
     </button>
 
-    <!-- Coach Bench Touch Mode -->
-    <button 
-      type="button" 
-      class="nav-menu-btn" 
-      onclick={() => { if (onSelectView) onSelectView('bench_touch'); onClose(); }}>
-      <Zap size={17} class="text-amber-400" />
-      <div class="menu-label-wrap">
-        <span class="menu-primary-label">Coach Bench Touch Mode (iPad)</span>
-        <span class="menu-sub-label">1-Tap rotasi paket & fast-logging di bench</span>
-      </div>
-      <ChevronRight size={15} class="menu-arrow" />
-    </button>
-
     <!-- Tactical Pitch & True Thermal Heatmap -->
     <button 
       type="button" 

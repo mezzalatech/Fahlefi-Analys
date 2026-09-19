@@ -20,7 +20,6 @@
   import AiTacticalInsightsModal from './components/AiTacticalInsightsModal.svelte';
   import VideoAnalysisPlayer from './components/VideoAnalysisPlayer.svelte';
   import PdfReportView from './components/PdfReportView.svelte';
-  import BenchTouchView from './components/BenchTouchView.svelte';
   import TournamentDashboardView from './components/TournamentDashboardView.svelte';
   import VoiceTaggingOverlay from './components/VoiceTaggingOverlay.svelte';
   import CloudProvisionerModal from './components/CloudProvisionerModal.svelte';
@@ -273,13 +272,6 @@
             <span>Lembar Dokumen</span>
           </button>
 
-          <button 
-            class="tab-btn {matchStore.currentView === 'bench_touch' ? 'active' : ''}" 
-            onclick={() => (matchStore.currentView = 'bench_touch')}
-            title="Mode Cepat Sentuh Khusus iPad di Bench Pelatih">
-            <Zap size={14} class="text-amber" />
-            <span>Bench Touch (iPad)</span>
-          </button>
 
           <button 
             class="tab-btn {matchStore.currentView === 'pitch' || matchStore.currentView === 'passing_network' ? 'active' : ''}" 
@@ -536,8 +528,6 @@
       <div class="tab-content-area">
         {#if matchStore.currentView === 'sheet'}
           <OfficialSheetView />
-        {:else if matchStore.currentView === 'bench_touch'}
-          <BenchTouchView />
         {:else if matchStore.currentView === 'matrix'}
           <StatsTable />
         {:else if matchStore.currentView === 'pitch' || matchStore.currentView === 'passing_network'}
