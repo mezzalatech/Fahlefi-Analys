@@ -706,7 +706,8 @@ class MatchStore {
       let res = await api.getMatch(mId);
 
       // Strict confidentiality: if match belongs to another team, load this team's match
-      if (!this.isSuperAdmin && res?.match?.teamId && this.activeTeamId && res.match.teamId !== this.activeTeamId) {
+      const matchTeam = res?.match?.teamId || 'team_paser';
+      if (!this.isSuperAdmin && this.activeTeamId && matchTeam !== this.activeTeamId) {
         await this.loadMatchesList(this.activeTeamId);
         if (this.matchesList.length > 0) {
           mId = this.matchesList[0].id;

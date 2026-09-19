@@ -375,6 +375,7 @@ export const supabaseApi = {
     const id = player.id || `mp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const row = {
       id,
+      team_id: player.teamId || 'team_paser',
       no_punggung: Number(player.noPunggung) || 1,
       name: player.name || 'Pemain Baru',
       nickname: player.nickname || '',
@@ -414,6 +415,7 @@ export const supabaseApi = {
     if (!supabase) return localDb.updateMasterPlayer(id, partial);
 
     const updates: any = {};
+    if (partial.teamId !== undefined) updates.team_id = partial.teamId;
     if (partial.noPunggung !== undefined) updates.no_punggung = Number(partial.noPunggung);
     if (partial.name !== undefined) updates.name = partial.name;
     if (partial.nickname !== undefined) updates.nickname = partial.nickname;
@@ -493,11 +495,7 @@ export const supabaseApi = {
         }));
 
         if (teamId) {
-          const filtered = list.filter(m => m.teamId === teamId);
-          const hasMultipleTeams = list.some(m => m.teamId && m.teamId !== 'team_paser');
-          if (filtered.length > 0 || hasMultipleTeams) {
-            list = filtered;
-          }
+          list = list.filter(m => m.teamId === teamId);
         }
         return list;
       }
@@ -620,6 +618,7 @@ export const supabaseApi = {
 
       const row = {
         id: newId,
+        team_id: resolvedTeamId,
         name: matchData.name || `Match #${newId}`,
         competition: matchData.competition || 'Futsal League',
         date: matchData.date || new Date().toISOString().split('T')[0],
