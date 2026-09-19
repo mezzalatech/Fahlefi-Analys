@@ -262,15 +262,15 @@
       <ChevronRight size={15} class="menu-arrow" />
     </button>
 
-    <!-- Passing Network & Pressure Map -->
+    <!-- Tactical Pitch, Heatmap & Passing Network -->
     <button 
       type="button" 
       class="nav-menu-btn" 
-      onclick={() => { if (onSelectView) onSelectView('passing_network'); onClose(); }}>
+      onclick={() => { if (onSelectView) onSelectView('pitch'); onClose(); }}>
       <Activity size={17} class="text-emerald-400" />
       <div class="menu-label-wrap">
-        <span class="menu-primary-label">Passing Network & Zone Pressure</span>
-        <span class="menu-sub-label">Peta alur bola 5-man & 3rd-zone block analysis</span>
+        <span class="menu-primary-label">Papan Taktik, Heatmap & Passing</span>
+        <span class="menu-sub-label">Plotting aksi, True Thermal Heatmap & Passing Matrix 5-Man</span>
       </div>
       <ChevronRight size={15} class="menu-arrow" />
     </button>

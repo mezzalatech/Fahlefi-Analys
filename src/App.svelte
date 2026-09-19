@@ -283,18 +283,11 @@
           </button>
 
           <button 
-            class="tab-btn {matchStore.currentView === 'pitch' ? 'active' : ''}" 
-            onclick={() => (matchStore.currentView = 'pitch')}>
+            class="tab-btn {matchStore.currentView === 'pitch' || matchStore.currentView === 'passing_network' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'pitch')}
+            title="Papan Taktik, True Thermal Heatmap & Passing Network">
             <MapPin size={14} />
-            <span>Papan Taktik</span>
-          </button>
-
-          <button 
-            class="tab-btn {matchStore.currentView === 'passing_network' ? 'active' : ''}" 
-            onclick={() => (matchStore.currentView = 'passing_network')}
-            title="Peta Alur Operan 5-Man & Tekanan Zona">
-            <Activity size={14} class="text-cyan" />
-            <span>Passing & Pressure</span>
+            <span>Papan Taktik & Heatmap</span>
           </button>
 
           <button 
@@ -548,10 +541,8 @@
           <BenchTouchView />
         {:else if matchStore.currentView === 'matrix'}
           <StatsTable />
-        {:else if matchStore.currentView === 'pitch'}
+        {:else if matchStore.currentView === 'pitch' || matchStore.currentView === 'passing_network'}
           <TacticalPitch />
-        {:else if matchStore.currentView === 'passing_network'}
-          <PassingPressureMap />
         {:else if matchStore.currentView === 'pakets'}
           <PaketManager />
         {:else if matchStore.currentView === 'substitutions'}
