@@ -1,6 +1,6 @@
 <script lang="ts">
   import { matchStore } from '../lib/store.svelte';
-  import { Shield, UserCheck, Lock, X, Eye, EyeOff, User, AlertCircle, Crown, Building2 } from 'lucide-svelte';
+  import { Shield, UserCheck, Lock, X, Eye, EyeOff, User, AlertCircle } from 'lucide-svelte';
 
   interface Props {
     onClose?: () => void;
@@ -32,12 +32,6 @@
     } finally {
       loading = false;
     }
-  }
-
-  function fillDemo(u: string, p: string) {
-    username = u;
-    password = p;
-    errorMessage = null;
   }
 </script>
 
@@ -127,46 +121,7 @@
         </button>
       </div>
 
-      <!-- Quick Demo Account Chips -->
-      <div class="demo-accounts-section">
-        <div class="demo-header-label">
-          <span>⚡ PILIH AKUN UJI COBA CEPAT (DEMO):</span>
-        </div>
-        <div class="demo-chips-grid">
-          <button 
-            type="button" 
-            class="demo-chip chip-superadmin" 
-            onclick={() => fillDemo('admin', 'admin123')}>
-            <Crown size={13} class="text-amber-400" />
-            <div class="chip-text">
-              <span class="chip-title">👑 Super Admin</span>
-              <span class="chip-cred">admin / admin123</span>
-            </div>
-          </button>
 
-          <button 
-            type="button" 
-            class="demo-chip chip-paser" 
-            onclick={() => fillDemo('coach', 'coach123')}>
-            <Building2 size={13} class="text-emerald-400" />
-            <div class="chip-text">
-              <span class="chip-title">🟢 Porprov Paser</span>
-              <span class="chip-cred">coach / coach123</span>
-            </div>
-          </button>
-
-          <button 
-            type="button" 
-            class="demo-chip chip-nazara" 
-            onclick={() => fillDemo('coach_nazara', 'nazara123')}>
-            <Building2 size={13} class="text-sky-400" />
-            <div class="chip-text">
-              <span class="chip-title">🔵 Nazara FC</span>
-              <span class="chip-cred">coach_nazara / nazara123</span>
-            </div>
-          </button>
-        </div>
-      </div>
 
       <div class="login-footer-info">
         <Shield size={13} class="text-muted" />
@@ -405,84 +360,7 @@
     cursor: not-allowed;
   }
 
-  /* Demo section */
-  .demo-accounts-section {
-    background: rgba(12, 22, 38, 0.7);
-    border: 1px dashed rgba(148, 163, 184, 0.2);
-    border-radius: 10px;
-    padding: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
 
-  .demo-header-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #94a3b8;
-    letter-spacing: 0.05em;
-  }
-
-  .demo-chips-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
-
-  .demo-chip {
-    background: rgba(15, 27, 48, 0.85);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 8px;
-    padding: 6px 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.15s;
-  }
-
-  .demo-chip:hover {
-    border-color: #38bdf8;
-    background: rgba(56, 189, 248, 0.1);
-    transform: translateY(-1px);
-  }
-
-  .chip-text {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .chip-title {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #f8fafc;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .chip-cred {
-    font-size: 0.64rem;
-    color: #94a3b8;
-    font-family: monospace;
-  }
-
-  .chip-superadmin:hover {
-    border-color: #fbbf24;
-    background: rgba(245, 158, 11, 0.12);
-  }
-
-  .chip-paser:hover {
-    border-color: #4ade80;
-    background: rgba(34, 197, 94, 0.12);
-  }
-
-  .chip-nazara:hover {
-    border-color: #38bdf8;
-    background: rgba(56, 189, 248, 0.12);
-  }
 
   .spinner-small {
     width: 16px;

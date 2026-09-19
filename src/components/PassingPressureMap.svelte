@@ -30,34 +30,62 @@
   }
 
   let nodes = $derived<PlayerNode[]>(() => {
-    // Ambil 5 pemain on pitch atau top 5 pemain dengan keterlibatan aksi tertinggi
+    // Ambil 5 pemain on pitch atau top 5 pemain aktif
     const onPitch = matchStore.onPitchPlayers;
     const activeSquad = players.filter(p => onPitch.includes(p.no));
 
     // Fallback jika belum pilih paket: ambil 5 pemain pertama
-    const displayPlayers = activeSquad.length >= 4 ? activeSquad : players.slice(0, 5);
+    const displayPlayers = (activeSquad.length >= 4 ? activeSquad : players.slice(0, 5)).slice(0, 5);
 
-    const defaultCoords = [
-      { role: 'GK', x: 120, y: 300 },
+    // Pisahkan GK dan Pemain Lapangan (Outfield) secara cerdas
+    let gkPlayer = displayPlayers.find(p => p.isGk === 1);
+    let outfieldPlayers = displayPlayers.filter(p => p !== gkPlayer);
+
+    // Jika tidak ada yang ditandai GK, jadikan pemain pertama sebagai penjaga gawang
+    if (!gkPlayer && displayPlayers.length > 0) {
+      gkPlayer = displayPlayers[0];
+      outfieldPlayers = displayPlayers.slice(1);
+    }
+
+    const tacticalRoles = [
       { role: 'ANC', x: 340, y: 300 },
       { role: 'FL-L', x: 520, y: 140 },
       { role: 'FL-R', x: 520, y: 460 },
       { role: 'PIV', x: 740, y: 300 }
     ];
 
-    return displayPlayers.map((p, idx) => {
-      const coord = defaultCoords[idx] || { role: 'FP', x: 400 + idx * 50, y: 200 + idx * 60 };
+    const result: PlayerNode[] = [];
+
+    // 1. Tempatkan Kiper di Gawang
+    if (gkPlayer) {
+      const touches = (gkPlayer.rec1 || 0) + (gkPlayer.rec2 || 0) + (gkPlayer.sh1 || 0) + (gkPlayer.sh2 || 0) + (gkPlayer.loss1 || 0) + (gkPlayer.loss2 || 0);
+      result.push({
+        id: gkPlayer.id,
+        no: gkPlayer.no,
+        name: gkPlayer.name,
+        role: 'GK',
+        x: 120,
+        y: 300,
+        touches: Math.max(5, touches)
+      });
+    }
+
+    // 2. Tempatkan 4 Pemain Lapangan sesuai formasi Anchor - Flank - Pivot
+    outfieldPlayers.forEach((p, idx) => {
+      const pos = tacticalRoles[idx] || { role: `FP-${idx + 1}`, x: 400 + idx * 60, y: 200 + (idx % 2 === 0 ? -100 : 100) };
       const touches = (p.rec1 || 0) + (p.rec2 || 0) + (p.sh1 || 0) + (p.sh2 || 0) + (p.loss1 || 0) + (p.loss2 || 0);
-      return {
+      result.push({
         id: p.id,
         no: p.no,
         name: p.name,
-        role: p.isGk ? 'GK' : coord.role,
-        x: coord.x,
-        y: coord.y,
+        role: pos.role,
+        x: pos.x,
+        y: pos.y,
         touches: Math.max(5, touches)
-      };
+      });
     });
+
+    return result;
   });
 
   // Calculate synthetic passing links based on proximity & tactical connections
@@ -189,14 +217,14 @@
         {#each nodes() as node}
           <g class="player-node-group" transform="translate({node.x}, {node.y})">
             <!-- Node Outer Glow -->
-            <circle cx="0" cy="0" r={22 + (node.touches * 0.4)} fill="rgba(0, 229, 255, 0.15)" stroke="#00e5ff" stroke-width="2" />
+            <circle class="node-glow" cx="0" cy="0" r={22 + (node.touches * 0.4)} fill="rgba(0, 229, 255, 0.15)" stroke="#00e5ff" stroke-width="2" />
             <!-- Node Core -->
-            <circle cx="0" cy="0" r="18" fill="#040914" stroke="#ffffff" stroke-width="2" />
+            <circle class="node-core" cx="0" cy="0" r="18" fill="#040914" stroke="#ffffff" stroke-width="2" />
             <!-- Jersey Number -->
-            <text x="0" y="5" font-size="12" font-weight="900" fill="#00e5ff" text-anchor="middle">#{node.no}</text>
+            <text class="node-num" x="0" y="5" font-size="12" font-weight="900" fill="#00e5ff" text-anchor="middle">#{node.no}</text>
             <!-- Player Name & Role Label -->
-            <rect x="-45" y="24" width="90" height="18" rx="4" fill="rgba(4, 9, 20, 0.85)" stroke="rgba(255,255,255,0.2)" />
-            <text x="0" y="36" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">{node.role} • {node.name.split(' ')[0]}</text>
+            <rect class="node-badge-rect" x="-45" y="24" width="90" height="18" rx="4" fill="rgba(4, 9, 20, 0.85)" stroke="rgba(255,255,255,0.2)" />
+            <text class="node-badge-text" x="0" y="36" font-size="9" font-weight="700" fill="#ffffff" text-anchor="middle">{node.role} • {node.name.split(' ')[0]}</text>
           </g>
         {/each}
 
@@ -351,11 +379,35 @@
 
   .player-node-group {
     cursor: pointer;
-    transition: transform 0.2s;
   }
 
-  .player-node-group:hover {
-    transform: scale(1.08);
+  .player-node-group .node-glow {
+    transition: all 0.2s ease-out;
+  }
+
+  .player-node-group .node-core {
+    transition: all 0.2s ease-out;
+  }
+
+  .player-node-group .node-badge-rect {
+    transition: all 0.2s ease-out;
+  }
+
+  .player-node-group:hover .node-glow {
+    fill: rgba(0, 229, 255, 0.35);
+    stroke: #38bdf8;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
+  }
+
+  .player-node-group:hover .node-core {
+    fill: #0c1e3d;
+    stroke: #38bdf8;
+  }
+
+  .player-node-group:hover .node-badge-rect {
+    stroke: #00e5ff;
+    fill: rgba(8, 18, 38, 0.95);
   }
 
   /* LEGEND */
