@@ -65,6 +65,12 @@
       <div class="spinner"></div>
       <p>Mengompilasi seluruh statistik arsip pertandingan...</p>
     </div>
+  {:else if summary && summary.totalMatches === 0}
+    <div class="empty-tourn-state">
+      <Trophy size={48} class="text-amber opacity-60" />
+      <h3>Belum Ada Riwayat Pertandingan</h3>
+      <p>Data akumulasi seri turnamen akan otomatis terakumulasi secara real-time setelah pertandingan dicatat dan disimpan di <strong>Lembar Dokumen</strong>.</p>
+    </div>
   {:else if summary}
     <!-- Key Record Metrics Cards Grid -->
     <div class="t-metrics-grid">
@@ -559,8 +565,30 @@
     color: #cbd5e1;
   }
 
-  .cell-no { font-weight: 800; color: #00e5ff; }
-  .cell-goals { font-weight: 800; color: #10b981; }
+  .empty-tourn-state {
+    background: #0d1527;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .empty-tourn-state h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #ffffff;
+  }
+  .empty-tourn-state p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    max-width: 450px;
+    line-height: 1.4;
+  }
 
   .text-amber { color: #f59e0b; }
   .text-emerald { color: #10b981; }

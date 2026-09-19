@@ -1,5 +1,4 @@
-import type { MatchData } from './api';
-import { localDb } from './localDb';
+import { api, type MatchData } from './api';
 
 export interface PlayerSeriesStat {
   no: number;
@@ -46,12 +45,13 @@ export interface TournamentSummary {
 
 export class SeriesAggregator {
   static async aggregateTeamSeries(teamId: string = 'team_paser'): Promise<TournamentSummary> {
-    const rawMatches = await localDb.getMatches(teamId);
+    const rawMatches = await api.getMatches(teamId);
     const detailedMatches: MatchData[] = [];
+    const masterPlayers = await api.getMasterPlayers(teamId);
 
     for (const m of rawMatches) {
       try {
-        const full = await localDb.getMatch(m.id);
+        const full = await api.getMatch(m.id);
         if (full) detailedMatches.push(full);
       } catch {}
     }
@@ -113,11 +113,14 @@ export class SeriesAggregator {
 
       // Pemain
       for (const p of m.players || []) {
+        const masterFound = masterPlayers.find(mp => mp.noPunggung === p.no);
+        const playerName = p.name && p.name.trim() ? p.name : (masterFound?.name || `Pemain #${p.no}`);
+
         if (!playerAgg[p.no]) {
           playerAgg[p.no] = {
             no: p.no,
-            name: p.name,
-            isGk: Boolean(p.isGk),
+            name: playerName,
+            isGk: Boolean(p.isGk || masterFound?.position === 'GK'),
             matchesCount: 0,
             goals: 0,
             shots: 0,
