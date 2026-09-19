@@ -31,7 +31,7 @@
 
   function handlePrintPdf() {
     if (matchStore.data) {
-      PdfReportGenerator.printReport(matchStore.data, matchStore.substitutions);
+      PdfReportGenerator.printReport(matchStore.data, matchStore.substitutions, matchStore.currentTeamLogo);
     }
   }
 </script>
@@ -63,10 +63,10 @@
       <div class="doc-header">
         <div class="brand-row">
           <div class="brand-left-doc">
-            <img src="/icon.png" alt="Logo" class="doc-logo" />
+            <img src={matchStore.currentTeamLogo || '/icon.png'} alt="Logo Tim" class="doc-logo" />
             <div>
-              <h2 class="doc-title">FAHLEFI FUTSAL ANALYTICS</h2>
-              <span class="doc-subtitle">Official Match Report & Performance Dossier</span>
+              <h2 class="doc-title">{matchStore.currentTeamName.toUpperCase()}</h2>
+              <span class="doc-subtitle">Official Match Report • FAHLEFI Analytics</span>
             </div>
           </div>
           <div class="doc-status-box">

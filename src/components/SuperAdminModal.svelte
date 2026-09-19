@@ -27,7 +27,8 @@
     Activity,
     FolderKanban,
     Sparkles,
-    FileSpreadsheet
+    FileSpreadsheet,
+    Camera
   } from 'lucide-svelte';
 
   interface Props {
@@ -48,8 +49,26 @@
   let formTeamName = $state<string>('');
   let formTeamShortName = $state<string>('');
   let formTeamCity = $state<string>('');
+  let formTeamLogoUrl = $state<string>('');
   let formTeamStatus = $state<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   let teamFormLoading = $state<boolean>(false);
+  let teamLogoInputRef: HTMLInputElement | null = null;
+
+  function handleTeamLogoSelect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        showError('Ukuran file logo maksimal 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        formTeamLogoUrl = (e.target?.result as string) || '';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
 
   // User Form Modal State
   let showUserForm = $state<boolean>(false);
@@ -93,6 +112,7 @@
     formTeamName = '';
     formTeamShortName = '';
     formTeamCity = '';
+    formTeamLogoUrl = '';
     formTeamStatus = 'ACTIVE';
     showTeamForm = true;
   }
@@ -103,6 +123,7 @@
     formTeamName = team.name;
     formTeamShortName = team.shortName || '';
     formTeamCity = team.city || '';
+    formTeamLogoUrl = team.logoUrl || '';
     formTeamStatus = team.status;
     showTeamForm = true;
   }
@@ -121,6 +142,7 @@
           name: formTeamName.trim(),
           shortName: formTeamShortName.trim().toUpperCase(),
           city: formTeamCity.trim(),
+          logoUrl: formTeamLogoUrl.trim() || '/icon.png',
           status: formTeamStatus
         });
         showSuccess(`Tim "${formTeamName}" berhasil diperbarui!`);
@@ -129,6 +151,7 @@
           name: formTeamName.trim(),
           shortName: formTeamShortName.trim().toUpperCase(),
           city: formTeamCity.trim(),
+          logoUrl: formTeamLogoUrl.trim() || '/icon.png',
           status: formTeamStatus
         });
         showSuccess(`Tim baru "${formTeamName}" berhasil didaftarkan!`);
@@ -682,6 +705,38 @@
             placeholder="Contoh: Porprov Paser, Nazara FC..." 
             required 
           />
+        </div>
+
+        <!-- Logo Tim Upload & Preview -->
+        <div class="form-group">
+          <label for="team-logo-url">Logo Tim / Lambang Klub</label>
+          <div class="team-logo-upload-box">
+            <div class="logo-preview-square">
+              <img src={formTeamLogoUrl || '/icon.png'} alt="Preview" class="logo-img-preview" />
+            </div>
+            <div class="logo-upload-controls">
+              <button 
+                type="button" 
+                class="btn-upload-logo-file" 
+                onclick={() => teamLogoInputRef?.click()}>
+                <Camera size={14} /> Unggah File Logo
+              </button>
+              <input 
+                type="file" 
+                accept="image/*" 
+                class="hidden-file-input" 
+                bind:this={teamLogoInputRef} 
+                onchange={handleTeamLogoSelect} 
+              />
+              <input 
+                id="team-logo-url"
+                type="text" 
+                bind:value={formTeamLogoUrl} 
+                placeholder="Atau tempel URL gambar logo..." 
+                class="input-logo-url"
+              />
+            </div>
+          </div>
         </div>
 
         <div class="form-row-2">
@@ -1650,6 +1705,78 @@
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
+  }
+
+  /* Team Logo Upload in Modal */
+  .team-logo-upload-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .logo-preview-square {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .logo-img-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .logo-upload-controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .btn-upload-logo-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    background: rgba(2, 132, 199, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-upload-logo-file:hover {
+    background: rgba(2, 132, 199, 0.35);
+  }
+
+  .input-logo-url {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    color: #ffffff;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .hidden-file-input {
+    display: none;
   }
 
   .text-muted-sm {

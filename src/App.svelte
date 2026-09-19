@@ -23,6 +23,7 @@
   import TournamentDashboardView from './components/TournamentDashboardView.svelte';
   import VoiceTaggingOverlay from './components/VoiceTaggingOverlay.svelte';
   import CloudProvisionerModal from './components/CloudProvisionerModal.svelte';
+  import UserProfileModal from './components/UserProfileModal.svelte';
   import { 
     FileText, 
     Table, 
@@ -58,15 +59,15 @@
     Building2,
     Menu,
     Bot,
-    Video,
-    Activity,
-    Printer,
     Sparkles,
+    Calendar,
+    Activity,
     Award
   } from 'lucide-svelte';
 
   let navTabsContainer: HTMLElement | null = $state(null);
   let showSidebar = $state<boolean>(false);
+  let showUserProfileModal = $state<boolean>(false);
   let showConfigModal = $state<boolean>(false);
   let showAnalyticsModal = $state<boolean>(false);
   let showAiTacticalModal = $state<boolean>(false);
@@ -237,12 +238,15 @@
           {/if}
         </button>
 
-        <!-- User Profile Pill Button (Click to open sidebar drawer) -->
+        <!-- User Profile Pill Button (Click to open user profile modal) -->
         <button 
           type="button"
           class="user-profile-btn" 
-          onclick={() => (showSidebar = true)}
-          title="Buka Menu Samping & Pengaturan Akun">
+          onclick={() => (showUserProfileModal = true)}
+          title="Buka Pengaturan Profil & Akun Saya">
+          {#if matchStore.currentUser?.avatarUrl}
+            <img src={matchStore.currentUser.avatarUrl} alt="Avatar" class="header-avatar-thumb" />
+          {/if}
           <span class="user-role-tag {userRoleBadge.class}">
             <span>{userRoleBadge.icon}</span>
             <span>{userRoleBadge.label}</span>
@@ -561,10 +565,15 @@
     onOpenIpadInstall={() => (showIpadInstallModal = true)} 
     onOpenAiInsights={() => (showAiTacticalModal = true)}
     onOpenCloudProvisioner={() => (showCloudProvisionerModal = true)}
+    onOpenUserProfile={() => (showUserProfileModal = true)}
     onSelectView={(v) => (matchStore.currentView = v)}
   />
 
   <!-- Modals -->
+  {#if showUserProfileModal}
+    <UserProfileModal onClose={() => (showUserProfileModal = false)} />
+  {/if}
+
   {#if showAiTacticalModal}
     <AiTacticalInsightsModal onClose={() => (showAiTacticalModal = false)} />
   {/if}
@@ -1693,6 +1702,14 @@
     cursor: pointer;
     transition: all 0.15s;
     box-sizing: border-box;
+  }
+
+  .header-avatar-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid #06b6d4;
   }
 
   .btn-logout-header {

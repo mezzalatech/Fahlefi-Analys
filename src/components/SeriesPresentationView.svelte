@@ -121,7 +121,11 @@
   async function handleExportPptx() {
     isExporting = true;
     try {
-      await generatePptx(seriesData);
+      const exportPayload = {
+        ...seriesData,
+        logoUrl: matchStore.currentTeamLogo || seriesData.logoUrl
+      };
+      await generatePptx(exportPayload);
     } catch (err) {
       console.error('Failed to export PPTX:', err);
       alert('Gagal mengekspor PowerPoint: ' + (err as any)?.message);

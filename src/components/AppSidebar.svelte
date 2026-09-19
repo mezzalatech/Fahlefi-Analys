@@ -38,10 +38,11 @@
     onOpenIpadInstall?: () => void;
     onOpenAiInsights?: () => void;
     onOpenCloudProvisioner?: () => void;
+    onOpenUserProfile?: () => void;
     onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament') => void;
   }
 
-  let { isOpen, onClose, onOpenIpadInstall, onOpenAiInsights, onOpenCloudProvisioner, onSelectView } = $props<Props>();
+  let { isOpen, onClose, onOpenIpadInstall, onOpenAiInsights, onOpenCloudProvisioner, onOpenUserProfile, onSelectView } = $props<Props>();
 
   let showTeamDropdown = $state<boolean>(false);
 
@@ -97,9 +98,18 @@
 
   <!-- User Profile Card -->
   <div class="user-card-section">
-    <div class="user-profile-box">
+    <div 
+      class="user-profile-box clickable" 
+      onclick={() => { if (onOpenUserProfile) onOpenUserProfile(); onClose(); }} 
+      role="button" 
+      tabindex="0"
+      title="Klik untuk membuka Pengaturan Profil & Ganti Foto">
       <div class="user-avatar-circle">
-        {matchStore.currentUser?.name ? matchStore.currentUser.name.charAt(0).toUpperCase() : 'U'}
+        {#if matchStore.currentUser?.avatarUrl}
+          <img src={matchStore.currentUser.avatarUrl} alt="Avatar" class="avatar-sidebar-img" />
+        {:else}
+          {matchStore.currentUser?.name ? matchStore.currentUser.name.charAt(0).toUpperCase() : 'U'}
+        {/if}
       </div>
       <div class="user-info-text">
         <div class="user-full-name">{matchStore.currentUser?.name || 'Pengguna Tamu'}</div>
@@ -113,6 +123,13 @@
           {/if}
         </div>
       </div>
+      <button 
+        type="button" 
+        class="btn-edit-profile-icon" 
+        onclick={(e) => { e.stopPropagation(); if (onOpenUserProfile) onOpenUserProfile(); onClose(); }}
+        title="Edit Profil & Foto">
+        <UserCog size={14} />
+      </button>
     </div>
 
     <!-- Active Team Workspace Widget -->
@@ -467,6 +484,18 @@
     gap: 12px;
   }
 
+  .user-profile-box.clickable {
+    cursor: pointer;
+    padding: 6px;
+    margin: -6px;
+    border-radius: 10px;
+    transition: background 0.15s;
+  }
+
+  .user-profile-box.clickable:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
   .user-avatar-circle {
     width: 40px;
     height: 40px;
@@ -481,6 +510,35 @@
     border: 2px solid rgba(56, 189, 248, 0.4);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .avatar-sidebar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .btn-edit-profile-icon {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-edit-profile-icon:hover {
+    background: rgba(6, 182, 212, 0.2);
+    color: #38bdf8;
+    border-color: rgba(6, 182, 212, 0.4);
   }
 
   .user-info-text {

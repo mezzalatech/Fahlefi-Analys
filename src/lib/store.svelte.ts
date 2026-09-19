@@ -516,7 +516,7 @@ class MatchStore {
     return created;
   }
 
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }) {
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string; avatarUrl?: string }) {
     const updated = await api.updateUser(id, userData);
     await this.loadUsers();
     if (this.currentUser && (this.currentUser.id === id || this.currentUser.username.toLowerCase() === userData.username?.toLowerCase())) {

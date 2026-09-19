@@ -233,7 +233,7 @@ export const supabaseApi = {
     return localCreated;
   },
 
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }): Promise<User> {
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string; avatarUrl?: string }): Promise<User> {
     // Always persist to localDb first so changes are immediate
     let localUpdated: User;
     try {
@@ -244,7 +244,8 @@ export const supabaseApi = {
         username: userData.username || 'user',
         name: userData.name || 'User',
         role: (userData.role as any) || 'coach',
-        teamId: userData.teamId
+        teamId: userData.teamId,
+        avatarUrl: userData.avatarUrl
       };
     }
 
@@ -257,6 +258,7 @@ export const supabaseApi = {
     if (userData.name) updates.name = userData.name.trim();
     if (userData.role) updates.role = userData.role;
     if (userData.password) updates.password_hash = userData.password;
+    if (userData.avatarUrl !== undefined) updates.avatar_url = userData.avatarUrl;
 
     try {
       // First try update without team_id if remote table doesn't have it, or with team_id

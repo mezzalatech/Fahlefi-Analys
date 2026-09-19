@@ -440,7 +440,7 @@ class LocalDatabase {
     return newUser;
   }
 
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }): Promise<User> {
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string; avatarUrl?: string }): Promise<User> {
     this.initStorage();
     const users: User[] = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
     const passwords: Record<string, string> = JSON.parse(localStorage.getItem(PASSWORDS_KEY) || '{}');
@@ -477,7 +477,8 @@ class LocalDatabase {
       email: userData.email !== undefined ? userData.email.trim() : users[idx].email,
       role: userData.role !== undefined ? (userData.role as any) : users[idx].role,
       teamId: teamId,
-      teamName: team ? team.name : users[idx].teamName
+      teamName: team ? team.name : users[idx].teamName,
+      avatarUrl: userData.avatarUrl !== undefined ? userData.avatarUrl : users[idx].avatarUrl
     };
 
     if (userData.password) {

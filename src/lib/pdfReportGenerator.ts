@@ -2,7 +2,7 @@ import type { MatchData, SubstitutionLog } from './api';
 import { AiTacticalEngine } from './aiTacticalEngine';
 
 export class PdfReportGenerator {
-  static generatePrintableHtml(matchData: MatchData, substitutions: SubstitutionLog[]): string {
+  static generatePrintableHtml(matchData: MatchData, substitutions: SubstitutionLog[], teamLogoUrl?: string): string {
     const m = matchData.match;
     const players = matchData.players || [];
     const pakets = matchData.pakets || [];
@@ -42,14 +42,24 @@ export class PdfReportGenerator {
             justify-content: space-between;
             align-items: center;
           }
+          .header-left-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .team-logo-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+          }
           .brand-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: 0.5px;
           }
           .match-meta {
-            font-size: 10px;
+            font-size: 9.5px;
             color: #64748b;
           }
           .scoreboard-box {
@@ -205,9 +215,12 @@ export class PdfReportGenerator {
         <div class="report-container">
           <!-- Header -->
           <div class="header-banner">
-            <div>
-              <div class="brand-title">FAHLEFI FUTSAL ANALYTICS — OFFICIAL MATCH REPORT</div>
-              <div class="match-meta">Kompetisi: ${m.competition || 'Futsal Championship'} | Venue: ${m.venue || 'Indoor Stadium'} | Tanggal: ${m.date} ${m.time}</div>
+            <div class="header-left-brand">
+              <img src="${teamLogoUrl || '/icon.png'}" alt="Logo Tim" class="team-logo-img" />
+              <div>
+                <div class="brand-title">${(m.homeTeam || 'TIM FUTSAL').toUpperCase()} — OFFICIAL MATCH REPORT</div>
+                <div class="match-meta">Kompetisi: ${m.competition || 'Futsal Championship'} | Venue: ${m.venue || 'Indoor Stadium'} | Tanggal: ${m.date} ${m.time}</div>
+              </div>
             </div>
             <div style="text-align: right; font-size: 9px; color: #64748b;">
               Status: <strong>OFFICIAL COMPLETED</strong>
@@ -301,8 +314,8 @@ export class PdfReportGenerator {
     `;
   }
 
-  static printReport(matchData: MatchData, substitutions: SubstitutionLog[]) {
-    const html = this.generatePrintableHtml(matchData, substitutions);
+  static printReport(matchData: MatchData, substitutions: SubstitutionLog[], teamLogoUrl?: string) {
+    const html = this.generatePrintableHtml(matchData, substitutions, teamLogoUrl);
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.open();

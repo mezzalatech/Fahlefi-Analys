@@ -301,7 +301,7 @@ export const api = {
     );
   },
 
-  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string }): Promise<User> {
+  async updateUser(id: string, userData: { username?: string; email?: string; name?: string; role?: string; password?: string; teamId?: string; avatarUrl?: string }): Promise<User> {
     return executeWithCloudFallback(
       () => supabaseApi.updateUser(id, userData),
       () => fetch(`${API_BASE}/auth/users/${id}`, {
