@@ -132,26 +132,6 @@
             </div>
           {/if}
         </div>
-
-        <!-- Player Fatigue Index -->
-        <div class="fatigue-section">
-          <h4 class="fatigue-title">
-            <Activity size={15} class="text-rose" /> Indeks Beban & Kelelahan Pemain (Load Management)
-          </h4>
-          <div class="fatigue-list">
-            {#each summary.playerStats.slice(0, 5) as p}
-              <div class="fatigue-item">
-                <div class="fatigue-info">
-                  <span>#{p.no} {p.name}</span>
-                  <strong>{p.fatigueScore}% Load</strong>
-                </div>
-                <div class="fatigue-bar-track">
-                  <div class="fatigue-bar-fill" style="width: {p.fatigueScore}%;"></div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
       </div>
 
       <!-- RIGHT: Match History Timeline -->
@@ -447,46 +427,6 @@
     font-size: 0.7rem;
     color: #94a3b8;
     margin-top: 2px;
-  }
-
-  /* FATIGUE */
-  .fatigue-section {
-    margin-top: 6px;
-  }
-
-  .fatigue-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.82rem;
-    color: #cbd5e1;
-    margin: 0 0 10px 0;
-  }
-
-  .fatigue-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .fatigue-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: #cbd5e1;
-    margin-bottom: 2px;
-  }
-
-  .fatigue-bar-track {
-    height: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .fatigue-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
   }
 
   /* HISTORY */

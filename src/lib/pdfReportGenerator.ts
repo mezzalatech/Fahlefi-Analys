@@ -118,39 +118,86 @@ export class PdfReportGenerator {
             font-weight: 700;
             background: #f8fafc;
           }
-          .ai-box {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
+          /* AI Tactical Box */
+          .ai-dossier-box {
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
             border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 9.5px;
-            margin-bottom: 12px;
+            padding: 10px 14px;
+            margin-top: 14px;
           }
-          .ai-box h4 {
-            margin: 0 0 4px 0;
-            color: #166534;
-            font-size: 10px;
-          }
-          .signatures-grid {
+          .ai-dossier-header {
+            font-size: 11px;
+            font-weight: 800;
+            color: #0f172a;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
-            margin-top: 24px;
-            padding-top: 10px;
           }
-          .sig-box {
-            width: 28%;
-            text-align: center;
+          .ai-summary-p {
+            font-size: 9.5px;
+            color: #334155;
+            line-height: 1.4;
+            margin: 0 0 8px 0;
           }
-          .sig-line {
-            margin-top: 40px;
-            border-top: 1px solid #94a3b8;
-            padding-top: 4px;
-            font-weight: 700;
-            font-size: 10px;
+          .ai-two-col {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
           }
-          .sig-role {
+          .ai-col-card {
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 6px 8px;
+          }
+          .ai-col-card.green {
+            border-left: 3px solid #16a34a;
+          }
+          .ai-col-card.red {
+            border-left: 3px solid #dc2626;
+          }
+          .col-card-title {
+            font-size: 9px;
+            font-weight: 800;
+            margin-bottom: 4px;
+          }
+          .col-card-title.green { color: #16a34a; }
+          .col-card-title.red { color: #dc2626; }
+          .ai-bullet-list {
+            margin: 0;
+            padding-left: 14px;
             font-size: 8.5px;
-            color: #64748b;
+            color: #475569;
+            line-height: 1.35;
+          }
+          .ai-bullet-list li {
+            margin-bottom: 2px;
+          }
+          .ai-rec-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 4px;
+            padding: 6px 8px;
+          }
+          .rec-title {
+            font-size: 9px;
+            font-weight: 800;
+            color: #92400e;
+            margin-bottom: 3px;
+          }
+          .rec-bullet-list {
+            margin: 0;
+            padding-left: 14px;
+            font-size: 8.5px;
+            color: #78350f;
+            line-height: 1.35;
+          }
+          .rec-bullet-list li {
+            margin-bottom: 2px;
           }
         </style>
       </head>
@@ -216,29 +263,37 @@ export class PdfReportGenerator {
             </tbody>
           </table>
 
-          <!-- AI Tactical Summary -->
-          <div class="ai-box">
-            <h4>ANALISIS & REKOMENDASI TAKTIKAL ASISTEN AI</h4>
-            <div>${briefing.executiveSummary.replace(/\*\*/g, '')}</div>
-            <div style="margin-top: 4px; font-weight: 700;">
-              Top Recommendation: ${briefing.recommendations[0] || 'Pertahankan disiplin posisi.'}
+          <!-- AI Tactical Summary & Actionable Recommendations (Replacing Signatures) -->
+          <div class="ai-dossier-box">
+            <div class="ai-dossier-header">
+              <span>REKOMENDASI & INSIGHT TAKTIKAL ASISTEN AI</span>
+              <span style="font-size: 8.5px; color: #166534; font-weight: 700;">AI TACTICAL DOSSIER</span>
             </div>
-          </div>
+            <p class="ai-summary-p">${briefing.executiveSummary.replace(/\*\*/g, '')}</p>
 
-          <!-- Signatures -->
-          <div class="signatures-grid">
-            <div class="sig-box">
-              <div class="sig-line">HEAD COACH</div>
-              <div class="sig-role">${m.homeTeam || 'Tim Futsal'}</div>
+            <div class="ai-two-col">
+              <div class="ai-col-card green">
+                <div class="col-card-title green">✓ KEUNGGULAN TAKTIKAL</div>
+                <ul class="ai-bullet-list">
+                  ${briefing.strengths.map(s => `<li>${s.replace(/\*\*/g, '')}</li>`).join('')}
+                </ul>
+              </div>
+              <div class="ai-col-card red">
+                <div class="col-card-title red">⚠ AREA EVALUASI & RISIKO</div>
+                <ul class="ai-bullet-list">
+                  ${briefing.vulnerabilities.map(v => `<li>${v.replace(/\*\*/g, '')}</li>`).join('')}
+                </ul>
+              </div>
             </div>
-            <div class="sig-box">
-              <div class="sig-line">MATCH ANALYST</div>
-              <div class="sig-role">Fahlefi Tactical Analytics</div>
-            </div>
-            <div class="sig-box">
-              <div class="sig-line">TEAM CAPTAIN</div>
-              <div class="sig-role">Official Sign-off</div>
-            </div>
+
+            ${briefing.recommendations.length > 0 ? `
+              <div class="ai-rec-box">
+                <div class="rec-title">💡 REKOMENDASI AKSI PELATIH</div>
+                <ul class="rec-bullet-list">
+                  ${briefing.recommendations.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
           </div>
         </div>
       </body>

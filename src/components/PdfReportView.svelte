@@ -1,6 +1,7 @@
 <script lang="ts">
   import { matchStore } from '../lib/store.svelte';
   import { PdfReportGenerator } from '../lib/pdfReportGenerator';
+  import { AiTacticalEngine } from '../lib/aiTacticalEngine';
   import { 
     Printer, 
     Download, 
@@ -13,12 +14,17 @@
     Check,
     Sparkles,
     Calendar,
-    MapPin
+    MapPin,
+    Flame,
+    Zap,
+    ShieldAlert,
+    Lightbulb
   } from 'lucide-svelte';
 
   let match = $derived(matchStore.data?.match);
   let players = $derived(matchStore.data?.players || []);
   let pakets = $derived(matchStore.data?.pakets || []);
+  let briefing = $derived(matchStore.data ? AiTacticalEngine.generateBriefing(matchStore.data, matchStore.substitutions) : null);
 
   let homeGoals = $derived((match?.homeScore1st || 0) + (match?.homeScore2nd || 0));
   let awayGoals = $derived((match?.awayScore1st || 0) + (match?.awayScore2nd || 0));
@@ -169,26 +175,65 @@
         </table>
       </div>
 
-      <!-- Sign-off Validation Blocks -->
-      <div class="doc-signatures">
-        <div class="sig-column">
-          <div class="sig-space"></div>
-          <div class="sig-title">HEAD COACH</div>
-          <div class="sig-sub">{match.homeTeam}</div>
-        </div>
+      <!-- AI Tactical Recommendations & Summary (Replacing signatures) -->
+      {#if briefing}
+        <div class="doc-ai-section">
+          <div class="ai-section-header">
+            <div class="ai-title-wrap">
+              <Sparkles size={16} class="text-emerald" />
+              <h4>REKOMENDASI & INSIGHT TAKTIKAL ASISTEN AI</h4>
+            </div>
+            <span class="ai-badge-label">AI TACTICAL DOSSIER</span>
+          </div>
 
-        <div class="sig-column">
-          <div class="sig-space"></div>
-          <div class="sig-title">MATCH ANALYST</div>
-          <div class="sig-sub">Fahlefi Tactical Team</div>
-        </div>
+          <div class="ai-summary-text">
+            <p>{briefing.executiveSummary.replace(/\*\*/g, '')}</p>
+          </div>
 
-        <div class="sig-column">
-          <div class="sig-space"></div>
-          <div class="sig-title">OFFICIAL OBSERVER</div>
-          <div class="sig-sub">Match Commissionaire</div>
+          <div class="ai-grid-blocks">
+            <!-- Strengths -->
+            <div class="ai-block-card strengths">
+              <div class="ai-block-title text-emerald">
+                <Zap size={13} />
+                <span>KEUNGGULAN TAKTIKAL</span>
+              </div>
+              <ul class="ai-points-list">
+                {#each briefing.strengths as s}
+                  <li>{s.replace(/\*\*/g, '')}</li>
+                {/each}
+              </ul>
+            </div>
+
+            <!-- Vulnerabilities -->
+            <div class="ai-block-card vulnerabilities">
+              <div class="ai-block-title text-rose">
+                <ShieldAlert size={13} />
+                <span>AREA EVALUASI & RISIKO</span>
+              </div>
+              <ul class="ai-points-list">
+                {#each briefing.vulnerabilities as v}
+                  <li>{v.replace(/\*\*/g, '')}</li>
+                {/each}
+              </ul>
+            </div>
+          </div>
+
+          <!-- Actionable Recommendations -->
+          {#if briefing.recommendations.length > 0}
+            <div class="ai-recommendations-box">
+              <div class="rec-head">
+                <Lightbulb size={14} class="text-amber" />
+                <span>REKOMENDASI AKSI PELATIH</span>
+              </div>
+              <ul class="rec-list">
+                {#each briefing.recommendations as r}
+                  <li>{r}</li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
         </div>
-      </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -510,39 +555,131 @@
     border-radius: 3px;
   }
 
-  /* SIGNATURES */
-  .doc-signatures {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 24px;
-    margin-top: 36px;
-    padding-top: 12px;
+  /* AI TACTICAL SECTION */
+  .doc-ai-section {
+    margin-top: 18px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 14px 16px;
   }
 
-  .sig-column {
-    text-align: center;
+  .ai-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
   }
 
-  .sig-space {
-    height: 48px;
+  .ai-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  .sig-title {
-    border-top: 1px solid #94a3b8;
-    padding-top: 4px;
+  .ai-title-wrap h4 {
+    margin: 0;
+    font-size: 0.85rem;
     font-weight: 800;
-    font-size: 0.75rem;
     color: #0f172a;
+    letter-spacing: 0.02em;
   }
 
-  .sig-sub {
-    font-size: 0.68rem;
-    color: #64748b;
-    margin-top: 2px;
+  .ai-badge-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  .ai-summary-text p {
+    margin: 0 0 10px 0;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    color: #334155;
+  }
+
+  .ai-grid-blocks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .ai-block-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .ai-block-card.strengths {
+    border-left: 3px solid #10b981;
+  }
+
+  .ai-block-card.vulnerabilities {
+    border-left: 3px solid #ef4444;
+  }
+
+  .ai-block-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+  }
+
+  .ai-points-list {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 0.72rem;
+    color: #475569;
+    line-height: 1.4;
+  }
+
+  .ai-points-list li {
+    margin-bottom: 3px;
+  }
+
+  .ai-recommendations-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .rec-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: #92400e;
+    margin-bottom: 6px;
+  }
+
+  .rec-list {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 0.73rem;
+    color: #78350f;
+    line-height: 1.4;
+  }
+
+  .rec-list li {
+    margin-bottom: 3px;
   }
 
   .text-left { text-align: left; }
   .text-amber { color: #d97706; }
   .text-cyan { color: #0284c7; }
   .text-emerald { color: #16a34a; }
+  .text-rose { color: #e11d48; }
 </style>
