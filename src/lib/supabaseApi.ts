@@ -613,8 +613,8 @@ export const supabaseApi = {
     const resolvedTeamId = matchData.teamId || teamId || 'team_paser';
 
     try {
-      const allMatches = await this.getMatches();
-      const newId = allMatches.length > 0 ? Math.max(...allMatches.map(m => m.id)) + 1 : 1;
+      const { data: maxRows } = await supabase.from('matches').select('id').order('id', { ascending: false }).limit(1);
+      const newId = maxRows && maxRows.length > 0 ? Number(maxRows[0].id) + 1 : 1;
 
       const row = {
         id: newId,

@@ -180,8 +180,8 @@
       </button>
     {/if}
 
-    <!-- Team User Management (For Coaches and Admins) -->
-    {#if matchStore.currentUser?.role === 'coach' || matchStore.isSuperAdmin}
+    <!-- Team User Management (Super Admin Only) -->
+    {#if matchStore.isSuperAdmin}
       <button 
         type="button" 
         class="nav-menu-btn" 
@@ -288,18 +288,20 @@
       <ChevronRight size={15} class="menu-arrow" />
     </button>
 
-    <!-- Cloud Health Diagnostics & Provisioner -->
-    <button 
-      type="button" 
-      class="nav-menu-btn" 
-      onclick={() => { if (onOpenCloudProvisioner) onOpenCloudProvisioner(); onClose(); }}>
-      <Cloud size={17} class="text-emerald-400" />
-      <div class="menu-label-wrap">
-        <span class="menu-primary-label">Diagnostik Database Cloud</span>
-        <span class="menu-sub-label">Cek 8 tabel Supabase & 1-klik perbaikan schema</span>
-      </div>
-      <ChevronRight size={15} class="menu-arrow" />
-    </button>
+    <!-- Cloud Health Diagnostics & Provisioner (Super Admin Only) -->
+    {#if matchStore.isSuperAdmin}
+      <button 
+        type="button" 
+        class="nav-menu-btn" 
+        onclick={() => { if (onOpenCloudProvisioner) onOpenCloudProvisioner(); onClose(); }}>
+        <Cloud size={17} class="text-emerald-400" />
+        <div class="menu-label-wrap">
+          <span class="menu-primary-label">Diagnostik Database Cloud</span>
+          <span class="menu-sub-label">Cek 8 tabel Supabase & 1-klik perbaikan schema</span>
+        </div>
+        <ChevronRight size={15} class="menu-arrow" />
+      </button>
+    {/if}
 
     <div class="nav-category-title mt-4">AKUN & APLIKASI</div>
 
