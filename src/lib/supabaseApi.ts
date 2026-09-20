@@ -54,7 +54,7 @@ export const supabaseApi = {
     if (teamData.status) updates.status = teamData.status;
 
     try {
-      const { data, error } = await supabase.from('teams').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('teams').update(updates).eq('id', id).select().maybeSingle();
       if (!error && data) {
         const team: Team = {
           id: data.id,
@@ -67,6 +67,15 @@ export const supabaseApi = {
         };
         broadcastFutsalAction('team_updated', team);
         return team;
+      } else if (!data) {
+        await supabase.from('teams').upsert({
+          id,
+          name: teamData.name || 'Team',
+          short_name: teamData.shortName || 'TIM',
+          city: teamData.city || '',
+          logo_url: teamData.logoUrl || '/icon.png',
+          status: teamData.status || 'ACTIVE'
+        });
       }
     } catch {}
     return localDb.updateTeam(id, teamData);
@@ -261,10 +270,32 @@ export const supabaseApi = {
     if (userData.avatarUrl !== undefined) updates.avatar_url = userData.avatarUrl;
 
     try {
-      // First try update without team_id if remote table doesn't have it, or with team_id
-      const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
+      // Use maybeSingle to prevent PostgREST 406 (Not Acceptable) when 0 rows match id
+      const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().maybeSingle();
       if (!error && data) {
         broadcastFutsalAction('user_updated', localUpdated);
+      } else {
+        // If ID didn't match (e.g. client ID mismatch with remote UUID), try matching by username
+        const uname = (userData.username || localUpdated.username || '').toLowerCase();
+        if (uname) {
+          const { data: byUname } = await supabase.from('users').update(updates).eq('username', uname).select().maybeSingle();
+          if (byUname) {
+            broadcastFutsalAction('user_updated', localUpdated);
+          } else {
+            // Upsert user if completely missing
+            await supabase.from('users').upsert({
+              id,
+              username: uname,
+              email: userData.email || localUpdated.email || `${uname}@fahlefi.com`,
+              name: userData.name || localUpdated.name || 'User',
+              role: userData.role || localUpdated.role || 'coach',
+              avatar_url: userData.avatarUrl !== undefined ? userData.avatarUrl : (localUpdated.avatarUrl || ''),
+              password_hash: userData.password || 'password123',
+              team_id: userData.teamId || localUpdated.teamId
+            }, { onConflict: 'username' });
+            broadcastFutsalAction('user_updated', localUpdated);
+          }
+        }
       }
     } catch {}
     return localUpdated;

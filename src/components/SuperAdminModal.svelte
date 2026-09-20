@@ -47,6 +47,8 @@
   let isEditingTeam = $state<boolean>(false);
   let editTeamId = $state<string | null>(null);
   let formTeamName = $state<string>('');
+  import { compressImageFile } from '../lib/imageCompressor';
+
   let formTeamShortName = $state<string>('');
   let formTeamCity = $state<string>('');
   let formTeamLogoUrl = $state<string>('');
@@ -54,19 +56,15 @@
   let teamFormLoading = $state<boolean>(false);
   let teamLogoInputRef: HTMLInputElement | null = null;
 
-  function handleTeamLogoSelect(event: Event) {
+  async function handleTeamLogoSelect(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
-      if (file.size > 2 * 1024 * 1024) {
-        showError('Ukuran file logo maksimal 2MB.');
-        return;
+      try {
+        formTeamLogoUrl = await compressImageFile(file, 300, 300, 0.85);
+      } catch (err) {
+        console.error('Error compressing team logo:', err);
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        formTeamLogoUrl = (e.target?.result as string) || '';
-      };
-      reader.readAsDataURL(file);
     }
   }
 

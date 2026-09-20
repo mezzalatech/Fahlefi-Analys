@@ -15,6 +15,8 @@
     Sparkles
   } from 'lucide-svelte';
 
+  import { compressImageFile } from '../lib/imageCompressor';
+
   interface Props {
     onClose: () => void;
   }
@@ -33,19 +35,16 @@
   let successMessage = $state<string | null>(null);
   let fileInputRef: HTMLInputElement | null = null;
 
-  function handleFileSelect(event: Event) {
+  async function handleFileSelect(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
-      if (file.size > 2 * 1024 * 1024) {
-        errorMessage = 'Ukuran file foto maksimal 2MB.';
-        return;
+      try {
+        errorMessage = null;
+        avatarUrl = await compressImageFile(file, 256, 256, 0.85);
+      } catch (err) {
+        console.error('Error compressing avatar:', err);
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        avatarUrl = (e.target?.result as string) || '';
-      };
-      reader.readAsDataURL(file);
     }
   }
 
