@@ -67,6 +67,12 @@ export interface SeriesPresentationData {
     topScorer: string;
     topAssist: string;
   };
+  aiEvaluation?: {
+    winRatePct: number;
+    strengths: Array<{ title: string; desc: string }>;
+    vulnerabilities: Array<{ title: string; desc: string }>;
+    recommendations: string[];
+  };
 }
 
 // Brand Luxury Palette (Broadcast Standard)
@@ -921,6 +927,164 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
         yCon += 1.05;
       });
     }
+  });
+
+  // -------------------------------------------------------------
+  // SLIDE FINAL: EXECUTIVE SUMMARY - EVALUASI TAKTIKAL & STRATEGI TIM
+  // -------------------------------------------------------------
+  const summarySlide = pres.addSlide();
+  summarySlide.background = { color: BG_DARK };
+
+  summarySlide.addText('EXECUTIVE SUMMARY: EVALUASI TAKTIKAL & STRATEGI TIM', {
+    x: 0.8,
+    y: 0.4,
+    w: 8.5,
+    h: 0.45,
+    fontSize: 18,
+    color: TEXT_WHITE,
+    bold: true,
+    fontFace: 'Arial'
+  });
+
+  const winPct = data.aiEvaluation?.winRatePct ?? Math.round((wins / Math.max(1, totalMatches)) * 100);
+  summarySlide.addText(`Efektivitas Seri: ${winPct}% Win Rate`, {
+    x: 8.5,
+    y: 0.4,
+    w: 4.0,
+    h: 0.45,
+    fontSize: 13,
+    color: EMERALD_ACCENT,
+    bold: true,
+    fontFace: 'Arial',
+    align: 'right'
+  });
+
+  // LEFT CARD: KEKUATAN TAKTIKAL & POLA SERANGAN (EMERALD)
+  summarySlide.addShape(pres.ShapeType.roundRect, {
+    x: 0.8,
+    y: 1.0,
+    w: 5.7,
+    h: 5.8,
+    rectRadius: 0.12,
+    fill: { color: BG_CARD },
+    line: { color: EMERALD_ACCENT, width: 1.2 }
+  });
+
+  summarySlide.addText('🔥 KEKUATAN TAKTIKAL & POLA SERANGAN', {
+    x: 1.0,
+    y: 1.15,
+    w: 5.3,
+    h: 0.35,
+    fontSize: 12,
+    color: EMERALD_ACCENT,
+    bold: true,
+    fontFace: 'Arial'
+  });
+
+  const strengths = data.aiEvaluation?.strengths || [
+    { title: 'Transisi Penyerangan Cepat', desc: 'Kecepatan transisi dari flank dan pivot menjadi senjata utama menghasilkan peluang.' },
+    { title: 'Ketajaman Lini Depan', desc: `Kolektivitas gol tim dengan Top Scorer ${data.summary?.topScorer || 'Pemain Utama'}.` },
+    { title: 'Variasi Set-Piece Efektif', desc: 'Skema bola mati terbukti memecah kebuntuan menghadapi pertahanan rapat (low block).' }
+  ];
+
+  let yStr = 1.6;
+  strengths.slice(0, 3).forEach((st) => {
+    summarySlide.addShape(pres.ShapeType.roundRect, {
+      x: 1.0,
+      y: yStr,
+      w: 5.3,
+      h: 1.45,
+      rectRadius: 0.08,
+      fill: { color: '091222' },
+      line: { color: '1E293B', width: 0.8 }
+    });
+
+    summarySlide.addText(st.title, {
+      x: 1.15,
+      y: yStr + 0.1,
+      w: 5.0,
+      h: 0.28,
+      fontSize: 10.5,
+      color: TEXT_WHITE,
+      bold: true,
+      fontFace: 'Arial'
+    });
+
+    summarySlide.addText(st.desc, {
+      x: 1.15,
+      y: yStr + 0.42,
+      w: 5.0,
+      h: 0.95,
+      fontSize: 9,
+      color: 'CBD5E1',
+      fontFace: 'Arial'
+    });
+
+    yStr += 1.6;
+  });
+
+  // RIGHT CARD: AREA EVALUASI & TITIK LEMAH BERTAHAN (RED)
+  summarySlide.addShape(pres.ShapeType.roundRect, {
+    x: 6.83,
+    y: 1.0,
+    w: 5.7,
+    h: 5.8,
+    rectRadius: 0.12,
+    fill: { color: BG_CARD },
+    line: { color: RED_ACCENT, width: 1.2 }
+  });
+
+  summarySlide.addText('🛡️ AREA EVALUASI & TITIK LEMAH BERTAHAN', {
+    x: 7.03,
+    y: 1.15,
+    w: 5.3,
+    h: 0.35,
+    fontSize: 12,
+    color: RED_ACCENT,
+    bold: true,
+    fontFace: 'Arial'
+  });
+
+  const vulnerabilities = data.aiEvaluation?.vulnerabilities || [
+    { title: 'Transisi Bertahan', desc: 'Rawan kebobolan saat bola hilang (turnover) di area serang tanpa covering anchor yang disiplin.' },
+    { title: 'Antisipasi Restart Bola Mati', desc: 'Perlunya konsistensi man-to-man marking pada situasi Kick-In dan Corner Kick lawan.' },
+    { title: 'Eksekusi Power Play', desc: 'Pematangan rotasi dan passing saat power play agar tidak rentan counter attack ke gawang kosong.' }
+  ];
+
+  let yVul = 1.6;
+  vulnerabilities.slice(0, 3).forEach((vl) => {
+    summarySlide.addShape(pres.ShapeType.roundRect, {
+      x: 7.03,
+      y: yVul,
+      w: 5.3,
+      h: 1.45,
+      rectRadius: 0.08,
+      fill: { color: '091222' },
+      line: { color: '1E293B', width: 0.8 }
+    });
+
+    summarySlide.addText(vl.title, {
+      x: 7.18,
+      y: yVul + 0.1,
+      w: 5.0,
+      h: 0.28,
+      fontSize: 10.5,
+      color: TEXT_WHITE,
+      bold: true,
+      fontFace: 'Arial'
+    });
+
+    summarySlide.addText(vl.desc, {
+      x: 7.18,
+      y: yVul + 0.42,
+      w: 5.0,
+      h: 0.95,
+      fontSize: 9,
+      color: 'CBD5E1',
+      fontFace: 'Arial'
+    });
+
+    yVul += 1.6;
   });
 
   // Save / Trigger Download

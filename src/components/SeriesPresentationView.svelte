@@ -63,7 +63,8 @@
       liveSeriesData = await buildSeriesDataFromWorkspaceAsync(
         matchStore.matchesList, 
         matchStore.data,
-        matchStore.masterPlayers
+        matchStore.masterPlayers,
+        matchStore.substitutions
       );
     } catch (err) {
       console.error('Error compiling workspace series data:', err);
@@ -80,6 +81,7 @@
     const _scoreA = (matchStore.data?.match.awayScore1st || 0) + (matchStore.data?.match.awayScore2nd || 0);
     const _playersLength = matchStore.data?.players?.length || 0;
     const _eventsLength = matchStore.data?.events?.length || 0;
+    const _subsLength = matchStore.substitutions?.length || 0;
     const _matchesLength = matchStore.matchesList.length;
 
     if (dataSource === 'live_workspace') {
@@ -717,17 +719,26 @@
               <div class="sc-header">
                 <Flame size={20} class="text-emerald" />
                 <h3>Kekuatan Taktikal & Pola Serangan</h3>
+                <span class="ai-chip-badge">AI Analysis</span>
               </div>
               <ul class="sum-bullets">
-                <li>
-                  <strong>Transisi Counter Attack Efektif:</strong> Kecepatan transisi dari flank dan pivot menjadi senjata utama menghasilkan peluang dan gol tim.
-                </li>
-                <li>
-                  <strong>Variasi Set-Piece (Kick In & Corner Kick):</strong> Skema bola mati terbukti memecah kebuntuan menghadapi pertahanan rapat (low block).
-                </li>
-                <li>
-                  <strong>Ketajaman Lini Depan:</strong> Kolektivitas gol tim dengan Top Scorer <em>{seriesData.summary?.topScorer}</em>.
-                </li>
+                {#if seriesData.aiEvaluation?.strengths && seriesData.aiEvaluation.strengths.length > 0}
+                  {#each seriesData.aiEvaluation.strengths as st}
+                    <li>
+                      <strong>{st.title}:</strong> {st.desc}
+                    </li>
+                  {/each}
+                {:else}
+                  <li>
+                    <strong>Transisi Counter Attack Efektif:</strong> Kecepatan transisi dari flank dan pivot menjadi senjata utama menghasilkan peluang dan gol tim.
+                  </li>
+                  <li>
+                    <strong>Variasi Set-Piece (Kick In & Corner Kick):</strong> Skema bola mati terbukti memecah kebuntuan menghadapi pertahanan rapat (low block).
+                  </li>
+                  <li>
+                    <strong>Ketajaman Lini Depan:</strong> Kolektivitas gol tim dengan Top Scorer <em>{seriesData.summary?.topScorer || '-'}</em>.
+                  </li>
+                {/if}
               </ul>
             </div>
 
@@ -736,17 +747,26 @@
               <div class="sc-header">
                 <ShieldAlert size={20} class="text-red" />
                 <h3>Area Evaluasi & Titik Lemah Bertahan</h3>
+                <span class="ai-chip-badge badge-red">AI Analysis</span>
               </div>
               <ul class="sum-bullets">
-                <li>
-                  <strong>Transisi Bertahan:</strong> Rawan kebobolan saat bola hilang (turnover) di area serang tanpa covering anchor yang disiplin.
-                </li>
-                <li>
-                  <strong>Antisipasi Restart Bola Mati:</strong> Perlunya konsistensi man-to-man marking pada situasi Kick-In dan Corner Kick lawan.
-                </li>
-                <li>
-                  <strong>Eksekusi Power Play:</strong> Pematangan rotasi dan passing saat power play agar tidak rentan counter attack ke gawang kosong.
-                </li>
+                {#if seriesData.aiEvaluation?.vulnerabilities && seriesData.aiEvaluation.vulnerabilities.length > 0}
+                  {#each seriesData.aiEvaluation.vulnerabilities as vl}
+                    <li>
+                      <strong>{vl.title}:</strong> {vl.desc}
+                    </li>
+                  {/each}
+                {:else}
+                  <li>
+                    <strong>Transisi Bertahan:</strong> Rawan kebobolan saat bola hilang (turnover) di area serang tanpa covering anchor yang disiplin.
+                  </li>
+                  <li>
+                    <strong>Antisipasi Restart Bola Mati:</strong> Perlunya konsistensi man-to-man marking pada situasi Kick-In dan Corner Kick lawan.
+                  </li>
+                  <li>
+                    <strong>Eksekusi Power Play:</strong> Pematangan rotasi dan passing saat power play agar tidak rentan counter attack ke gawang kosong.
+                  </li>
+                {/if}
               </ul>
             </div>
           </div>
@@ -1536,6 +1556,7 @@
   .sc-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
   }
 
@@ -1544,6 +1565,24 @@
     font-size: 0.95rem;
     font-weight: 800;
     color: #ffffff;
+  }
+
+  .ai-chip-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-chip-badge.badge-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
   }
 
   .sum-bullets {

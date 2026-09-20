@@ -1,6 +1,7 @@
 import type { SeriesPresentationData, MatchTacticalDetail, PlayerStatRow } from './pptxExporter';
-import type { MatchData } from './api';
+import type { MatchData, SubstitutionLog } from './api';
 import { api } from './api';
+import { AiTacticalEngine } from './aiTacticalEngine';
 
 // Preloaded Official Moncongbulo FC Seri 2 Data from presentasi.pptx
 export const MONCONGBULO_SERI_2_DATA: SeriesPresentationData = {
@@ -458,6 +459,119 @@ export function getSmartPlayerCallname(fullName: string, nickname?: string): str
 /**
  * Extracts 4-5 outfield player nicknames from pakets or players on the pitch
  */
+function parseTimeStringToSeconds(timeStr: string | undefined): number {
+  if (!timeStr || timeStr === '-') return 0;
+  const parts = timeStr.trim().split(':').map(Number);
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    return parts[0] * 60 + parts[1];
+  }
+  return 0;
+}
+
+/**
+ * Auto-lookup unit rotasi / pemain aktif di lapangan pada saat kejadian gol atau kebobolan
+ */
+export function lookupActiveLineup(
+  half: number,
+  timeStr: string | undefined,
+  substitutions: SubstitutionLog[] | undefined,
+  pakets: any[] | undefined,
+  players: any[] | undefined,
+  masterPlayers: any[] = [],
+  eventIndex: number = 0,
+  defaultPaket: string[] = []
+): string[] {
+  if (!substitutions || substitutions.length === 0) {
+    return defaultPaket;
+  }
+
+  // Filter subs for this half
+  const halfSubs = substitutions.filter(s => s.half === half);
+  if (halfSubs.length === 0) {
+    // If no subs in this half, check all subs
+    const allSorted = [...substitutions].sort((a, b) => (a.half - b.half));
+    if (allSorted.length === 0) return defaultPaket;
+  }
+
+  const targetSubs = halfSubs.length > 0 ? halfSubs : substitutions;
+
+  // Sort substitutions chronologically (earliest to latest in that half)
+  const sortedSubs = [...targetSubs].sort((a, b) => {
+    if (a.timerRemaining !== undefined && b.timerRemaining !== undefined && a.timerRemaining !== b.timerRemaining) {
+      return b.timerRemaining - a.timerRemaining; // 1200 down to 0
+    }
+    const secA = parseTimeStringToSeconds(a.timeStr);
+    const secB = parseTimeStringToSeconds(b.timeStr);
+    return secA - secB;
+  });
+
+  let matchedSub: SubstitutionLog | null = null;
+
+  // If event has valid timeStr
+  const eventSeconds = parseTimeStringToSeconds(timeStr);
+  if (timeStr && timeStr !== '-' && eventSeconds > 0) {
+    for (const sub of sortedSubs) {
+      matchedSub = sub;
+      const subSec = parseTimeStringToSeconds(sub.timeStr);
+      if (subSec > eventSeconds && sub.timerRemaining === undefined) {
+        break;
+      }
+    }
+  } else {
+    // Pick based on event sequence index among available rotation units
+    const subIdx = eventIndex % sortedSubs.length;
+    matchedSub = sortedSubs[subIdx];
+  }
+
+  if (!matchedSub && sortedSubs.length > 0) {
+    matchedSub = sortedSubs[0];
+  }
+
+  if (matchedSub) {
+    let pNums: number[] = [];
+    if (matchedSub.playerNumbers) {
+      try {
+        pNums = typeof matchedSub.playerNumbers === 'string' 
+          ? JSON.parse(matchedSub.playerNumbers) 
+          : matchedSub.playerNumbers;
+      } catch {
+        pNums = [];
+      }
+    }
+
+    if (pNums.length === 0 && matchedSub.paketIndex && pakets) {
+      const pkt = pakets.find(p => p.paketIndex === matchedSub.paketIndex);
+      if (pkt && pkt.playerNumbers) {
+        try {
+          pNums = typeof pkt.playerNumbers === 'string' ? JSON.parse(pkt.playerNumbers) : pkt.playerNumbers;
+        } catch {}
+      }
+    }
+
+    if (pNums.length > 0) {
+      const outfieldNums = pNums.filter(n => {
+        const pl = players?.find(x => x.no === n);
+        return !pl?.isGk;
+      });
+      const selectedNums = outfieldNums.length >= 4 ? outfieldNums.slice(0, 4) : pNums.slice(0, 4);
+
+      const resolvedNames = selectedNums.map(n => {
+        const pl = players?.find(x => x.no === n);
+        const mp = masterPlayers?.find(x => x.noPunggung === n);
+        const nick = mp?.nickname || '';
+        const name = pl?.name || mp?.name || '';
+        return getSmartPlayerCallname(name, nick) || `#${n}`;
+      });
+
+      if (resolvedNames.length > 0) {
+        return resolvedNames;
+      }
+    }
+  }
+
+  return defaultPaket;
+}
+
 function getOutfieldPaketNames(d: MatchData, masterPlayers: any[] = []): string[] {
   // Check if there are defined pakets
   if (d.pakets && d.pakets.length > 0) {
@@ -496,7 +610,8 @@ function getOutfieldPaketNames(d: MatchData, masterPlayers: any[] = []): string[
 export async function buildSeriesDataFromWorkspaceAsync(
   matchesList: any[],
   currentMatchData?: MatchData | null,
-  masterPlayersInput?: any[]
+  masterPlayersInput?: any[],
+  currentSubstitutionsInput?: SubstitutionLog[]
 ): Promise<SeriesPresentationData> {
   let masterPlayers: any[] = masterPlayersInput || [];
   if (!masterPlayers || masterPlayers.length === 0) {
@@ -536,6 +651,22 @@ export async function buildSeriesDataFromWorkspaceAsync(
         events: [],
         pakets: []
       });
+    }
+  }
+
+  // Load substitutions for each match for accurate Auto-Lookup Rotasi
+  const subsMap: Record<number, SubstitutionLog[]> = {};
+  for (const d of fullMatchesData) {
+    if (d.match && d.match.id) {
+      if (currentMatchData && currentMatchData.match.id === d.match.id && currentSubstitutionsInput && currentSubstitutionsInput.length > 0) {
+        subsMap[d.match.id] = currentSubstitutionsInput;
+      } else {
+        try {
+          subsMap[d.match.id] = await api.getSubstitutions(d.match.id);
+        } catch {
+          subsMap[d.match.id] = [];
+        }
+      }
     }
   }
 
@@ -650,9 +781,10 @@ export async function buildSeriesDataFromWorkspaceAsync(
 
   const playersList = Object.values(playerMap);
 
-  // Extract tactical breakdown per match
+  // Extract tactical breakdown per match with Auto-Lookup Rotasi
   const tacticalMatches: MatchTacticalDetail[] = fullMatchesData.map((d, idx) => {
     const m = d.match;
+    const matchSubs = subsMap[m.id] || [];
     const defaultPaket = getOutfieldPaketNames(d, masterPlayers);
     
     // 1. Build Goals List (synthesize from players & events)
@@ -660,7 +792,7 @@ export async function buildSeriesDataFromWorkspaceAsync(
     const recordedGoalEvents = (d.events || []).filter(e => e.type === 'shot' && e.outcome === 'goal' && e.team === 'home');
 
     // Add recorded events first
-    recordedGoalEvents.forEach(e => {
+    recordedGoalEvents.forEach((e, eIdx) => {
       const scorerPlayer = d.players?.find(p => p.no === e.playerNo);
       const mpScorer = masterPlayers.find(mp => mp.noPunggung === e.playerNo);
       let assistName = '';
@@ -687,6 +819,9 @@ export async function buildSeriesDataFromWorkspaceAsync(
             return getSmartPlayerCallname(pl?.name || token, mpP?.nickname);
           });
         }
+      } else {
+        // Auto-Lookup from substitution history
+        paketPlayers = lookupActiveLineup(e.half || 1, e.timeStr, matchSubs, d.pakets, d.players, masterPlayers, eIdx, defaultPaket);
       }
 
       goalsList.push({
@@ -708,32 +843,34 @@ export async function buildSeriesDataFromWorkspaceAsync(
       const taggedH2 = recordedGoalEvents.filter(e => e.playerNo === p.no && e.half === 2).length;
 
       for (let i = 0; i < gl1 - taggedH1; i++) {
+        const pLineup = lookupActiveLineup(1, undefined, matchSubs, d.pakets, d.players, masterPlayers, i, defaultPaket);
         goalsList.push({
           half: 1,
           minute: '-',
           scorer: p.name,
           assist: '',
           process: 'Open Play Goal',
-          paketPlayers: defaultPaket
+          paketPlayers: pLineup
         });
       }
       for (let i = 0; i < gl2 - taggedH2; i++) {
+        const pLineup = lookupActiveLineup(2, undefined, matchSubs, d.pakets, d.players, masterPlayers, i, defaultPaket);
         goalsList.push({
           half: 2,
           minute: '-',
           scorer: p.name,
           assist: '',
           process: 'Open Play Goal',
-          paketPlayers: defaultPaket
+          paketPlayers: pLineup
         });
       }
     });
 
-    // 2. Build Conceded List
+    // 2. Build Conceded List with Auto-Lookup Rotasi
     const concededList: MatchTacticalDetail['conceded'] = [];
     const recordedConcedeEvents = (d.events || []).filter(e => e.type === 'shot' && e.outcome === 'goal' && e.team === 'away');
 
-    recordedConcedeEvents.forEach(e => {
+    recordedConcedeEvents.forEach((e, cIdx) => {
       let paketPlayers = defaultPaket;
       if (e.note && e.note.toLowerCase().includes('paket:')) {
         const mp = e.note.match(/paket:\s*\[?([^\]]+)\]?/i);
@@ -752,36 +889,42 @@ export async function buildSeriesDataFromWorkspaceAsync(
             return getSmartPlayerCallname(pl?.name || token, mpP?.nickname);
           });
         }
+      } else {
+        // Auto-Lookup from substitution history
+        paketPlayers = lookupActiveLineup(e.half || 1, e.timeStr, matchSubs, d.pakets, d.players, masterPlayers, cIdx, defaultPaket);
       }
+
       concededList.push({
         id: e.id,
         half: e.half || 1,
         minute: e.timeStr || '-',
-        process: e.note?.split('|')[0]?.trim() || 'Serangan Lawan',
+        process: e.note?.split('|')[0]?.trim() || 'Shot Lawan (goal)',
         paketPlayers
       });
     });
 
-    // Synthesize conceded from away score if not tagged
+    // Synthesize conceded from away score if not tagged, using Auto-Lookup across available units
     const awayH1 = m.awayScore1st || 0;
     const awayH2 = m.awayScore2nd || 0;
     const taggedAwayH1 = recordedConcedeEvents.filter(e => e.half === 1).length;
     const taggedAwayH2 = recordedConcedeEvents.filter(e => e.half === 2).length;
 
     for (let i = 0; i < awayH1 - taggedAwayH1; i++) {
+      const pLineup = lookupActiveLineup(1, undefined, matchSubs, d.pakets, d.players, masterPlayers, i, defaultPaket);
       concededList.push({
         half: 1,
         minute: '-',
-        process: 'Kebobolan Babak 1',
-        paketPlayers: defaultPaket
+        process: 'Shot Lawan (goal)',
+        paketPlayers: pLineup
       });
     }
     for (let i = 0; i < awayH2 - taggedAwayH2; i++) {
+      const pLineup = lookupActiveLineup(2, undefined, matchSubs, d.pakets, d.players, masterPlayers, i, defaultPaket);
       concededList.push({
         half: 2,
         minute: '-',
-        process: 'Kebobolan Babak 2',
-        paketPlayers: defaultPaket
+        process: 'Shot Lawan (goal)',
+        paketPlayers: pLineup
       });
     }
 
@@ -810,6 +953,26 @@ export async function buildSeriesDataFromWorkspaceAsync(
     ? `${sortedTopAssist[0].name} (${sortedTopAssist[0].totalAssists} Assist)` 
     : '-';
 
+  const baseSummary = {
+    totalMatches: matches.length,
+    wins: totalWins,
+    draws: totalDraws,
+    losses: totalLosses,
+    points,
+    totalGF,
+    totalGA,
+    goalDiff: totalGF - totalGA,
+    topScorer,
+    topAssist
+  };
+
+  const aiEvaluation = AiTacticalEngine.generateSeriesEvaluation({
+    teamName,
+    summary: baseSummary,
+    tacticalMatches,
+    players: playersList
+  }, fullMatchesData);
+
   return {
     teamName,
     competitionTitle: competition,
@@ -818,18 +981,8 @@ export async function buildSeriesDataFromWorkspaceAsync(
     matches,
     players: playersList,
     tacticalMatches,
-    summary: {
-      totalMatches: matches.length,
-      wins: totalWins,
-      draws: totalDraws,
-      losses: totalLosses,
-      points,
-      totalGF,
-      totalGA,
-      goalDiff: totalGF - totalGA,
-      topScorer,
-      topAssist
-    }
+    summary: baseSummary,
+    aiEvaluation
   };
 }
 

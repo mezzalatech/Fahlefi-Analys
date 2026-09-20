@@ -370,4 +370,192 @@ export class AiTacticalEngine {
       lossVulnerabilityZone
     };
   }
+
+  /**
+   * Menghasilkan Evaluasi Eksekutif Taktikal Seri Turnamen Otomatis (AI Series Tactical Evaluation)
+   */
+  static generateSeriesEvaluation(
+    seriesData: {
+      teamName?: string;
+      summary?: {
+        totalMatches: number;
+        wins: number;
+        draws: number;
+        losses: number;
+        totalGF: number;
+        totalGA: number;
+        topScorer?: string;
+        topAssist?: string;
+      };
+      tacticalMatches?: Array<{
+        matchNo: number;
+        opponent: string;
+        scoreHome: number;
+        scoreAway: number;
+        result: string;
+        goals: Array<{ process: string; scorer: string; assist?: string; paketPlayers?: string[] }>;
+        conceded: Array<{ process: string; half: number; paketPlayers?: string[] }>;
+      }>;
+      players?: Array<{ name: string; totalGoals: number; totalAssists: number }>;
+    },
+    allMatchesData: MatchData[] = []
+  ): {
+    winRatePct: number;
+    strengths: Array<{ title: string; desc: string }>;
+    vulnerabilities: Array<{ title: string; desc: string }>;
+    recommendations: string[];
+  } {
+    const summary = seriesData.summary || {
+      totalMatches: 1,
+      wins: 1,
+      draws: 0,
+      losses: 0,
+      totalGF: 0,
+      totalGA: 0
+    };
+
+    const totalMatches = Math.max(1, summary.totalMatches);
+    const winRatePct = Math.round(((summary.wins || 0) / totalMatches) * 100);
+    const tacticalMatches = seriesData.tacticalMatches || [];
+
+    // 1. Analisis Semua Gol yang Dicetak Tim
+    const allGoals = tacticalMatches.flatMap(m => m.goals || []);
+    const goalProcessMap: Record<string, number> = {};
+    allGoals.forEach(g => {
+      const proc = (g.process || 'Open Play').trim();
+      goalProcessMap[proc] = (goalProcessMap[proc] || 0) + 1;
+    });
+
+    const sortedGoalProcs = Object.entries(goalProcessMap).sort((a, b) => b[1] - a[1]);
+    const topGoalProc = sortedGoalProcs[0];
+
+    // 2. Analisis Semua Kebobolan
+    const allConceded = tacticalMatches.flatMap(m => m.conceded || []);
+    const concedeProcessMap: Record<string, number> = {};
+    let concedeH1Count = 0;
+    let concedeH2Count = 0;
+    const concedePaketMap: Record<string, number> = {};
+
+    allConceded.forEach(c => {
+      const proc = (c.process || 'Serangan Lawan').trim();
+      concedeProcessMap[proc] = (concedeProcessMap[proc] || 0) + 1;
+      if (c.half === 1) concedeH1Count++;
+      else if (c.half === 2) concedeH2Count++;
+
+      if (c.paketPlayers && c.paketPlayers.length > 0) {
+        const key = c.paketPlayers.slice(0, 3).join(', ');
+        concedePaketMap[key] = (concedePaketMap[key] || 0) + 1;
+      }
+    });
+
+    const sortedConcedeProcs = Object.entries(concedeProcessMap).sort((a, b) => b[1] - a[1]);
+    const topConcedeProc = sortedConcedeProcs[0];
+    const sortedConcedePakets = Object.entries(concedePaketMap).sort((a, b) => b[1] - a[1]);
+    const topConcedingUnit = sortedConcedePakets[0];
+
+    // 3. Analisis Events (Turnovers, Recoveries, Zona Lapangan)
+    const allEvents = allMatchesData.flatMap(m => m.events || []);
+    const totalLosses = allEvents.filter(e => e.type === 'loss' && e.team === 'home').length;
+    const totalRecoveries = allEvents.filter(e => e.type === 'recover' && e.team === 'home').length;
+    const zones = this.analyzeZones(allEvents);
+    const dangerZone = zones.find(z => z.category === 'DEFENSIVE' && z.losses > 0) || zones[0];
+
+    // 4. Susun Kekuatan (Strengths)
+    const strengths: Array<{ title: string; desc: string }> = [];
+
+    if (topGoalProc && topGoalProc[1] > 0) {
+      const pct = Math.round((topGoalProc[1] / Math.max(1, allGoals.length)) * 100);
+      strengths.push({
+        title: `Efektivitas Pola ${topGoalProc[0]}`,
+        desc: `Sebanyak ${topGoalProc[1]} gol (${pct}% dari total gol) tercipta melalui skema ${topGoalProc[0].toLowerCase()}, menjadi senjata utama penyerangan tim.`
+      });
+    } else {
+      strengths.push({
+        title: 'Transisi Penyerangan Dinamis',
+        desc: 'Variasi serangan dari sektor flank dan pivot berjalan agresif dalam membongkar pertahanan lawan.'
+      });
+    }
+
+    if (summary.topScorer && summary.topScorer !== '-') {
+      const topAssistText = summary.topAssist && summary.topAssist !== '-' ? ` didukung distribusi assist oleh ${summary.topAssist}` : '';
+      strengths.push({
+        title: 'Ketajaman & Kolektivitas Lini Serang',
+        desc: `Produktivitas tinggi dipimpin oleh Top Scorer ${summary.topScorer}${topAssistText}.`
+      });
+    }
+
+    if (totalRecoveries > 0) {
+      strengths.push({
+        title: 'Disiplin Ball Recovery & Counter-Press',
+        desc: `Tim mencatatkan ${totalRecoveries} kali perebutan bola (recoveries) sukses untuk memutus progresi serangan lawan.`
+      });
+    } else if (winRatePct >= 50) {
+      strengths.push({
+        title: 'Konsistensi Hasil Seri Turnamen',
+        desc: `Tingkat kemenangan ${winRatePct}% dengan produktivitas ${summary.totalGF} gol membuktikan dominasi strategi tim sepanjang seri.`
+      });
+    }
+
+    // 5. Susun Titik Lemah & Evaluasi (Vulnerabilities)
+    const vulnerabilities: Array<{ title: string; desc: string }> = [];
+
+    if (allConceded.length > 0) {
+      if (topConcedeProc) {
+        vulnerabilities.push({
+          title: `Kerentanan Terhadap ${topConcedeProc[0]}`,
+          desc: `Catatan ${topConcedeProc[1]} gol kebobolan berakar dari situasi ${topConcedeProc[0].toLowerCase()} yang perlu diantisipasi dengan disiplin covering.`
+        });
+      }
+
+      if (concedeH1Count > concedeH2Count && concedeH1Count > 0) {
+        vulnerabilities.push({
+          title: 'Konsentrasi Menit Awal (Babak 1)',
+          desc: `Mayoritas kebobolan (${concedeH1Count} dari ${allConceded.length} gol) terjadi pada Babak 1, mengindikasikan perlunya fokus lebih cepat sejak kickoff.`
+        });
+      } else if (concedeH2Count > 0) {
+        vulnerabilities.push({
+          title: 'Manajemen Stamina & Menit Akhir',
+          desc: `Kebobolan di Babak 2 (${concedeH2Count} gol) menuntut rotasi pemain yang lebih disiplin untuk menjaga intensitas bertahan.`
+        });
+      }
+
+      if (topConcedingUnit && topConcedingUnit[1] > 1) {
+        vulnerabilities.push({
+          title: 'Koordinasi Unit Bertahan',
+          desc: `Kombinasi rotasi unit [${topConcedingUnit[0]}] mencatatkan ${topConcedingUnit[1]} kali kebobolan dan perlu pematangan komunikasi man-to-man marking.`
+        });
+      }
+    } else {
+      vulnerabilities.push({
+        title: 'Pertahanan Solid (Clean Sheet)',
+        desc: 'Tidak ada catatan kebobolan signifikan, pertahankan struktur zonal marking dan penjagaan ruang antarlini.'
+      });
+    }
+
+    if (dangerZone && dangerZone.losses > 0) {
+      vulnerabilities.push({
+        title: `Zona Rawan Turnover: ${dangerZone.name}`,
+        desc: `Terdeteksi ${dangerZone.losses} kali kehilangan bola di area ${dangerZone.name}, hindari passing spekulatif di zona bertahan.`
+      });
+    } else if (vulnerabilities.length < 3) {
+      vulnerabilities.push({
+        title: 'Antisipasi Situasi Restart & Set-Piece Lawan',
+        desc: 'Peningkatan konsistensi blocking dan wall formation saat menghadapi corner kick dan kick-in dekat kotak penalti lawan.'
+      });
+    }
+
+    const recommendations = [
+      'Tingkatkan kecepatan sirkulasi bola saat menghadapi pertahanan low block lawan.',
+      'Disiplinkan covering anchor saat flank melakukan overlap menyerang.',
+      'Maksimalkan rotasi paket berdurasi 2-3 menit untuk menjaga level pressing tetap maksimal.'
+    ];
+
+    return {
+      winRatePct,
+      strengths: strengths.slice(0, 3),
+      vulnerabilities: vulnerabilities.slice(0, 3),
+      recommendations
+    };
+  }
 }
+
