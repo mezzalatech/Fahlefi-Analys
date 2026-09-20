@@ -386,9 +386,10 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     y: 2.55,
     w: 11.73,
     colW: [1.3, 3.2, 0.9, 0.9, 3.4, 2.03],
-    rowH: 0.36,
-    fontSize: 9.5,
+    rowH: 0.30,
+    fontSize: 9,
     fontFace: 'Arial',
+    margin: [2, 4, 2, 4],
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
 
@@ -499,7 +500,7 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
   ];
 
   const goalTableRows: any[] = [goalHeaderRow];
-  sortedByGoals.slice(0, 12).forEach((p, idx) => {
+  sortedByGoals.slice(0, 14).forEach((p, idx) => {
     const rowBg = idx % 2 === 0 ? '0B1528' : '101E38';
     const matchVals = data.matches.map(m => {
       const g = p.goalsPerMatch[m.matchNo] || 0;
@@ -521,9 +522,10 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     x: 4.5,
     y: 1.3,
     w: 8.03,
-    rowH: 0.36,
-    fontSize: 9,
+    rowH: 0.28,
+    fontSize: 8.5,
     fontFace: 'Arial',
+    margin: [2, 4, 2, 4],
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
 
@@ -631,7 +633,7 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
   ];
 
   const assistTableRows: any[] = [assistHeaderRow];
-  sortedByAssists.slice(0, 12).forEach((p, idx) => {
+  sortedByAssists.slice(0, 14).forEach((p, idx) => {
     const rowBg = idx % 2 === 0 ? '0B1528' : '101E38';
     const matchVals = data.matches.map(m => {
       const a = p.assistsPerMatch[m.matchNo] || 0;
@@ -653,9 +655,10 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     x: 4.5,
     y: 1.3,
     w: 8.03,
-    rowH: 0.36,
-    fontSize: 9,
+    rowH: 0.28,
+    fontSize: 8.5,
     fontFace: 'Arial',
+    margin: [2, 4, 2, 4],
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
 
@@ -688,11 +691,69 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     fontFace: 'Arial'
   });
 
+  const totalYellow = data.players.reduce((s, p) => s + (p.yellowCards || 0), 0);
+  const totalRed = data.players.reduce((s, p) => s + (p.redCards || 0), 0);
+  const playersAtRisk = data.players.filter(p => (p.yellowCards || 0) >= 2 || (p.redCards || 0) >= 1);
+
+  // Left 3 Metric Summary Cards (Matches Slide 3 & 4 layout)
+  const cardSummaryBoxes = [
+    { label: '🟨 TOTAL KARTU KUNING', val: `${totalYellow} KARTU`, sub: 'Pelanggaran Disiplin Taktis', color: AMBER_ACCENT, bg: '241804' },
+    { label: '🟥 TOTAL KARTU MERAH', val: `${totalRed} KARTU`, sub: 'Hukuman Keluar Lapangan', color: RED_ACCENT, bg: '2A0B0B' },
+    { label: '⚠️ RISIKO AKUMULASI', val: `${playersAtRisk.length} PEMAIN`, sub: 'Perlu Rotasi Penjagaan', color: CYAN_ACCENT, bg: '083344' }
+  ];
+
+  cardSummaryBoxes.forEach((cb, idx) => {
+    const yPos = 1.3 + idx * 1.8;
+    slide5.addShape(pres.ShapeType.roundRect, {
+      x: 0.8,
+      y: yPos,
+      w: 3.4,
+      h: 1.65,
+      rectRadius: 0.1,
+      fill: { color: cb.bg },
+      line: { color: cb.color, width: 1 }
+    });
+
+    slide5.addText(cb.label, {
+      x: 1.0,
+      y: yPos + 0.15,
+      w: 3.0,
+      h: 0.25,
+      fontSize: 9.5,
+      color: cb.color,
+      bold: true,
+      fontFace: 'Arial'
+    });
+
+    slide5.addText(cb.val, {
+      x: 1.0,
+      y: yPos + 0.45,
+      w: 3.0,
+      h: 0.5,
+      fontSize: 18,
+      color: cb.color,
+      bold: true,
+      fontFace: 'Arial'
+    });
+
+    slide5.addText(cb.sub, {
+      x: 1.0,
+      y: yPos + 1.05,
+      w: 3.0,
+      h: 0.4,
+      fontSize: 8.5,
+      color: TEXT_MUTED,
+      fontFace: 'Arial'
+    });
+  });
+
+  // Table on Right with Clean Compact Layout
   const cardHeaderRow: any[] = [
     { text: 'NO', options: { bold: true, color: TEXT_WHITE, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
     { text: 'NAMA PEMAIN', options: { bold: true, color: TEXT_WHITE, fill: { color: BG_TABLE_HEADER }, align: 'left' } },
-    { text: 'KARTU KUNING', options: { bold: true, color: AMBER_ACCENT, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
-    { text: 'KARTU MERAH', options: { bold: true, color: RED_ACCENT, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
+    { text: 'POS', options: { bold: true, color: TEXT_WHITE, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
+    { text: 'KUNING', options: { bold: true, color: AMBER_ACCENT, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
+    { text: 'MERAH', options: { bold: true, color: RED_ACCENT, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
     { text: 'TOTAL', options: { bold: true, color: TEXT_WHITE, fill: { color: BG_TABLE_HEADER }, align: 'center' } },
     { text: 'STATUS SANKSI', options: { bold: true, color: TEXT_WHITE, fill: { color: BG_TABLE_HEADER }, align: 'center' } }
   ];
@@ -700,16 +761,17 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
   const cardTableRows: any[] = [cardHeaderRow];
   const sortedByCards = [...data.players].sort((a, b) => (b.yellowCards + b.redCards * 3) - (a.yellowCards + a.redCards * 3));
 
-  sortedByCards.slice(0, 12).forEach((p, idx) => {
+  sortedByCards.slice(0, 14).forEach((p, idx) => {
     const rowBg = idx % 2 === 0 ? '0B1528' : '101E38';
     const total = p.yellowCards + p.redCards;
     const isWarning = p.yellowCards >= 3 || p.redCards >= 1;
-    const statusText = p.redCards >= 1 ? 'HUKUMAN MERAH' : p.yellowCards >= 5 ? 'AKUMULASI SANKSI' : p.yellowCards >= 3 ? 'RAWAN AKUMULASI' : 'AMAN';
-    const statusColor = p.redCards >= 1 ? RED_ACCENT : p.yellowCards >= 3 ? AMBER_ACCENT : EMERALD_ACCENT;
+    const statusText = p.redCards >= 1 ? 'HUKUMAN MERAH' : p.yellowCards >= 5 ? 'AKUMULASI SANKSI' : p.yellowCards >= 2 ? 'RAWAN AKUMULASI' : 'AMAN';
+    const statusColor = p.redCards >= 1 ? RED_ACCENT : p.yellowCards >= 2 ? AMBER_ACCENT : EMERALD_ACCENT;
 
     cardTableRows.push([
       { text: String(p.no), options: { color: TEXT_MUTED, fill: { color: rowBg }, align: 'center' } },
       { text: p.name, options: { color: TEXT_WHITE, fill: { color: rowBg }, align: 'left', bold: total > 0 } },
+      { text: p.position || 'FP', options: { color: '94A3B8', fill: { color: rowBg }, align: 'center' } },
       { text: p.yellowCards > 0 ? `🟨 ${p.yellowCards}` : '-', options: { color: p.yellowCards > 0 ? AMBER_ACCENT : '64748B', fill: { color: rowBg }, align: 'center', bold: p.yellowCards > 0 } },
       { text: p.redCards > 0 ? `🟥 ${p.redCards}` : '-', options: { color: p.redCards > 0 ? RED_ACCENT : '64748B', fill: { color: rowBg }, align: 'center', bold: p.redCards > 0 } },
       { text: String(total), options: { color: TEXT_WHITE, fill: { color: rowBg }, align: 'center', bold: true } },
@@ -718,13 +780,14 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
   });
 
   slide5.addTable(cardTableRows, {
-    x: 0.8,
+    x: 4.5,
     y: 1.3,
-    w: 11.73,
-    colW: [0.9, 4.0, 1.8, 1.8, 1.2, 2.03],
-    rowH: 0.38,
-    fontSize: 9.5,
+    w: 8.03,
+    colW: [0.55, 2.58, 0.55, 1.0, 1.0, 0.7, 1.65],
+    rowH: 0.28,
+    fontSize: 8.5,
     fontFace: 'Arial',
+    margin: [2, 3, 2, 3],
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
 
