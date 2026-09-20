@@ -62,7 +62,9 @@
     Sparkles,
     Calendar,
     Activity,
-    Award
+    Award,
+    Video,
+    Printer
   } from 'lucide-svelte';
 
   let navTabsContainer: HTMLElement | null = $state(null);
