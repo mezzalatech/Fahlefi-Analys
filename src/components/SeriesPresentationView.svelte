@@ -300,20 +300,17 @@
 
           <div class="cover-center-content">
             <div class="logo-box">
-              <img src="/logo.png" alt="Team Logo" class="team-lion-logo" />
+              <img 
+                src={dataSource === 'preset_pfl' ? (seriesData.logoUrl || '/icon.png') : (matchStore.currentTeamLogo || seriesData.logoUrl || '/icon.png')} 
+                alt="{seriesData.teamName} Logo" 
+                class="team-lion-logo" 
+              />
             </div>
             <h1 class="cover-main-title">{seriesData.seriesTitle}</h1>
             <h2 class="cover-sub-title">LAPORAN EVALUASI TAKTIKAL & REKAPITULASI TIM</h2>
             <div class="cover-team-pill">
               <Trophy size={18} class="text-amber" />
               <span>{seriesData.teamName} • {seriesData.season}</span>
-            </div>
-          </div>
-
-          <div class="cover-footer">
-            <div class="footer-badge">
-              <Sparkles size={14} class="text-emerald" />
-              <span>FAHLEFI FUTSAL ANALYTICS • EXECUTIVE MATCH INTELLIGENCE</span>
             </div>
           </div>
         </div>
@@ -784,6 +781,14 @@
               <span>Download Full PowerPoint Presentation (.pptx)</span>
             </button>
           </div>
+        </div>
+      {/if}
+
+      <!-- Global Web App Mini Logo & Tagline in Bottom-Right of Every Slide -->
+      {#if currentSlide !== totalSlides}
+        <div class="slide-global-brand-footer">
+          <img src="/logo.png" alt="FAHLEFI" class="brand-mini-logo" />
+          <span class="brand-text">FAHLEFI FUTSAL ANALYTICS <span class="brand-sep">•</span> EXECUTIVE MATCH INTELLIGENCE</span>
         </div>
       {/if}
 
@@ -1645,6 +1650,43 @@
     font-size: 0.82rem;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  /* Global Watermark Footer on Every Slide */
+  .slide-global-brand-footer {
+    position: absolute;
+    bottom: 12px;
+    right: 18px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(11, 19, 43, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    padding: 4px 12px 4px 7px;
+    border-radius: 999px;
+    z-index: 25;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .brand-mini-logo {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    border-radius: 50%;
+  }
+
+  .brand-text {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.06em;
+  }
+
+  .brand-sep {
+    color: #10b981;
+    margin: 0 2px;
   }
 
   /* Bottom Thumbnail Strip */

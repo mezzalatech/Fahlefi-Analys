@@ -89,6 +89,19 @@ const AMBER_ACCENT = 'F59E0B'; // Gold / Warning
 const RED_ACCENT = 'EF4444'; // Red Danger
 const BORDER_COLOR = '1E3A8A';
 
+function addGlobalSlideWatermark(slide: any): void {
+  slide.addText('FAHLEFI FUTSAL ANALYTICS • EXECUTIVE MATCH INTELLIGENCE', {
+    x: 7.2,
+    y: 7.12,
+    w: 5.3,
+    h: 0.25,
+    fontSize: 7.5,
+    color: '64748B',
+    align: 'right',
+    fontFace: 'Arial'
+  });
+}
+
 export async function generatePptx(data: SeriesPresentationData): Promise<void> {
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_16x9'; // 13.33 x 7.5 inches
@@ -132,6 +145,19 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     line: { color: '1E3A8A', width: 1.5 }
   });
 
+  // If Team Logo Available
+  if (data.logoUrl && (data.logoUrl.startsWith('data:') || data.logoUrl.startsWith('http') || data.logoUrl.startsWith('/'))) {
+    try {
+      slide1.addImage({
+        path: data.logoUrl,
+        x: 10.6,
+        y: 1.1,
+        w: 1.5,
+        h: 1.5
+      });
+    } catch {}
+  }
+
   // Competition Tag Pill
   slide1.addShape(pres.ShapeType.roundRect, {
     x: 1.3,
@@ -160,7 +186,7 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
   slide1.addText(data.seriesTitle.toUpperCase(), {
     x: 1.3,
     y: 1.9,
-    w: 10.73,
+    w: 9.0,
     h: 1.1,
     fontSize: 28,
     color: TEXT_WHITE,
@@ -173,7 +199,7 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
   slide1.addText(`${data.teamName.toUpperCase()}`, {
     x: 1.3,
     y: 2.9,
-    w: 10.73,
+    w: 9.0,
     h: 0.7,
     fontSize: 24,
     color: EMERALD_ACCENT,
@@ -243,17 +269,7 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     });
   });
 
-  // Bottom Tagline
-  slide1.addText('FAHLEFI FUTSAL ANALYTICS • OFFICIAL PERFORMANCE INTELLIGENCE', {
-    x: 0.8,
-    y: 6.9,
-    w: 11.73,
-    h: 0.35,
-    fontSize: 9,
-    color: '475569',
-    fontFace: 'Arial',
-    align: 'center'
-  });
+  addGlobalSlideWatermark(slide1);
 
   // -------------------------------------------------------------
   // SLIDE 2: RINGKASAN EKSEKUTIF & HASIL PERTANDINGAN
@@ -375,6 +391,8 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     fontFace: 'Arial',
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
+
+  addGlobalSlideWatermark(slide2);
 
   // -------------------------------------------------------------
   // SLIDE 3: LEADERBOARD GOL & PENYELESAIAN AKHIR
@@ -509,6 +527,8 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
 
+  addGlobalSlideWatermark(slide3);
+
   // -------------------------------------------------------------
   // SLIDE 4: LEADERBOARD ASSIST & KREASI PELUANG
   // -------------------------------------------------------------
@@ -639,6 +659,8 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
 
+  addGlobalSlideWatermark(slide4);
+
   // -------------------------------------------------------------
   // SLIDE 5: REKAPITULASI KEDISIPLINAN & KARTU
   // -------------------------------------------------------------
@@ -705,6 +727,8 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
     fontFace: 'Arial',
     border: { type: 'solid', pt: 0.5, color: '1E3A8A' }
   });
+
+  addGlobalSlideWatermark(slide5);
 
   // -------------------------------------------------------------
   // SLIDES 6 s/d N: ANALISIS TAKTIKAL PER PERTANDINGAN
@@ -927,6 +951,8 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
         yCon += 1.05;
       });
     }
+
+    addGlobalSlideWatermark(slide);
   });
 
   // -------------------------------------------------------------
@@ -1086,6 +1112,8 @@ export async function generatePptx(data: SeriesPresentationData): Promise<void> 
 
     yVul += 1.6;
   });
+
+  addGlobalSlideWatermark(summarySlide);
 
   // Save / Trigger Download
   const filename = `${data.seriesTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}_Tactical_Presentation.pptx`;
