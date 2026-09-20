@@ -282,8 +282,8 @@ export const supabaseApi = {
           if (byUname) {
             broadcastFutsalAction('user_updated', localUpdated);
           } else {
-            // Upsert user if completely missing
-            await supabase.from('users').upsert({
+            // Try inserting if completely missing
+            await supabase.from('users').insert({
               id,
               username: uname,
               email: userData.email || localUpdated.email || `${uname}@fahlefi.com`,
@@ -292,7 +292,7 @@ export const supabaseApi = {
               avatar_url: userData.avatarUrl !== undefined ? userData.avatarUrl : (localUpdated.avatarUrl || ''),
               password_hash: userData.password || 'password123',
               team_id: userData.teamId || localUpdated.teamId
-            }, { onConflict: 'username' });
+            });
             broadcastFutsalAction('user_updated', localUpdated);
           }
         }
