@@ -1049,14 +1049,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.25rem;
+    padding: 1rem 1.25rem;
     background: radial-gradient(circle at center, #111c3a 0%, #060b18 100%);
+    min-height: 0;
+    overflow: hidden;
   }
 
   .slide-canvas {
     width: 100%;
     max-width: 1200px;
-    min-height: 600px;
+    height: min(680px, calc(100vh - 165px));
+    min-height: 480px;
     aspect-ratio: 16 / 9;
     background: #0b132b;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1070,11 +1073,15 @@
 
   .slide-content {
     flex: 1;
-    padding: 2.2rem 2.5rem;
+    padding: 1.5rem 2.2rem 2.2rem 2.2rem;
     display: flex;
     flex-direction: column;
     position: relative;
     z-index: 2;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
   }
 
   .animate-fade {
@@ -1181,9 +1188,10 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 1.2rem;
+    margin-bottom: 0.8rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    flex-shrink: 0;
   }
 
   .slide-tag {
@@ -1195,10 +1203,10 @@
   }
 
   .slide-title {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: #ffffff;
-    margin: 0.2rem 0 0 0;
+    margin: 0.15rem 0 0 0;
   }
 
   .summary-pills {
@@ -1234,7 +1242,35 @@
 
   .table-container {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: auto;
+    position: relative;
+    border-radius: 12px;
+  }
+
+  .table-container::-webkit-scrollbar,
+  .tactical-card-list::-webkit-scrollbar,
+  .sum-card::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .table-container::-webkit-scrollbar-track,
+  .tactical-card-list::-webkit-scrollbar-track,
+  .sum-card::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 4px;
+  }
+  .table-container::-webkit-scrollbar-thumb,
+  .tactical-card-list::-webkit-scrollbar-thumb,
+  .sum-card::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.4);
+    border-radius: 4px;
+  }
+  .table-container::-webkit-scrollbar-thumb:hover,
+  .tactical-card-list::-webkit-scrollbar-thumb:hover,
+  .sum-card::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.7);
   }
 
   .series-table {
@@ -1331,6 +1367,7 @@
     padding: 6px 14px;
     border-radius: 10px;
     border: 1px solid;
+    flex-shrink: 0;
   }
 
   .box-win { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); }
@@ -1347,6 +1384,7 @@
     gap: 1.25rem;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   .tactical-panel {
@@ -1356,6 +1394,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
+    height: 100%;
   }
 
   .panel-goal { border-top: 3px solid #10b981; }
@@ -1368,6 +1408,7 @@
     padding: 0.8rem 1rem;
     background: rgba(30, 41, 59, 0.5);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
   }
 
   .ph-left {
@@ -1396,6 +1437,7 @@
   .tactical-card-list {
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
     padding: 0.75rem;
     display: flex;
     flex-direction: column;
@@ -1542,17 +1584,21 @@
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
     flex: 1;
-    margin-bottom: 1rem;
+    min-height: 0;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
   }
 
   .sum-card {
     background: rgba(15, 23, 42, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
-    padding: 1.2rem;
+    padding: 1rem 1.2rem;
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.6rem;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .card-strength { border-top: 3px solid #10b981; }
