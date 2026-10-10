@@ -1937,7 +1937,7 @@
   <!-- ==================================================== -->
   {#if showAddGoalModal}
     <div 
-      class="modal-backdrop-layer" 
+      class="tactical-modal-backdrop" 
       onclick={() => showAddGoalModal = false}
       onkeydown={(e) => { if (e.key === 'Escape') showAddGoalModal = false; }}
       role="dialog"
@@ -1945,49 +1945,54 @@
       tabindex="-1"
     >
       <div 
-        class="modal-window-card" 
+        class="tactical-modal-card" 
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => e.stopPropagation()}
         role="document"
         tabindex="0"
       >
-        <div class="modal-window-head">
-          <div class="flex items-center gap-2">
-            <AlertTriangle class="w-5 h-5 text-rose-400" />
-            <h3 class="text-sm font-bold text-white">Catat Gol Kebobolan Baru</h3>
+        <div class="tactical-modal-head">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-icon-badge rose">
+              <AlertTriangle class="w-4 h-4" />
+            </div>
+            <div>
+              <h3 class="modal-title-text">Catat Gol Kebobolan Baru</h3>
+              <p class="modal-subtitle-text">Tandai posisi penembak lawan & sasaran gawang</p>
+            </div>
           </div>
-          <button class="modal-close-btn" onclick={() => showAddGoalModal = false}><X class="w-4 h-4" /></button>
+          <button class="modal-close-icon-btn" onclick={() => showAddGoalModal = false}><X class="w-4 h-4" /></button>
         </div>
 
-        <div class="p-4 space-y-4">
+        <div class="tactical-modal-body">
           <!-- Babak & Menit -->
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="goal-half" class="modal-field-lbl">Babak:</label>
-              <select id="goal-half" bind:value={newGoalHalf} class="modal-field-select">
+            <div class="modal-field-group">
+              <label for="goal-half" class="tactical-form-label">Babak Pertandingan</label>
+              <select id="goal-half" bind:value={newGoalHalf} class="tactical-form-select">
                 <option value={1}>Babak 1 (1st Half)</option>
                 <option value={2}>Babak 2 (2nd Half)</option>
               </select>
             </div>
-            <div>
-              <label for="goal-minute" class="modal-field-lbl">Menit Kejadian:</label>
-              <input id="goal-minute" type="text" bind:value={newGoalMinute} placeholder="cth. 14:20 atau 14'" class="modal-field-input" />
+            <div class="modal-field-group">
+              <label for="goal-minute" class="tactical-form-label">Menit Kejadian</label>
+              <input id="goal-minute" type="text" bind:value={newGoalMinute} placeholder="cth. 14:20 atau 14'" class="tactical-form-input font-mono" />
             </div>
           </div>
 
           <!-- Zona Penembak & Arah Masuk -->
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="goal-pitch-zone" class="modal-field-lbl">Zona Penembak (Pitch):</label>
-              <select id="goal-pitch-zone" bind:value={newGoalPitchZone} class="modal-field-select">
+            <div class="modal-field-group">
+              <label for="goal-pitch-zone" class="tactical-form-label">Zona Lapangan (Pitch)</label>
+              <select id="goal-pitch-zone" bind:value={newGoalPitchZone} class="tactical-form-select">
                 {#each pitchZones as pz}
                   <option value={pz.id}>Zona {pz.id} - {pz.label}</option>
                 {/each}
               </select>
             </div>
-            <div>
-              <label for="goal-target-zone" class="modal-field-lbl">Arah Bola ke Gawang:</label>
-              <select id="goal-target-zone" bind:value={newGoalTargetZone} class="modal-field-select">
+            <div class="modal-field-group">
+              <label for="goal-target-zone" class="tactical-form-label">Arah Bola ke Gawang</label>
+              <select id="goal-target-zone" bind:value={newGoalTargetZone} class="tactical-form-select">
                 {#each goalTargetZones as gz}
                   <option value={gz.id}>Zona {gz.id} ({gz.title})</option>
                 {/each}
@@ -1996,20 +2001,20 @@
           </div>
 
           <!-- Keterangan & Presets -->
-          <div>
-            <label for="goal-note" class="modal-field-lbl">Tipe Gol / Keterangan Taktik:</label>
+          <div class="modal-field-group">
+            <label for="goal-note" class="tactical-form-label">Tipe Gol / Pola Serangan Lawan</label>
             <input 
               id="goal-note"
               type="text" 
               bind:value={newGoalNote} 
               placeholder="cth. lower shooting, 2nd post tap-in, rebound..."
-              class="modal-field-input"
+              class="tactical-form-input"
             />
-            <div class="flex flex-wrap gap-1 mt-1.5">
+            <div class="preset-chips-wrap">
               {#each ['lower shooting', 'second post', 'rebound', 'counter attack', 'upper corner', 'penalty', 'own goal'] as preset}
                 <button 
                   type="button" 
-                  class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 hover:bg-sky-900/50 border border-sky-500/20"
+                  class="preset-chip-btn {newGoalNote === preset ? 'active' : ''}"
                   onclick={() => newGoalNote = preset}
                 >
                   {preset}
@@ -2019,21 +2024,23 @@
           </div>
 
           <!-- Pemain Lawan -->
-          <div>
-            <label for="goal-shooter" class="modal-field-lbl">Pemain Lawan (Opsional):</label>
+          <div class="modal-field-group">
+            <label for="goal-shooter" class="tactical-form-label">Pemain Lawan (Opsional)</label>
             <input 
               id="goal-shooter"
               type="text" 
               bind:value={newGoalShooter} 
               placeholder="Nama atau Nomor Punggung Lawan"
-              class="modal-field-input"
+              class="tactical-form-input"
             />
           </div>
         </div>
 
-        <div class="modal-window-foot">
-          <button class="btn-modal-cancel" onclick={() => showAddGoalModal = false}>Batal</button>
-          <button class="btn-modal-submit" onclick={handleAddGoal}>Simpan Gol</button>
+        <div class="tactical-modal-foot">
+          <button class="tactical-btn-ghost" onclick={() => showAddGoalModal = false}>Batal</button>
+          <button class="tactical-btn-primary" onclick={handleAddGoal}>
+            <Plus class="w-4 h-4" /> Simpan Gol
+          </button>
         </div>
       </div>
     </div>
@@ -2044,7 +2051,7 @@
   <!-- ==================================================== -->
   {#if showEditGoalModal && editingGoal}
     <div 
-      class="modal-backdrop-layer" 
+      class="tactical-modal-backdrop" 
       onclick={() => showEditGoalModal = false}
       onkeydown={(e) => { if (e.key === 'Escape') showEditGoalModal = false; }}
       role="dialog"
@@ -2052,49 +2059,54 @@
       tabindex="-1"
     >
       <div 
-        class="modal-window-card" 
+        class="tactical-modal-card" 
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => e.stopPropagation()}
         role="document"
         tabindex="0"
       >
-        <div class="modal-window-head !bg-sky-950/80">
-          <div class="flex items-center gap-2">
-            <Pencil class="w-5 h-5 text-sky-400" />
-            <h3 class="text-sm font-bold text-white">Edit Data Gol Kebobolan</h3>
+        <div class="tactical-modal-head edit-head">
+          <div class="flex items-center gap-2.5">
+            <div class="modal-icon-badge sky">
+              <Pencil class="w-4 h-4" />
+            </div>
+            <div>
+              <h3 class="modal-title-text">Edit Data Gol Kebobolan</h3>
+              <p class="modal-subtitle-text">Perbarui menit, titik lapangan, dan target sasaran gawang</p>
+            </div>
           </div>
-          <button class="modal-close-btn" onclick={() => showEditGoalModal = false}><X class="w-4 h-4" /></button>
+          <button class="modal-close-icon-btn" onclick={() => showEditGoalModal = false}><X class="w-4 h-4" /></button>
         </div>
 
-        <div class="p-4 space-y-4">
+        <div class="tactical-modal-body">
           <!-- Babak & Menit -->
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="edit-goal-half" class="modal-field-lbl">Babak:</label>
-              <select id="edit-goal-half" bind:value={editingGoal.half} class="modal-field-select">
+            <div class="modal-field-group">
+              <label for="edit-goal-half" class="tactical-form-label">Babak Pertandingan</label>
+              <select id="edit-goal-half" bind:value={editingGoal.half} class="tactical-form-select">
                 <option value={1}>Babak 1 (1st Half)</option>
                 <option value={2}>Babak 2 (2nd Half)</option>
               </select>
             </div>
-            <div>
-              <label for="edit-goal-minute" class="modal-field-lbl">Menit Kejadian:</label>
-              <input id="edit-goal-minute" type="text" bind:value={editingGoal.minute} placeholder="cth. 14:20 atau 14'" class="modal-field-input" />
+            <div class="modal-field-group">
+              <label for="edit-goal-minute" class="tactical-form-label">Menit Kejadian</label>
+              <input id="edit-goal-minute" type="text" bind:value={editingGoal.minute} placeholder="cth. 14:20 atau 14'" class="tactical-form-input font-mono" />
             </div>
           </div>
 
           <!-- Zona Penembak & Arah Masuk -->
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="edit-goal-pitch-zone" class="modal-field-lbl">Zona Penembak (Pitch):</label>
-              <select id="edit-goal-pitch-zone" bind:value={editingGoal.shooterZone} class="modal-field-select">
+            <div class="modal-field-group">
+              <label for="edit-goal-pitch-zone" class="tactical-form-label">Zona Lapangan (Pitch)</label>
+              <select id="edit-goal-pitch-zone" bind:value={editingGoal.shooterZone} class="tactical-form-select">
                 {#each pitchZones as pz}
                   <option value={pz.id}>Zona {pz.id} - {pz.label}</option>
                 {/each}
               </select>
             </div>
-            <div>
-              <label for="edit-goal-target-zone" class="modal-field-lbl">Arah Bola ke Gawang:</label>
-              <select id="edit-goal-target-zone" bind:value={editingGoal.goalZone} class="modal-field-select">
+            <div class="modal-field-group">
+              <label for="edit-goal-target-zone" class="tactical-form-label">Arah Bola ke Gawang</label>
+              <select id="edit-goal-target-zone" bind:value={editingGoal.goalZone} class="tactical-form-select">
                 {#each goalTargetZones as gz}
                   <option value={gz.id}>Zona {gz.id} ({gz.title})</option>
                 {/each}
@@ -2103,20 +2115,20 @@
           </div>
 
           <!-- Keterangan & Presets -->
-          <div>
-            <label for="edit-goal-note" class="modal-field-lbl">Tipe Gol / Keterangan Taktik:</label>
+          <div class="modal-field-group">
+            <label for="edit-goal-note" class="tactical-form-label">Tipe Gol / Pola Serangan Lawan</label>
             <input 
               id="edit-goal-note"
               type="text" 
               bind:value={editingGoal.note} 
               placeholder="cth. lower shooting, 2nd post tap-in, rebound..."
-              class="modal-field-input"
+              class="tactical-form-input"
             />
-            <div class="flex flex-wrap gap-1 mt-1.5">
+            <div class="preset-chips-wrap">
               {#each ['lower shooting', 'second post', 'rebound', 'counter attack', 'upper corner', 'penalty', 'own goal'] as preset}
                 <button 
                   type="button" 
-                  class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 hover:bg-sky-900/50 border border-sky-500/20"
+                  class="preset-chip-btn {editingGoal.note === preset ? 'active' : ''}"
                   onclick={() => { if (editingGoal) editingGoal.note = preset; }}
                 >
                   {preset}
@@ -2126,28 +2138,31 @@
           </div>
 
           <!-- Pemain Lawan -->
-          <div>
-            <label for="edit-goal-shooter" class="modal-field-lbl">Pemain Lawan (Opsional):</label>
+          <div class="modal-field-group">
+            <label for="edit-goal-shooter" class="tactical-form-label">Pemain Lawan (Opsional)</label>
             <input 
               id="edit-goal-shooter"
               type="text" 
               bind:value={editingGoal.shooterPlayer} 
               placeholder="Nama atau Nomor Punggung Lawan"
-              class="modal-field-input"
+              class="tactical-form-input"
             />
           </div>
         </div>
 
-        <div class="modal-window-foot flex items-center justify-between">
+        <div class="tactical-modal-foot flex items-center justify-between">
           <button 
-            class="px-3 py-1.5 rounded-md bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5"
+            class="tactical-btn-danger"
             onclick={() => { if (editingGoal) handleDeleteGoal(editingGoal.id); }}
+            title="Hapus gol ini dari statistik"
           >
             <Trash2 class="w-3.5 h-3.5" /> Hapus Gol Ini
           </button>
           <div class="flex items-center gap-2">
-            <button class="btn-modal-cancel" onclick={() => showEditGoalModal = false}>Batal</button>
-            <button class="btn-modal-submit !bg-sky-600 hover:!bg-sky-500" onclick={handleSaveEditedGoal}>Simpan Perubahan</button>
+            <button class="tactical-btn-ghost" onclick={() => showEditGoalModal = false}>Batal</button>
+            <button class="tactical-btn-primary" onclick={handleSaveEditedGoal}>
+              <Check class="w-4 h-4" /> Simpan Perubahan
+            </button>
           </div>
         </div>
       </div>
@@ -3578,106 +3593,257 @@
   }
 
   /* ==================================================== */
-  /* MODAL DIALOG                                         */
+  /* PREMIUM TACTICAL MODAL DIALOG                        */
   /* ==================================================== */
-  .modal-backdrop-layer {
+  .tactical-modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
+    background: rgba(4, 8, 16, 0.82);
+    backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     padding: 1rem;
+    animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .modal-window-card {
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 0.75rem;
+  .tactical-modal-card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 28, 0.98) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 0.85rem;
     width: 100%;
-    max-width: 480px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    max-width: 520px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.1);
     overflow: hidden;
+    animation: modalCardScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .modal-window-head {
-    background: rgba(30, 41, 59, 0.6);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0.75rem 1rem;
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes modalCardScale {
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .tactical-modal-head {
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.9rem 1.15rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .modal-close-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
+  .tactical-modal-head.edit-head {
+    background: linear-gradient(90deg, rgba(14, 116, 144, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border-bottom-color: rgba(56, 189, 248, 0.2);
   }
 
-  .modal-close-btn:hover {
-    color: #ffffff;
-  }
-
-  .modal-field-lbl {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #94a3b8;
-    margin-bottom: 0.25rem;
-  }
-
-  .modal-field-select, .modal-field-input {
-    width: 100%;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 0.4rem;
-    color: #ffffff;
-    font-size: 0.75rem;
-    padding: 0.45rem 0.6rem;
-    outline: none;
-  }
-
-  .modal-field-select:focus, .modal-field-input:focus {
-    border-color: #38bdf8;
-  }
-
-  .modal-window-foot {
-    background: rgba(30, 41, 59, 0.4);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0.75rem 1rem;
+  .modal-icon-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.5rem;
     display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
-  .btn-modal-cancel {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+  .modal-icon-badge.rose {
+    background: rgba(244, 63, 94, 0.15);
+    color: #f43f5e;
+    border: 1px solid rgba(244, 63, 94, 0.3);
+  }
+
+  .modal-icon-badge.sky {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .modal-title-text {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  .modal-subtitle-text {
+    font-size: 0.68rem;
+    font-weight: 600;
     color: #94a3b8;
+    margin-top: 0.1rem;
+  }
+
+  .modal-close-icon-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    width: 28px;
+    height: 28px;
+    border-radius: 0.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .modal-close-icon-btn:hover {
+    background: rgba(244, 63, 94, 0.2);
+    border-color: #f43f5e;
+    color: #ffffff;
+  }
+
+  .tactical-modal-body {
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .modal-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .tactical-form-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .tactical-form-select,
+  .tactical-form-input {
+    width: 100%;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.45rem;
+    color: #f8fafc;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.5rem 0.7rem;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .tactical-form-select:focus,
+  .tactical-form-input:focus {
+    border-color: #38bdf8;
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  }
+
+  .preset-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+  }
+
+  .preset-chip-btn {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    color: #7dd3fc;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.22rem 0.55rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .preset-chip-btn:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #ffffff;
+  }
+
+  .preset-chip-btn.active {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
+  }
+
+  .tactical-modal-foot {
+    background: rgba(15, 23, 42, 0.9);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.85rem 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+
+  .tactical-btn-ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
     font-size: 0.75rem;
     font-weight: 700;
-    padding: 0.4rem 0.85rem;
-    border-radius: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.45rem;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
 
-  .btn-modal-submit {
-    background: #e11d48;
-    border: none;
+  .tactical-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    font-size: 0.75rem;
-    font-weight: 800;
-    padding: 0.4rem 1rem;
-    border-radius: 0.4rem;
-    cursor: pointer;
   }
 
-  .btn-modal-submit:hover {
-    background: #f43f5e;
+  .tactical-btn-primary {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border: 1px solid #38bdf8;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.45rem 1.1rem;
+    border-radius: 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35);
+    transition: all 0.15s ease;
+  }
+
+  .tactical-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .tactical-btn-danger {
+    background: rgba(225, 29, 72, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.35);
+    color: #fda4af;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tactical-btn-danger:hover {
+    background: rgba(225, 29, 72, 0.3);
+    border-color: #f43f5e;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
   }
 
   .tab-fade-in {

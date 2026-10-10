@@ -1806,7 +1806,7 @@ class MatchStore {
 
     // If it's a live match event ID, also remove the event from events list
     if (this.data.events && this.data.events.some(e => e.id === goalId)) {
-      await this.deleteEvent(goalId);
+      await this.deletePitchEvent(goalId);
     }
   }
 
