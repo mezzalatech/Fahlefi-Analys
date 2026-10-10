@@ -64,6 +64,66 @@ export interface SubstitutionLog {
   teamScope?: 'home' | 'away' | 'all' | string;
 }
 
+export interface GkConcededGoal {
+  id: string;
+  half: 1 | 2;
+  minute: string;
+  shooterZone: string; // 'D' | '6' | '7' | '8' | '9' | '6N' | '9N' | '10' | '11' | '12' | '13'
+  goalZone: string; // '1' | '2' | '3' | '4' | '5'
+  note?: string;
+  shooterPlayer?: string;
+  posX?: number;
+  posY?: number;
+  goalPosX?: number;
+  goalPosY?: number;
+}
+
+export interface GkStat {
+  id: string;
+  matchId: number;
+  playerId?: number | null;
+  playerNo: number;
+  playerName: string;
+  minutesPlayed: string;
+  oppShotsOn1: number;
+  oppShotsOff1: number;
+  oppShotsOn2: number;
+  oppShotsOff2: number;
+  saveCatch: number;
+  saveBlock: number;
+  saveCross: number;
+  saveSplit: number;
+  saveDive: number;
+  coveringZ1: number;
+  coveringZ2: number;
+  coveringZ3: number;
+  coveringZ4: number;
+  handShortSuccess: number;
+  handShortFail: number;
+  handMidSuccess: number;
+  handMidFail: number;
+  handLongSuccess: number;
+  handLongFail: number;
+  feetShortSuccess: number;
+  feetShortFail: number;
+  feetMidSuccess: number;
+  feetMidFail: number;
+  feetLongSuccess: number;
+  feetLongFail: number;
+  shootingOpenPlay: number;
+  shootingDropKick: number;
+  shootingSetPlay: number;
+  assistThrowing: number;
+  assistPassing: number;
+  concededGoals: string;
+  anticipationNotes?: string;
+  reboundNotes?: string;
+  secondPostNotes?: string;
+  generalNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface MatchData {
   match: {
     id: number;
@@ -132,6 +192,7 @@ export interface MatchData {
     teamScope?: 'home' | 'away' | 'all' | string;
   }>;
   substitutions?: SubstitutionLog[];
+  gkStats?: GkStat[];
 }
 
 const API_BASE = '/api';
@@ -672,5 +733,42 @@ export const api = {
 
   getExportUrl(matchId: number): string {
     return `${API_BASE}/matches/${matchId}/export`;
+  },
+
+  // ==================== GK STATS ====================
+  async getGkStats(matchId: number): Promise<GkStat[]> {
+    return tryFetchOrFallback(
+      () => fetch(`${API_BASE}/matches/${matchId}/gk-stats`),
+      () => localDb.getGkStats(matchId)
+    );
+  },
+
+  async saveGkStat(matchId: number, stat: Partial<GkStat>): Promise<GkStat> {
+    return tryFetchOrFallback(
+      () => fetch(`${API_BASE}/matches/${matchId}/gk-stats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stat)
+      }),
+      () => localDb.saveGkStat(matchId, stat)
+    );
+  },
+
+  async updateGkStat(statId: string, partial: Partial<GkStat>): Promise<GkStat> {
+    return tryFetchOrFallback(
+      () => fetch(`${API_BASE}/gk-stats/${statId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(partial)
+      }),
+      () => localDb.updateGkStat(statId, partial)
+    );
+  },
+
+  async deleteGkStat(statId: string): Promise<any> {
+    return tryFetchOrFallback(
+      () => fetch(`${API_BASE}/gk-stats/${statId}`, { method: 'DELETE' }),
+      () => localDb.deleteGkStat(statId)
+    );
   }
 };

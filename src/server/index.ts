@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { db } from '../db';
-import { matches, players, pitchEvents, lineupPakets, users, masterPlayers, substitutions } from '../db/schema';
+import { matches, players, pitchEvents, lineupPakets, users, masterPlayers, substitutions, gkStats } from '../db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { initDb } from '../db/seed';
 import { exportMatchToExcel } from './services/excel';
@@ -368,13 +368,15 @@ export const app = new Elysia({ prefix: '/api' })
     const events = db.select().from(pitchEvents).where(eq(pitchEvents.matchId, matchId)).all();
     const pakets = db.select().from(lineupPakets).where(eq(lineupPakets.matchId, matchId)).all();
     const subs = db.select().from(substitutions).where(eq(substitutions.matchId, matchId)).orderBy(desc(substitutions.createdAt)).all();
+    const gkStatsList = db.select().from(gkStats).where(eq(gkStats.matchId, matchId)).all();
 
     return {
       match,
       players: matchPlayers.sort((a, b) => a.no - b.no),
       events,
       pakets: pakets.sort((a, b) => a.paketIndex - b.paketIndex),
-      substitutions: subs
+      substitutions: subs,
+      gkStats: gkStatsList
     };
   })
 
@@ -538,6 +540,7 @@ export const app = new Elysia({ prefix: '/api' })
     db.delete(players).where(eq(players.matchId, matchId)).run();
     db.delete(lineupPakets).where(eq(lineupPakets.matchId, matchId)).run();
     db.delete(substitutions).where(eq(substitutions.matchId, matchId)).run();
+    db.delete(gkStats).where(eq(gkStats.matchId, matchId)).run();
     db.delete(matches).where(eq(matches.id, matchId)).run();
     return { success: true };
   })
@@ -605,7 +608,112 @@ export const app = new Elysia({ prefix: '/api' })
 
   // Delete Pitch Event
   .delete('/events/:id', async ({ params }) => {
-    db.delete(pitchEvents).where(eq(pitchEvents.id, params.id)).run();
+    db.delete(pitchEvents).where(eq(pitchEvents.matchId, params.id)).run();
+    return { success: true };
+  })
+
+  // ==========================================
+  // GOALKEEPER (GK) STATS ENDPOINTS
+  // ==========================================
+  // Get GK stats for match
+  .get('/matches/:id/gk-stats', async ({ params }) => {
+    const matchId = parseInt(params.id);
+    const stats = db.select().from(gkStats).where(eq(gkStats.matchId, matchId)).all();
+    return stats;
+  })
+
+  // Save/Upsert GK stats
+  .post('/matches/:id/gk-stats', async ({ params, body }) => {
+    const matchId = parseInt(params.id);
+    const payload = body as any;
+    const statId = payload.id || `gks_${matchId}_${payload.playerNo || 1}`;
+
+    const existing = db.select().from(gkStats).where(eq(gkStats.id, statId)).get();
+    if (existing) {
+      const updated = db.update(gkStats)
+        .set({
+          ...payload,
+          matchId,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(gkStats.id, statId))
+        .returning()
+        .get();
+      return updated;
+    } else {
+      const created = db.insert(gkStats)
+        .values({
+          id: statId,
+          matchId,
+          playerId: payload.playerId || null,
+          playerNo: payload.playerNo || 1,
+          playerName: payload.playerName || 'Goalkeeper',
+          minutesPlayed: payload.minutesPlayed || '40 minutes full match',
+          oppShotsOn1: payload.oppShotsOn1 || 0,
+          oppShotsOff1: payload.oppShotsOff1 || 0,
+          oppShotsOn2: payload.oppShotsOn2 || 0,
+          oppShotsOff2: payload.oppShotsOff2 || 0,
+          saveCatch: payload.saveCatch || 0,
+          saveBlock: payload.saveBlock || 0,
+          saveCross: payload.saveCross || 0,
+          saveSplit: payload.saveSplit || 0,
+          saveDive: payload.saveDive || 0,
+          coveringZ1: payload.coveringZ1 || 0,
+          coveringZ2: payload.coveringZ2 || 0,
+          coveringZ3: payload.coveringZ3 || 0,
+          coveringZ4: payload.coveringZ4 || 0,
+          handShortSuccess: payload.handShortSuccess || 0,
+          handShortFail: payload.handShortFail || 0,
+          handMidSuccess: payload.handMidSuccess || 0,
+          handMidFail: payload.handMidFail || 0,
+          handLongSuccess: payload.handLongSuccess || 0,
+          handLongFail: payload.handLongFail || 0,
+          feetShortSuccess: payload.feetShortSuccess || 0,
+          feetShortFail: payload.feetShortFail || 0,
+          feetMidSuccess: payload.feetMidSuccess || 0,
+          feetMidFail: payload.feetMidFail || 0,
+          feetLongSuccess: payload.feetLongSuccess || 0,
+          feetLongFail: payload.feetLongFail || 0,
+          shootingOpenPlay: payload.shootingOpenPlay || 0,
+          shootingDropKick: payload.shootingDropKick || 0,
+          shootingSetPlay: payload.shootingSetPlay || 0,
+          assistThrowing: payload.assistThrowing || 0,
+          assistPassing: payload.assistPassing || 0,
+          concededGoals: typeof payload.concededGoals === 'string' ? payload.concededGoals : JSON.stringify(payload.concededGoals || []),
+          anticipationNotes: payload.anticipationNotes || '',
+          reboundNotes: payload.reboundNotes || '',
+          secondPostNotes: payload.secondPostNotes || '',
+          generalNotes: payload.generalNotes || '',
+          updatedAt: new Date().toISOString()
+        })
+        .returning()
+        .get();
+      return created;
+    }
+  })
+
+  // Patch GK stat directly by ID
+  .patch('/gk-stats/:id', async ({ params, body, error }) => {
+    const statId = params.id;
+    const payload = body as any;
+    if (payload.concededGoals && typeof payload.concededGoals !== 'string') {
+      payload.concededGoals = JSON.stringify(payload.concededGoals);
+    }
+    const updated = db.update(gkStats)
+      .set({
+        ...payload,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(gkStats.id, statId))
+      .returning()
+      .get();
+    if (!updated) return error(404, 'GK Stat record not found');
+    return updated;
+  })
+
+  // Delete GK Stat
+  .delete('/gk-stats/:id', async ({ params }) => {
+    db.delete(gkStats).where(eq(gkStats.id, params.id)).run();
     return { success: true };
   })
 

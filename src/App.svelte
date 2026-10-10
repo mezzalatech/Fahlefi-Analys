@@ -24,6 +24,7 @@
   import VoiceTaggingOverlay from './components/VoiceTaggingOverlay.svelte';
   import CloudProvisionerModal from './components/CloudProvisionerModal.svelte';
   import UserProfileModal from './components/UserProfileModal.svelte';
+  import GkStatsView from './components/GkStatsView.svelte';
   import { 
     FileText, 
     Table, 
@@ -295,6 +296,14 @@
           </button>
 
           <button 
+            class="tab-btn {matchStore.currentView === 'gk_analysis' ? 'active' : ''}" 
+            onclick={() => (matchStore.currentView = 'gk_analysis')}
+            title="Analisis Statistik & Mapping Kiper (Defence, Distribution, Conceded Map)">
+            <Shield size={14} class="text-cyan-400" />
+            <span>Statistik Kiper</span>
+          </button>
+
+          <button 
             class="tab-btn {matchStore.currentView === 'pakets' ? 'active' : ''}" 
             onclick={() => (matchStore.currentView = 'pakets')}>
             <Users size={14} />
@@ -536,6 +545,8 @@
           <OfficialSheetView />
         {:else if matchStore.currentView === 'matrix'}
           <StatsTable />
+        {:else if matchStore.currentView === 'gk_analysis'}
+          <GkStatsView />
         {:else if matchStore.currentView === 'pitch' || matchStore.currentView === 'passing_network'}
           <TacticalPitch />
         {:else if matchStore.currentView === 'pakets'}

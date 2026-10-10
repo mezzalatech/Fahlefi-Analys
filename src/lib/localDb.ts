@@ -1,5 +1,5 @@
 // Local Database Engine for Offline-First & Multi-Tenant Deployments
-import type { User, MasterPlayer, MatchData, SubstitutionLog, Team } from './api';
+import type { User, MasterPlayer, MatchData, SubstitutionLog, Team, GkStat } from './api';
 
 const TEAMS_KEY = 'ffta_offline_teams';
 const USERS_KEY = 'ffta_offline_users';
@@ -186,7 +186,8 @@ function createDefaultMatchForTeam(teamId: string, matchId: number, teamName: st
       { id: 3, matchId, paketIndex: 2, code: 'PAKET 3 (ROTASI B)', playerNumbers: JSON.stringify(teamPlayers.slice(2, 7).map(p => p.noPunggung)) },
       { id: 4, matchId, paketIndex: 3, code: 'PAKET 4 (POWER PLAY)', playerNumbers: JSON.stringify(startingNos) }
     ],
-    substitutions: []
+    substitutions: [],
+    gkStats: []
   };
 }
 
@@ -965,6 +966,108 @@ class LocalDatabase {
       m.substitutions = m.substitutions.filter(s => s.id !== subId);
       localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
     }
+    return { success: true };
+  }
+
+  // ==================== GK STATS ====================
+  async getGkStats(matchId: number): Promise<GkStat[]> {
+    this.initStorage();
+    const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
+    const m = matches.find(x => x.match.id === matchId);
+    return m?.gkStats || [];
+  }
+
+  async saveGkStat(matchId: number, stat: Partial<GkStat>): Promise<GkStat> {
+    this.initStorage();
+    const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
+    const m = matches.find(x => x.match.id === matchId);
+    if (!m) throw new Error('Match not found');
+
+    if (!m.gkStats) m.gkStats = [];
+    const statId = stat.id || `gks_${matchId}_${stat.playerNo || 1}`;
+    const existingIdx = m.gkStats.findIndex(g => g.id === statId);
+
+    const fullStat: GkStat = {
+      id: statId,
+      matchId,
+      playerId: stat.playerId || null,
+      playerNo: stat.playerNo || 1,
+      playerName: stat.playerName || 'Goalkeeper',
+      minutesPlayed: stat.minutesPlayed || '40 minutes full match',
+      oppShotsOn1: stat.oppShotsOn1 || 0,
+      oppShotsOff1: stat.oppShotsOff1 || 0,
+      oppShotsOn2: stat.oppShotsOn2 || 0,
+      oppShotsOff2: stat.oppShotsOff2 || 0,
+      saveCatch: stat.saveCatch || 0,
+      saveBlock: stat.saveBlock || 0,
+      saveCross: stat.saveCross || 0,
+      saveSplit: stat.saveSplit || 0,
+      saveDive: stat.saveDive || 0,
+      coveringZ1: stat.coveringZ1 || 0,
+      coveringZ2: stat.coveringZ2 || 0,
+      coveringZ3: stat.coveringZ3 || 0,
+      coveringZ4: stat.coveringZ4 || 0,
+      handShortSuccess: stat.handShortSuccess || 0,
+      handShortFail: stat.handShortFail || 0,
+      handMidSuccess: stat.handMidSuccess || 0,
+      handMidFail: stat.handMidFail || 0,
+      handLongSuccess: stat.handLongSuccess || 0,
+      handLongFail: stat.handLongFail || 0,
+      feetShortSuccess: stat.feetShortSuccess || 0,
+      feetShortFail: stat.feetShortFail || 0,
+      feetMidSuccess: stat.feetMidSuccess || 0,
+      feetMidFail: stat.feetMidFail || 0,
+      feetLongSuccess: stat.feetLongSuccess || 0,
+      feetLongFail: stat.feetLongFail || 0,
+      shootingOpenPlay: stat.shootingOpenPlay || 0,
+      shootingDropKick: stat.shootingDropKick || 0,
+      shootingSetPlay: stat.shootingSetPlay || 0,
+      assistThrowing: stat.assistThrowing || 0,
+      assistPassing: stat.assistPassing || 0,
+      concededGoals: typeof stat.concededGoals === 'string' ? stat.concededGoals : JSON.stringify(stat.concededGoals || []),
+      anticipationNotes: stat.anticipationNotes || '',
+      reboundNotes: stat.reboundNotes || '',
+      secondPostNotes: stat.secondPostNotes || '',
+      generalNotes: stat.generalNotes || '',
+      createdAt: stat.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIdx >= 0) {
+      m.gkStats[existingIdx] = { ...m.gkStats[existingIdx], ...fullStat, updatedAt: new Date().toISOString() };
+    } else {
+      m.gkStats.push(fullStat);
+    }
+
+    localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+    return existingIdx >= 0 ? m.gkStats[existingIdx] : fullStat;
+  }
+
+  async updateGkStat(statId: string, partial: Partial<GkStat>): Promise<GkStat> {
+    this.initStorage();
+    const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
+    for (const m of matches) {
+      if (m.gkStats) {
+        const idx = m.gkStats.findIndex(g => g.id === statId);
+        if (idx >= 0) {
+          m.gkStats[idx] = { ...m.gkStats[idx], ...partial, updatedAt: new Date().toISOString() };
+          localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+          return m.gkStats[idx];
+        }
+      }
+    }
+    throw new Error('GK Stat not found');
+  }
+
+  async deleteGkStat(statId: string): Promise<any> {
+    this.initStorage();
+    const matches: MatchData[] = JSON.parse(localStorage.getItem(MATCHES_KEY) || '[]');
+    for (const m of matches) {
+      if (m.gkStats) {
+        m.gkStats = m.gkStats.filter(g => g.id !== statId);
+      }
+    }
+    localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
     return { success: true };
   }
 

@@ -1,4 +1,4 @@
-import { api, type MatchData, type User, type MasterPlayer, type SubstitutionLog, type Team } from './api';
+import { api, type MatchData, type User, type MasterPlayer, type SubstitutionLog, type Team, type GkStat, type GkConcededGoal } from './api';
 import confetti from 'canvas-confetti';
 import { HapticEngine } from './haptic';
 import { 
@@ -50,9 +50,13 @@ class MatchStore {
   timerRunning = $state<boolean>(false);
   private timerInterval: any = null;
   activeHalf = $state<number>(1);
-  currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament'>('sheet');
+  currentView = $state<'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament' | 'gk_analysis'>('sheet');
   activePaketIndex = $state<number | null>(null);
   onPitchPlayers = $state<number[]>([]);
+
+  // GK Statistics State
+  activeGkPlayerNo = $state<number>(1);
+  activeGkTab = $state<'all' | 'dossier' | 'defence' | 'attack' | 'conceded'>('all');
 
   constructor() {
     this.initAuth();
@@ -1446,6 +1450,377 @@ class MatchStore {
         origin: { y: 0.6 }
       });
     } catch {}
+  }
+
+  // ==========================================
+  // GOALKEEPER (GK) STATS GETTERS & ACTIONS
+  // ==========================================
+  get matchGkList(): Array<{ no: number; name: string; position: string; isGk: number; photoUrl?: string }> {
+    if (!this.data) return [];
+    
+    // 1. Get from match players marked as isGk or GK position
+    const gkInMatch = this.data.players
+      .filter(p => p.isGk === 1 || p.no === 1 || p.no === 2 || p.no === 22)
+      .map(p => {
+        const mp = this.masterPlayers.find(m => m.noPunggung === p.no);
+        return {
+          no: p.no,
+          name: p.name || mp?.name || `Kiper #${p.no}`,
+          position: 'GK',
+          isGk: 1,
+          photoUrl: mp?.photoUrl || ''
+        };
+      });
+
+    // 2. Also check if any master player is GK and not in list
+    const extraGks = this.masterPlayers
+      .filter(mp => mp.position === 'GK' && !gkInMatch.some(g => g.no === mp.noPunggung))
+      .map(mp => ({
+        no: mp.noPunggung,
+        name: mp.name,
+        position: 'GK',
+        isGk: 1,
+        photoUrl: mp.photoUrl || ''
+      }));
+
+    const combined = [...gkInMatch, ...extraGks];
+    if (combined.length === 0) {
+      return [
+        { no: 1, name: 'M. Rizky Pratama', position: 'GK', isGk: 1 },
+        { no: 2, name: 'Dimas Aldi Setiawan', position: 'GK', isGk: 1 },
+        { no: 22, name: 'Eko Prasetya', position: 'GK', isGk: 1 }
+      ];
+    }
+    return combined.sort((a, b) => a.no - b.no);
+  }
+
+  get currentGkStat(): GkStat {
+    const defaultStat: GkStat = {
+      id: `gks_${this.data?.match.id || 1}_${this.activeGkPlayerNo}`,
+      matchId: this.data?.match.id || 1,
+      playerId: null,
+      playerNo: this.activeGkPlayerNo,
+      playerName: this.matchGkList.find(g => g.no === this.activeGkPlayerNo)?.name || `Kiper #${this.activeGkPlayerNo}`,
+      minutesPlayed: '40 minutes full match',
+      oppShotsOn1: 0,
+      oppShotsOff1: 0,
+      oppShotsOn2: 0,
+      oppShotsOff2: 0,
+      saveCatch: 0,
+      saveBlock: 0,
+      saveCross: 0,
+      saveSplit: 0,
+      saveDive: 0,
+      coveringZ1: 0,
+      coveringZ2: 0,
+      coveringZ3: 0,
+      coveringZ4: 0,
+      handShortSuccess: 0,
+      handShortFail: 0,
+      handMidSuccess: 0,
+      handMidFail: 0,
+      handLongSuccess: 0,
+      handLongFail: 0,
+      feetShortSuccess: 0,
+      feetShortFail: 0,
+      feetMidSuccess: 0,
+      feetMidFail: 0,
+      feetLongSuccess: 0,
+      feetLongFail: 0,
+      shootingOpenPlay: 0,
+      shootingDropKick: 0,
+      shootingSetPlay: 0,
+      assistThrowing: 0,
+      assistPassing: 0,
+      concededGoals: '[]',
+      anticipationNotes: 'Antisipasi shooting baik terutama di tiang dekat.',
+      reboundNotes: 'Refleks cepat menangkap second ball.',
+      secondPostNotes: 'Komunikasi dan covering second post perlu ditingkatkan.',
+      generalNotes: ''
+    };
+
+    if (!this.data || !Array.isArray(this.data.gkStats)) return defaultStat;
+    const found = this.data.gkStats.find(g => g.playerNo === this.activeGkPlayerNo);
+    return found || defaultStat;
+  }
+
+  get currentGkConcededGoals(): GkConcededGoal[] {
+    const raw = this.currentGkStat.concededGoals;
+    if (!raw) return [];
+    try {
+      return typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+    } catch {
+      return [];
+    }
+  }
+
+  get gkCalculations() {
+    const s = this.currentGkStat;
+    const concededList = this.currentGkConcededGoals;
+
+    // Direct Integration with Match Events (Papan Taktis / Official Sheet)
+    const evts = this.data?.events || [];
+    const oppShots = evts.filter(e => {
+      if (e.type !== 'shot') return false;
+      if (e.team === 'away') return true;
+      if (this.teamScope === 'home' && e.team !== 'home') return true;
+      if (e.isOpponent) return true;
+      return false;
+    });
+
+    const hasPitchOppShots = oppShots.length > 0;
+    const pitchOn1 = oppShots.filter(e => (e.outcome === 'goal' || e.outcome === 'saved' || e.outcome === 'on_target' || e.outcome === 'ontarget') && e.half === 1).length;
+    const pitchOff1 = oppShots.filter(e => (e.outcome === 'off_target' || e.outcome === 'blocked' || e.outcome === 'wide' || e.outcome === 'post' || e.outcome === 'out' || e.outcome === 'rejected') && e.half === 1).length;
+    const pitchOn2 = oppShots.filter(e => (e.outcome === 'goal' || e.outcome === 'saved' || e.outcome === 'on_target' || e.outcome === 'ontarget') && e.half === 2).length;
+    const pitchOff2 = oppShots.filter(e => (e.outcome === 'off_target' || e.outcome === 'blocked' || e.outcome === 'wide' || e.outcome === 'post' || e.outcome === 'out' || e.outcome === 'rejected') && e.half === 2).length;
+
+    const oppShotsOn1 = hasPitchOppShots ? pitchOn1 : (s.oppShotsOn1 || 0);
+    const oppShotsOff1 = hasPitchOppShots ? pitchOff1 : (s.oppShotsOff1 || 0);
+    const oppShotsOn2 = hasPitchOppShots ? pitchOn2 : (s.oppShotsOn2 || 0);
+    const oppShotsOff2 = hasPitchOppShots ? pitchOff2 : (s.oppShotsOff2 || 0);
+
+    const totalOppShotsOn = oppShotsOn1 + oppShotsOn2;
+    const totalOppShotsOff = oppShotsOff1 + oppShotsOff2;
+    const totalOppShots = totalOppShotsOn + totalOppShotsOff;
+    const oppShotAccuracy = totalOppShots > 0 ? Math.round((totalOppShotsOn / totalOppShots) * 100) : 0;
+
+    const totalSaves = (s.saveCatch || 0) + (s.saveBlock || 0) + (s.saveCross || 0) + (s.saveSplit || 0) + (s.saveDive || 0);
+    const totalCovering = (s.coveringZ1 || 0) + (s.coveringZ2 || 0) + (s.coveringZ3 || 0) + (s.coveringZ4 || 0);
+    
+    // Conceded Count Integration (Manual Detailed Ledger > Pitch Goal Events > Match Scoreboard Score)
+    const match = this.data?.match;
+    const isHome = this.teamScope === 'home';
+    const matchOppScore1st = isHome ? (match?.awayScore1st || 0) : (match?.homeScore1st || 0);
+    const matchOppScore2nd = isHome ? (match?.awayScore2nd || 0) : (match?.homeScore2nd || 0);
+    
+    const pitchGoalEvents = oppShots.filter(e => e.outcome === 'goal');
+    const pitchGoalH1 = pitchGoalEvents.filter(e => e.half === 1).length;
+    const pitchGoalH2 = pitchGoalEvents.filter(e => e.half === 2).length;
+
+    const manualConcededH1 = concededList.filter(c => c.half === 1).length;
+    const manualConcededH2 = concededList.filter(c => c.half === 2).length;
+
+    const concededH1 = Math.max(manualConcededH1, pitchGoalH1, matchOppScore1st);
+    const concededH2 = Math.max(manualConcededH2, pitchGoalH2, matchOppScore2nd);
+    const totalConceded = concededH1 + concededH2;
+
+    const savePercentage = (totalSaves + totalConceded > 0)
+      ? Math.round((totalSaves / (totalSaves + totalConceded)) * 100)
+      : (totalOppShotsOn > 0 ? Math.round((totalSaves / totalOppShotsOn) * 100) : 100);
+
+    // Distribution Hand
+    const handSuccess = (s.handShortSuccess || 0) + (s.handMidSuccess || 0) + (s.handLongSuccess || 0);
+    const handFail = (s.handShortFail || 0) + (s.handMidFail || 0) + (s.handLongFail || 0);
+    const handTotal = handSuccess + handFail;
+    const handAccuracy = handTotal > 0 ? Math.round((handSuccess / handTotal) * 100) : 0;
+
+    // Distribution Feet
+    const feetSuccess = (s.feetShortSuccess || 0) + (s.feetMidSuccess || 0) + (s.feetLongSuccess || 0);
+    const feetFail = (s.feetShortFail || 0) + (s.feetMidFail || 0) + (s.feetLongFail || 0);
+    const feetTotal = feetSuccess + feetFail;
+    const feetAccuracy = feetTotal > 0 ? Math.round((feetSuccess / feetTotal) * 100) : 0;
+
+    // Total Overall Distribution
+    const distSuccess = handSuccess + feetSuccess;
+    const distTotal = handTotal + feetTotal;
+    const distAccuracy = distTotal > 0 ? Math.round((distSuccess / distTotal) * 100) : 0;
+
+    // Shooting & Assists
+    const totalGkShots = (s.shootingOpenPlay || 0) + (s.shootingDropKick || 0) + (s.shootingSetPlay || 0);
+    const totalGkAssists = (s.assistThrowing || 0) + (s.assistPassing || 0);
+
+    return {
+      oppShotsOn1,
+      oppShotsOff1,
+      oppShotsOn2,
+      oppShotsOff2,
+      totalOppShotsOn,
+      totalOppShotsOff,
+      totalOppShots,
+      oppShotAccuracy,
+      hasPitchOppShots,
+      totalSaves,
+      totalCovering,
+      concededH1,
+      concededH2,
+      totalConceded,
+      savePercentage,
+      handSuccess,
+      handFail,
+      handTotal,
+      handAccuracy,
+      feetSuccess,
+      feetFail,
+      feetTotal,
+      feetAccuracy,
+      distSuccess,
+      distTotal,
+      distAccuracy,
+      totalGkShots,
+      totalGkAssists
+    };
+  }
+
+  async updateGkStatField(field: keyof GkStat, deltaOrValue: any, isDelta: boolean = false) {
+    if (!this.data) return;
+    if (!this.data.gkStats) this.data.gkStats = [];
+
+    const statId = `gks_${this.data.match.id}_${this.activeGkPlayerNo}`;
+    let stat = this.data.gkStats.find(g => g.id === statId || g.playerNo === this.activeGkPlayerNo);
+
+    if (!stat) {
+      const gkPlayer = this.matchGkList.find(g => g.no === this.activeGkPlayerNo);
+      stat = {
+        id: statId,
+        matchId: this.data.match.id,
+        playerId: null,
+        playerNo: this.activeGkPlayerNo,
+        playerName: gkPlayer?.name || `Kiper #${this.activeGkPlayerNo}`,
+        minutesPlayed: '40 minutes full match',
+        oppShotsOn1: 0,
+        oppShotsOff1: 0,
+        oppShotsOn2: 0,
+        oppShotsOff2: 0,
+        saveCatch: 0,
+        saveBlock: 0,
+        saveCross: 0,
+        saveSplit: 0,
+        saveDive: 0,
+        coveringZ1: 0,
+        coveringZ2: 0,
+        coveringZ3: 0,
+        coveringZ4: 0,
+        handShortSuccess: 0,
+        handShortFail: 0,
+        handMidSuccess: 0,
+        handMidFail: 0,
+        handLongSuccess: 0,
+        handLongFail: 0,
+        feetShortSuccess: 0,
+        feetShortFail: 0,
+        feetMidSuccess: 0,
+        feetMidFail: 0,
+        feetLongSuccess: 0,
+        feetLongFail: 0,
+        shootingOpenPlay: 0,
+        shootingDropKick: 0,
+        shootingSetPlay: 0,
+        assistThrowing: 0,
+        assistPassing: 0,
+        concededGoals: '[]',
+        anticipationNotes: '',
+        reboundNotes: '',
+        secondPostNotes: '',
+        generalNotes: ''
+      };
+      this.data.gkStats.push(stat);
+    }
+
+    if (isDelta && typeof deltaOrValue === 'number') {
+      const currentVal = (stat[field] as number) || 0;
+      const newVal = Math.max(0, currentVal + deltaOrValue);
+      (stat as any)[field] = newVal;
+    } else {
+      (stat as any)[field] = deltaOrValue;
+    }
+
+    HapticEngine.triggerLight();
+
+    // Persist to backend / offline storage
+    try {
+      await api.saveGkStat(this.data.match.id, stat);
+    } catch (e) {
+      console.error('Failed to sync GK stat update:', e);
+    }
+  }
+
+  async updateGkCounter(field: keyof GkStat, delta: number) {
+    await this.updateGkStatField(field, delta, true);
+  }
+
+  async setGkStatField(field: keyof GkStat, value: any) {
+    await this.updateGkStatField(field, value, false);
+  }
+
+  async addGkConcededGoal(goal: { half: 1 | 2; minute: string; shooterZone: string; goalZone: string; note?: string; shooterPlayer?: string; posX?: number; posY?: number; goalPosX?: number; goalPosY?: number }) {
+    if (!this.data) return;
+    const currentGoals = this.currentGkConcededGoals;
+    const newGoal: GkConcededGoal = {
+      id: `gkg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      half: goal.half,
+      minute: goal.minute || '00:00',
+      shooterZone: goal.shooterZone || 'D',
+      goalZone: goal.goalZone || '1',
+      note: goal.note || '',
+      shooterPlayer: goal.shooterPlayer || '',
+      posX: goal.posX,
+      posY: goal.posY,
+      goalPosX: goal.goalPosX,
+      goalPosY: goal.goalPosY
+    };
+
+    const updatedGoals = [...currentGoals, newGoal];
+    await this.updateGkStatField('concededGoals', JSON.stringify(updatedGoals), false);
+  }
+
+  async updateGkConcededGoal(goalId: string, updatedData: Partial<GkConcededGoal>, allCurrentGoals?: GkConcededGoal[]) {
+    if (!this.data) return;
+    const currentGoals = allCurrentGoals || this.currentGkConcededGoals;
+    const goalIndex = currentGoals.findIndex(g => g.id === goalId);
+    
+    let updatedGoals: GkConcededGoal[];
+    if (goalIndex >= 0) {
+      updatedGoals = currentGoals.map(g => g.id === goalId ? { ...g, ...updatedData } : g);
+    } else {
+      // Goal was from live event or scoreboard fallback, add it to manual ledger
+      const newGoal: GkConcededGoal = {
+        id: goalId,
+        half: updatedData.half || 1,
+        minute: updatedData.minute || '00:00',
+        shooterZone: updatedData.shooterZone || 'D',
+        goalZone: updatedData.goalZone || '1',
+        note: updatedData.note || '',
+        shooterPlayer: updatedData.shooterPlayer || '',
+        posX: updatedData.posX,
+        posY: updatedData.posY,
+        goalPosX: updatedData.goalPosX,
+        goalPosY: updatedData.goalPosY,
+        ...updatedData
+      };
+      updatedGoals = [...currentGoals, newGoal];
+    }
+
+    await this.updateGkStatField('concededGoals', JSON.stringify(updatedGoals), false);
+  }
+
+  async setAllGkConcededGoals(goals: GkConcededGoal[]) {
+    if (!this.data) return;
+    await this.updateGkStatField('concededGoals', JSON.stringify(goals), false);
+  }
+
+  async removeGkConcededGoal(goalId: string, allCurrentGoals?: GkConcededGoal[]) {
+    if (!this.data) return;
+    const currentGoals = allCurrentGoals || this.currentGkConcededGoals;
+    const updatedGoals = currentGoals.filter(g => g.id !== goalId);
+    await this.updateGkStatField('concededGoals', JSON.stringify(updatedGoals), false);
+
+    // If it's a live match event ID, also remove the event from events list
+    if (this.data.events && this.data.events.some(e => e.id === goalId)) {
+      await this.deleteEvent(goalId);
+    }
+  }
+
+  async deleteGkConcededGoal(goalId: string, allCurrentGoals?: GkConcededGoal[]) {
+    await this.removeGkConcededGoal(goalId, allCurrentGoals);
+  }
+
+  async updateGkTacticalNotes(notes: { anticipationNotes?: string; reboundNotes?: string; secondPostNotes?: string; generalNotes?: string; minutesPlayed?: string }) {
+    if (!this.data) return;
+    if (notes.anticipationNotes !== undefined) await this.updateGkStatField('anticipationNotes', notes.anticipationNotes, false);
+    if (notes.reboundNotes !== undefined) await this.updateGkStatField('reboundNotes', notes.reboundNotes, false);
+    if (notes.secondPostNotes !== undefined) await this.updateGkStatField('secondPostNotes', notes.secondPostNotes, false);
+    if (notes.generalNotes !== undefined) await this.updateGkStatField('generalNotes', notes.generalNotes, false);
+    if (notes.minutesPlayed !== undefined) await this.updateGkStatField('minutesPlayed', notes.minutesPlayed, false);
   }
 }
 

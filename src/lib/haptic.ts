@@ -9,6 +9,17 @@ export class HapticEngine {
   }
 
   /**
+   * Click mikro / Counter stepper: Getaran sentuhan halus [30ms]
+   */
+  static triggerLight() {
+    if (this.isSupported()) {
+      try {
+        navigator.vibrate(30);
+      } catch {}
+    }
+  }
+
+  /**
    * Gol untuk tim: Getaran selebrasi kuat ganda [150ms getar, 80ms jeda, 200ms getar]
    */
   static triggerGoal() {

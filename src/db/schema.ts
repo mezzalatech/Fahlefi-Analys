@@ -118,6 +118,60 @@ export const substitutions = sqliteTable('substitutions', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
+export const gkStats = sqliteTable('gk_stats', {
+  id: text('id').primaryKey(),
+  matchId: integer('match_id').references(() => matches.id, { onDelete: 'cascade' }).notNull(),
+  playerId: integer('player_id'),
+  playerNo: integer('player_no').notNull().default(1),
+  playerName: text('player_name').notNull().default('Goalkeeper'),
+  minutesPlayed: text('minutes_played').notNull().default('40 minutes full match'),
+  // Opponent shooting
+  oppShotsOn1: integer('opp_shots_on_1').notNull().default(0),
+  oppShotsOff1: integer('opp_shots_off_1').notNull().default(0),
+  oppShotsOn2: integer('opp_shots_on_2').notNull().default(0),
+  oppShotsOff2: integer('opp_shots_off_2').notNull().default(0),
+  // Saves
+  saveCatch: integer('save_catch').notNull().default(0),
+  saveBlock: integer('save_block').notNull().default(0),
+  saveCross: integer('save_cross').notNull().default(0),
+  saveSplit: integer('save_split').notNull().default(0),
+  saveDive: integer('save_dive').notNull().default(0),
+  // Covering
+  coveringZ1: integer('covering_z1').notNull().default(0),
+  coveringZ2: integer('covering_z2').notNull().default(0),
+  coveringZ3: integer('covering_z3').notNull().default(0),
+  coveringZ4: integer('covering_z4').notNull().default(0),
+  // Distribution Hand
+  handShortSuccess: integer('hand_short_success').notNull().default(0),
+  handShortFail: integer('hand_short_fail').notNull().default(0),
+  handMidSuccess: integer('hand_mid_success').notNull().default(0),
+  handMidFail: integer('hand_mid_fail').notNull().default(0),
+  handLongSuccess: integer('hand_long_success').notNull().default(0),
+  handLongFail: integer('hand_long_fail').notNull().default(0),
+  // Distribution Feet
+  feetShortSuccess: integer('feet_short_success').notNull().default(0),
+  feetShortFail: integer('feet_short_fail').notNull().default(0),
+  feetMidSuccess: integer('feet_mid_success').notNull().default(0),
+  feetMidFail: integer('feet_mid_fail').notNull().default(0),
+  feetLongSuccess: integer('feet_long_success').notNull().default(0),
+  feetLongFail: integer('feet_long_fail').notNull().default(0),
+  // Shooting & Assists
+  shootingOpenPlay: integer('shooting_open_play').notNull().default(0),
+  shootingDropKick: integer('shooting_drop_kick').notNull().default(0),
+  shootingSetPlay: integer('shooting_set_play').notNull().default(0),
+  assistThrowing: integer('assist_throwing').notNull().default(0),
+  assistPassing: integer('assist_passing').notNull().default(0),
+  // Conceded Goals Array (JSON)
+  concededGoals: text('conceded_goals').notNull().default('[]'),
+  // Qualitative & Tactical Notes
+  anticipationNotes: text('anticipation_notes').default(''),
+  reboundNotes: text('rebound_notes').default(''),
+  secondPostNotes: text('second_post_notes').default(''),
+  generalNotes: text('general_notes').default(''),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
 export type Team = typeof teams.$inferSelect;
 export type InsertTeam = typeof teams.$inferInsert;
 export type Match = typeof matches.$inferSelect;
@@ -134,4 +188,6 @@ export type MasterPlayer = typeof masterPlayers.$inferSelect;
 export type InsertMasterPlayer = typeof masterPlayers.$inferInsert;
 export type Substitution = typeof substitutions.$inferSelect;
 export type InsertSubstitution = typeof substitutions.$inferInsert;
+export type GkStat = typeof gkStats.$inferSelect;
+export type InsertGkStat = typeof gkStats.$inferInsert;
 

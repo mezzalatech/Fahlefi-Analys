@@ -39,7 +39,7 @@
     onOpenAiInsights?: () => void;
     onOpenCloudProvisioner?: () => void;
     onOpenUserProfile?: () => void;
-    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament') => void;
+    onSelectView?: (view: 'sheet' | 'matrix' | 'pitch' | 'pakets' | 'substitutions' | 'master_db' | 'presentation' | 'video' | 'pdf_report' | 'bench_touch' | 'passing_network' | 'tournament' | 'gk_analysis') => void;
   }
 
   let { isOpen, onClose, onOpenIpadInstall, onOpenAiInsights, onOpenCloudProvisioner, onOpenUserProfile, onSelectView } = $props<Props>();
@@ -239,6 +239,19 @@
     </button>
 
     <div class="nav-category-title mt-4">FITUR & ANALISIS LANJUTAN</div>
+
+    <!-- GK Statistics & Visual Mapper -->
+    <button 
+      type="button" 
+      class="nav-menu-btn" 
+      onclick={() => { if (onSelectView) onSelectView('gk_analysis'); onClose(); }}>
+      <Shield size={17} class="text-cyan-400" />
+      <div class="menu-label-wrap">
+        <span class="menu-primary-label">Analisis & Statistik Kiper</span>
+        <span class="menu-sub-label">Saves, distribusi tangan/kaki, & mapping kebobolan</span>
+      </div>
+      <ChevronRight size={15} class="menu-arrow" />
+    </button>
 
     <!-- AI Tactical Insights -->
     <button 

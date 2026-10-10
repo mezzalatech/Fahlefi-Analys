@@ -5,8 +5,19 @@ import { count } from 'drizzle-orm';
 export async function initDb() {
   // Create tables directly if not already created
   sqlite.run(`
+    CREATE TABLE IF NOT EXISTS teams (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      short_name TEXT DEFAULT '',
+      city TEXT DEFAULT '',
+      logo_url TEXT DEFAULT '/icon.png',
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id TEXT DEFAULT 'team_paser',
       name TEXT NOT NULL DEFAULT 'Match Analysis',
       competition TEXT NOT NULL DEFAULT 'PASER FUTSAL CUP',
       date TEXT NOT NULL DEFAULT '07/08/2024',
@@ -108,7 +119,58 @@ export async function initDb() {
       note TEXT DEFAULT '',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS gk_stats (
+      id TEXT PRIMARY KEY,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER,
+      player_no INTEGER NOT NULL DEFAULT 1,
+      player_name TEXT NOT NULL DEFAULT 'Goalkeeper',
+      minutes_played TEXT NOT NULL DEFAULT '40 minutes full match',
+      opp_shots_on_1 INTEGER NOT NULL DEFAULT 0,
+      opp_shots_off_1 INTEGER NOT NULL DEFAULT 0,
+      opp_shots_on_2 INTEGER NOT NULL DEFAULT 0,
+      opp_shots_off_2 INTEGER NOT NULL DEFAULT 0,
+      save_catch INTEGER NOT NULL DEFAULT 0,
+      save_block INTEGER NOT NULL DEFAULT 0,
+      save_cross INTEGER NOT NULL DEFAULT 0,
+      save_split INTEGER NOT NULL DEFAULT 0,
+      save_dive INTEGER NOT NULL DEFAULT 0,
+      covering_z1 INTEGER NOT NULL DEFAULT 0,
+      covering_z2 INTEGER NOT NULL DEFAULT 0,
+      covering_z3 INTEGER NOT NULL DEFAULT 0,
+      covering_z4 INTEGER NOT NULL DEFAULT 0,
+      hand_short_success INTEGER NOT NULL DEFAULT 0,
+      hand_short_fail INTEGER NOT NULL DEFAULT 0,
+      hand_mid_success INTEGER NOT NULL DEFAULT 0,
+      hand_mid_fail INTEGER NOT NULL DEFAULT 0,
+      hand_long_success INTEGER NOT NULL DEFAULT 0,
+      hand_long_fail INTEGER NOT NULL DEFAULT 0,
+      feet_short_success INTEGER NOT NULL DEFAULT 0,
+      feet_short_fail INTEGER NOT NULL DEFAULT 0,
+      feet_mid_success INTEGER NOT NULL DEFAULT 0,
+      feet_mid_fail INTEGER NOT NULL DEFAULT 0,
+      feet_long_success INTEGER NOT NULL DEFAULT 0,
+      feet_long_fail INTEGER NOT NULL DEFAULT 0,
+      shooting_open_play INTEGER NOT NULL DEFAULT 0,
+      shooting_drop_kick INTEGER NOT NULL DEFAULT 0,
+      shooting_set_play INTEGER NOT NULL DEFAULT 0,
+      assist_throwing INTEGER NOT NULL DEFAULT 0,
+      assist_passing INTEGER NOT NULL DEFAULT 0,
+      conceded_goals TEXT NOT NULL DEFAULT '[]',
+      anticipation_notes TEXT DEFAULT '',
+      rebound_notes TEXT DEFAULT '',
+      second_post_notes TEXT DEFAULT '',
+      general_notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
+
+  // Safe ALTER TABLE additions for existing sqlite databases
+  try { sqlite.run(`ALTER TABLE matches ADD COLUMN team_id TEXT DEFAULT 'team_paser';`); } catch {}
+  try { sqlite.run(`ALTER TABLE master_players ADD COLUMN team_id TEXT DEFAULT 'team_paser';`); } catch {}
+  try { sqlite.run(`ALTER TABLE users ADD COLUMN team_id TEXT;`); } catch {}
 
   // Seed default demo users if none exist
   const userCount = sqlite.query('SELECT count(*) as count FROM users').get() as { count: number };
