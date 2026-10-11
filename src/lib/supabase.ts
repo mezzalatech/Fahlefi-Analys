@@ -14,22 +14,29 @@ export function getStoredSupabaseConfig() {
   let storedUrl = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_URL_KEY) || '' : '';
   let storedKey = typeof localStorage !== 'undefined' ? localStorage.getItem(SUPABASE_KEY_KEY) || '' : '';
 
-  // Auto-heal known typos (e.g. qdngyotxpwgbsuauzlde -> qdnqyotxpwgbsuauzlde)
-  if (storedUrl.includes('qdngyotxpwgbsuauzlde')) {
-    storedUrl = storedUrl.replace('qdngyotxpwgbsuauzlde', 'qdnqyotxpwgbsuauzlde');
+  // Auto-heal known typos (e.g. qdngy -> qdnqy or corrupted project ref)
+  if (storedUrl.includes('qdngy')) {
+    storedUrl = storedUrl.replace(/qdngy/g, 'qdnqy');
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(SUPABASE_URL_KEY, storedUrl);
     }
   }
 
-  // If stored URL is empty or invalid, fallback to default
+  // If stored URL is empty, corrupted, or invalid, reset to default
+  if (!storedUrl || !storedUrl.startsWith('http')) {
+    storedUrl = DEFAULT_SUPABASE_URL;
+  }
+  if (!storedKey || storedKey.length < 10) {
+    storedKey = DEFAULT_SUPABASE_KEY;
+  }
+
   const effectiveUrl = (storedUrl || envUrl || DEFAULT_SUPABASE_URL).trim();
   const effectiveKey = (storedKey || envKey || DEFAULT_SUPABASE_KEY).trim();
 
   return {
     url: effectiveUrl,
     key: effectiveKey,
-    source: storedUrl ? 'custom' : (envUrl ? 'default' : 'none')
+    source: storedUrl && storedUrl !== DEFAULT_SUPABASE_URL ? 'custom' : (envUrl ? 'default' : 'none')
   };
 }
 

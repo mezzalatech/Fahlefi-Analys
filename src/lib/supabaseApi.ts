@@ -323,17 +323,24 @@ export const supabaseApi = {
     try {
       const [playersRes, matchPlayersRes, subsRes] = await Promise.all([
         supabase.from('master_players').select('*').order('no_punggung', { ascending: true }),
-        supabase.from('players').select('*'),
-        supabase.from('substitutions').select('*')
+        supabase.from('players').select('no, gl_1, gl_2, sh_1, sh_2, rec_1, rec_2, loss_1, loss_2, fl_1, fl_2, yellow_cards, red_cards'),
+        supabase.from('substitutions').select('id, match_id, player_numbers')
       ]);
+
+      if (matchPlayersRes?.error) {
+        console.warn('players stats query notice:', matchPlayersRes.error.message);
+      }
+      if (subsRes?.error) {
+        console.warn('subs query notice:', subsRes.error.message);
+      }
 
       if (!playersRes.error && playersRes.data) {
         let playersList = playersRes.data || [];
         if (teamId) {
           playersList = playersList.filter((p: any) => (p.team_id || 'team_paser') === teamId);
         }
-        const allMatchPlayers = matchPlayersRes.data || [];
-        const allSubs = subsRes.data || [];
+        const allMatchPlayers = matchPlayersRes?.data || [];
+        const allSubs = subsRes?.data || [];
 
         return playersList.map(p => {
           let totalMatches = 0;
