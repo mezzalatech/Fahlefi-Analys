@@ -3,7 +3,8 @@
   import { api } from '../lib/api';
   import { 
     Plus, Minus, UserPlus, Filter, Search, ArrowUpDown, ArrowUp, ArrowDown, 
-    RotateCcw, Shield, Award, AlertTriangle, Check, Printer, Download
+    RotateCcw, Shield, Award, AlertTriangle, Check, Printer, Download,
+    RefreshCw, Trash2
   } from 'lucide-svelte';
 
   let filterPaket = $state<boolean>(false);
@@ -20,7 +21,19 @@
   let newPlayerNo = $state<number>(26);
   let newPlayerIsGk = $state<boolean>(false);
 
-  let rawPlayers = $derived(matchStore.data?.players || []);
+  let isSyncingMaster = $state<boolean>(false);
+
+  let rawPlayers = $derived.by(() => {
+    const list = matchStore.data?.players || [];
+    const maxMaster = matchStore.masterPlayers.length > 0 ? matchStore.masterPlayers.length : 15;
+    return list.filter(p => {
+      const hasRealName = Boolean(p.name && p.name.trim() && !p.name.startsWith('Pemain #'));
+      const hasStats = ((p.gl1 || 0) + (p.gl2 || 0) + (p.sh1 || 0) + (p.sh2 || 0) + 
+                        (p.rec1 || 0) + (p.rec2 || 0) + (p.loss1 || 0) + (p.loss2 || 0) + 
+                        (p.fl1 || 0) + (p.fl2 || 0) + (p.yellowCards || 0) + (p.redCards || 0)) > 0;
+      return hasRealName || hasStats || p.no <= maxMaster;
+    });
+  });
   let activePaket = $derived(
     matchStore.data?.pakets?.find((p) => p.paketIndex === matchStore.activePaketIndex)
   );
@@ -180,6 +193,25 @@
         <Download size={15} />
         <span>Ekspor Excel</span>
       </a>
+      <button 
+        type="button" 
+        class="btn-sync-master" 
+        onclick={async () => {
+          isSyncingMaster = true;
+          try {
+            const res = await matchStore.syncSquadFromMaster();
+            alert(res.message);
+          } catch (err: any) {
+            alert('Gagal menyinkronkan Database Master: ' + err.message);
+          } finally {
+            isSyncingMaster = false;
+          }
+        }} 
+        disabled={isSyncingMaster}
+        title="Muat seluruh nama dan nomor pemain dari Database Master ke Laga ini">
+        <RefreshCw size={14} class={isSyncingMaster ? 'spin text-cyan' : 'text-cyan'} />
+        <span>{isSyncingMaster ? 'Menyinkronkan...' : 'Sinkronkan Master'}</span>
+      </button>
       <button type="button" class="btn-add-player" onclick={() => (showAddPlayer = !showAddPlayer)}>
         <UserPlus size={15} />
         <span>Tambah Pemain</span>
@@ -384,6 +416,17 @@
                 {#if player.isGk}
                   <span class="gk-tag">GK</span>
                 {/if}
+                <button 
+                  type="button" 
+                  class="btn-delete-p" 
+                  title="Hapus pemain #{player.no} dari daftar laga ini"
+                  onclick={() => {
+                    if (confirm(`Hapus pemain #${player.no} ${player.name || ''} dari laga ini?`)) {
+                      matchStore.deletePlayer(player.id);
+                    }
+                  }}>
+                  <Trash2 size={12} />
+                </button>
               </div>
             </td>
 
@@ -671,6 +714,48 @@
   .btn-add-player:hover {
     filter: brightness(1.15);
     box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+  }
+
+  .btn-sync-master {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(6, 182, 212, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-sync-master:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
+  }
+
+  .btn-delete-p {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 5px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.35;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .player-row:hover .btn-delete-p {
+    opacity: 1;
+  }
+  .btn-delete-p:hover {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.15);
   }
 
   /* Filter Toolbar */

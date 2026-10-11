@@ -40,6 +40,12 @@
   let showPlayerModal = $state<boolean>(false);
   let editingPlayer = $state<MasterPlayer | null>(null);
 
+  let canManageSquad = $derived(
+    matchStore.isSuperAdmin || 
+    !matchStore.currentUser || 
+    matchStore.currentUser.role !== 'player'
+  );
+
   // Import State
   let isImporting = $state<boolean>(false);
   let importMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -382,7 +388,7 @@
         <span>Unduh Template</span>
       </button>
 
-      {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
+      {#if canManageSquad}
         <label class="btn-excel-tool btn-upload {isImporting ? 'disabled' : ''}" title="Impor Data Pemain dari File Excel (.xlsx)">
           {#if isImporting}
             <span class="spinner-micro"></span>
@@ -589,7 +595,7 @@
                   onclick={() => importToMatch(p)}>
                   <Download size={13} />
                 </button>
-                {#if matchStore.currentUser?.role === 'coach' || matchStore.currentUser?.role === 'admin'}
+                {#if canManageSquad}
                   <button 
                     class="action-btn btn-edit" 
                     title="Edit Profil Pemain" 

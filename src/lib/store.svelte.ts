@@ -655,7 +655,24 @@ class MatchStore {
       }
     }
 
-    // Bersihkan nama pemain bernomor di luar Database Master agar tidak menyisakan nama dummy lama
+    // Hapus pemain bernomor di luar Database Master jika tidak memiliki statistik tercatat
+    const toDelete = this.data.players.filter(p => {
+      if (masterNos.has(p.no)) return false;
+      const totalStats = (p.gl1 || 0) + (p.gl2 || 0) + (p.sh1 || 0) + (p.sh2 || 0) + 
+                         (p.rec1 || 0) + (p.rec2 || 0) + (p.loss1 || 0) + (p.loss2 || 0) + 
+                         (p.fl1 || 0) + (p.fl2 || 0) + (p.yellowCards || 0) + (p.redCards || 0);
+      return totalStats === 0;
+    });
+
+    for (const p of toDelete) {
+      try {
+        await api.deletePlayer(p.id);
+      } catch {}
+      this.data.players = this.data.players.filter(x => x.id !== p.id);
+      updatedCount++;
+    }
+
+    // Bersihkan nama pemain di luar Database Master yang tersisa
     for (const p of this.data.players) {
       if (!masterNos.has(p.no) && p.name) {
         await api.updatePlayer(p.id, { name: '' });
@@ -670,6 +687,13 @@ class MatchStore {
       count: updatedCount,
       message: `Berhasil menyinkronkan ${this.masterPlayers.length} pemain dari Database Master ke pertandingan ini!`
     };
+  }
+
+  async deletePlayer(id: number) {
+    await api.deletePlayer(id);
+    if (this.data && Array.isArray(this.data.players)) {
+      this.data.players = this.data.players.filter(p => p.id !== id);
+    }
   }
 
   // Multi-Match Actions
