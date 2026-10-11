@@ -290,8 +290,7 @@ export const supabaseApi = {
               name: userData.name || localUpdated.name || 'User',
               role: userData.role || localUpdated.role || 'coach',
               avatar_url: userData.avatarUrl !== undefined ? userData.avatarUrl : (localUpdated.avatarUrl || ''),
-              password_hash: userData.password || 'password123',
-              team_id: userData.teamId || localUpdated.teamId
+              password_hash: userData.password || 'password123'
             });
             broadcastFutsalAction('user_updated', localUpdated);
           }
@@ -415,7 +414,6 @@ export const supabaseApi = {
     const id = player.id || `mp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const row = {
       id,
-      team_id: player.teamId || 'team_paser',
       no_punggung: Number(player.noPunggung) || 1,
       name: player.name || 'Pemain Baru',
       nickname: player.nickname || '',
@@ -432,7 +430,7 @@ export const supabaseApi = {
       if (!error && data) {
         const created: MasterPlayer = {
           id: data.id,
-          teamId: data.team_id || player.teamId || 'team_paser',
+          teamId: player.teamId || 'team_paser',
           noPunggung: data.no_punggung,
           name: data.name,
           nickname: data.nickname || '',
@@ -455,7 +453,6 @@ export const supabaseApi = {
     if (!supabase) return localDb.updateMasterPlayer(id, partial);
 
     const updates: any = {};
-    if (partial.teamId !== undefined) updates.team_id = partial.teamId;
     if (partial.noPunggung !== undefined) updates.no_punggung = Number(partial.noPunggung);
     if (partial.name !== undefined) updates.name = partial.name;
     if (partial.nickname !== undefined) updates.nickname = partial.nickname;
@@ -471,7 +468,7 @@ export const supabaseApi = {
       if (!error && data) {
         const updated: MasterPlayer = {
           id: data.id,
-          teamId: data.team_id || partial.teamId || 'team_paser',
+          teamId: partial.teamId || 'team_paser',
           noPunggung: data.no_punggung,
           name: data.name,
           nickname: data.nickname || '',
@@ -658,7 +655,6 @@ export const supabaseApi = {
 
       const row = {
         id: newId,
-        team_id: resolvedTeamId,
         name: matchData.name || `Match #${newId}`,
         competition: matchData.competition || 'Futsal League',
         date: matchData.date || new Date().toISOString().split('T')[0],

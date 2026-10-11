@@ -822,10 +822,15 @@ class MatchStore {
         }
       }
       await this.loadMasterPlayers(this.activeTeamId);
-      // Auto-populate match roster from master players if empty or all names blank
-      const hasNamedPlayers = this.data?.players?.some(p => Boolean(p.name?.trim()));
-      if (!hasNamedPlayers && this.masterPlayers.length > 0) {
-        await this.syncSquadFromMaster(mId);
+      // Auto-populate / auto-sync match roster from master players if names differ
+      if (this.masterPlayers.length > 0 && this.data?.players) {
+        const needsSync = this.masterPlayers.some(mp => {
+          const matchP = this.data!.players.find(p => p.no === mp.noPunggung);
+          return !matchP || matchP.name !== mp.name;
+        });
+        if (needsSync) {
+          await this.syncSquadFromMaster(mId);
+        }
       }
       await this.loadMatchesList(this.activeTeamId);
     } catch (err: any) {

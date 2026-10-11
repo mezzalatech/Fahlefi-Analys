@@ -32,10 +32,22 @@
   let importErrorMsg = $state<string | null>(null);
 
   function getPlayer(num: number) {
-    return players.find((pl) => pl.no === num);
+    const matchP = players.find((pl) => pl.no === num);
+    const masterP = matchStore.masterPlayers.find((mp) => mp.noPunggung === num);
+    if (masterP) {
+      return {
+        ...matchP,
+        no: num,
+        name: masterP.name,
+        isGk: masterP.position === 'GK' ? 1 : (matchP?.isGk ?? 0)
+      };
+    }
+    return matchP;
   }
 
   function getPlayerName(num: number): string {
+    const masterP = matchStore.masterPlayers.find((mp) => mp.noPunggung === num);
+    if (masterP && masterP.name) return masterP.name;
     const p = getPlayer(num);
     return p && p.name ? p.name : `Pemain #${num}`;
   }
