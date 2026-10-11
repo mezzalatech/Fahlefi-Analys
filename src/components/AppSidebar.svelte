@@ -216,7 +216,7 @@
     <button 
       type="button" 
       class="nav-menu-btn" 
-      onclick={() => { matchStore.showMatchManagerModal = true; onClose(); }}>
+      onclick={() => { matchStore.pauseTimer(); matchStore.showMatchManagerModal = true; onClose(); }}>
       <Trophy size={17} class="text-cyan-400" />
       <div class="menu-label-wrap">
         <span class="menu-primary-label">Manajemen Arsip Pertandingan</span>

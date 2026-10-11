@@ -41,6 +41,7 @@
   let isSubmitting = $state<boolean>(false);
 
   onMount(() => {
+    matchStore.pauseTimer();
     formHomeTeam = matchStore.currentTeamName;
     formName = `Match Analysis ${matchStore.currentTeamName}`;
     matchStore.loadMatchesList(matchStore.activeTeamId);

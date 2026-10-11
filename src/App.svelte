@@ -193,7 +193,7 @@
         <button 
           type="button" 
           class="match-selector-pill" 
-          onclick={() => (matchStore.showMatchManagerModal = true)}
+          onclick={() => { matchStore.pauseTimer(); matchStore.showMatchManagerModal = true; }}
           title="Klik untuk memilih laga, membuat laga baru, atau melihat arsip pertandingan">
           <Trophy size={14} class="text-cyan" />
           <span class="active-match-title">

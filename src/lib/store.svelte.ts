@@ -609,27 +609,34 @@ class MatchStore {
     }
   }
 
-  async syncSquadFromMaster(matchId?: number) {
+  async syncSquadFromMaster(matchId?: number): Promise<{ success: boolean; count: number; message: string }> {
     const mId = matchId ?? this.activeMatchId;
-    await this.loadMasterPlayers();
-    if (!this.data || this.masterPlayers.length === 0) return;
+    await this.loadMasterPlayers(this.activeTeamId);
+    if (!this.data || this.masterPlayers.length === 0) {
+      return { success: false, count: 0, message: 'Database Master kosong atau data laga belum termuat.' };
+    }
+
+    let updatedCount = 0;
+    const masterNos = new Set(this.masterPlayers.map(p => p.noPunggung));
 
     for (const mp of this.masterPlayers) {
       const existing = this.data.players.find(p => p.no === mp.noPunggung);
+      const isGk = mp.position === 'GK' ? 1 : 0;
       if (existing) {
-        if (!existing.name || existing.name !== mp.name) {
+        if (existing.name !== mp.name || existing.isGk !== isGk) {
           await api.updatePlayer(existing.id, {
             name: mp.name,
-            isGk: mp.position === 'GK' ? 1 : 0
+            isGk
           });
           existing.name = mp.name;
-          existing.isGk = mp.position === 'GK' ? 1 : 0;
+          existing.isGk = isGk;
+          updatedCount++;
         }
       } else {
         const newPlayer = await api.addPlayer(mId, {
           no: mp.noPunggung,
           name: mp.name,
-          isGk: mp.position === 'GK' ? 1 : 0,
+          isGk,
           yellowCards: 0,
           redCards: 0,
           loss1: 0,
@@ -644,8 +651,25 @@ class MatchStore {
           gl2: 0
         });
         this.data.players.push(newPlayer);
+        updatedCount++;
       }
     }
+
+    // Bersihkan nama pemain bernomor di luar Database Master agar tidak menyisakan nama dummy lama
+    for (const p of this.data.players) {
+      if (!masterNos.has(p.no) && p.name) {
+        await api.updatePlayer(p.id, { name: '' });
+        p.name = '';
+        updatedCount++;
+      }
+    }
+
+    this.data.players.sort((a, b) => a.no - b.no);
+    return {
+      success: true,
+      count: updatedCount,
+      message: `Berhasil menyinkronkan ${this.masterPlayers.length} pemain dari Database Master ke pertandingan ini!`
+    };
   }
 
   // Multi-Match Actions
@@ -668,6 +692,7 @@ class MatchStore {
   }
 
   async createNewMatch(matchData: any) {
+    this.pauseTimer();
     const payload = {
       ...matchData,
       teamId: matchData.teamId || this.activeTeamId,
@@ -681,6 +706,7 @@ class MatchStore {
   }
 
   async duplicateMatch(matchId: number) {
+    this.pauseTimer();
     const duplicated = await api.duplicateMatch(matchId);
     await this.loadMatchesList(this.activeTeamId);
     await this.switchMatch(duplicated.id);
@@ -688,6 +714,7 @@ class MatchStore {
   }
 
   async deleteMatch(matchId: number) {
+    this.pauseTimer();
     await api.deleteMatch(matchId);
     await this.loadMatchesList(this.activeTeamId);
     if (this.activeMatchId === matchId) {

@@ -3,11 +3,15 @@
   import { api } from '../lib/api';
   import { 
     Users, Plus, Check, Trash2, ArrowRightLeft, Download, Upload, 
-    FileSpreadsheet, Sparkles, Edit3, X, AlertCircle, CheckCircle2, Shield
+    FileSpreadsheet, Sparkles, Edit3, X, AlertCircle, CheckCircle2, Shield,
+    Database, RefreshCw
   } from 'lucide-svelte';
 
   let pakets = $derived(matchStore.scopedPakets);
   let players = $derived(matchStore.data?.players || []);
+
+  let isSyncingMaster = $state<boolean>(false);
+  let syncFeedbackMsg = $state<string | null>(null);
 
   let showAddPaket = $state<boolean>(false);
   let newPaketCode = $state<string>('');
@@ -239,6 +243,22 @@
       if (fileInputRef) fileInputRef.value = '';
     }
   }
+
+  async function handleSyncMaster() {
+    isSyncingMaster = true;
+    syncFeedbackMsg = null;
+    try {
+      const res = await matchStore.syncSquadFromMaster();
+      syncFeedbackMsg = res.message;
+      setTimeout(() => {
+        syncFeedbackMsg = null;
+      }, 4000);
+    } catch (err: any) {
+      alert('Gagal menyinkronkan Database Master: ' + err.message);
+    } finally {
+      isSyncingMaster = false;
+    }
+  }
 </script>
 
 <div class="paket-section glass-card">
@@ -302,6 +322,17 @@
         <span>Auto-Preset</span>
       </button>
 
+      <!-- Sync Master Squad Button -->
+      <button 
+        type="button" 
+        class="tool-btn btn-sync-master" 
+        onclick={handleSyncMaster}
+        disabled={isSyncingMaster}
+        title="Sinkronkan nama dan nomor punggung skuad dari Database Master ke Laga ini">
+        <RefreshCw size={14} class={isSyncingMaster ? 'spin text-cyan' : 'text-cyan'} />
+        <span>{isSyncingMaster ? 'Menyinkronkan...' : 'Sinkronkan Master'}</span>
+      </button>
+
       <!-- Add New Paket -->
       <button 
         class="tool-btn btn-add-pkt" 
@@ -311,6 +342,13 @@
       </button>
     </div>
   </div>
+
+  {#if syncFeedbackMsg}
+    <div class="sync-banner-alert">
+      <CheckCircle2 size={16} class="text-emerald" />
+      <span>{syncFeedbackMsg}</span>
+    </div>
+  {/if}
 
   <!-- Quick Add Box -->
   {#if showAddPaket}
@@ -455,7 +493,18 @@
         </div>
 
         <!-- Roster Player Picker -->
-        <div class="roster-picker-label">Pilih 5 Pemain dari Skuad:</div>
+        <div class="roster-picker-header">
+          <div class="roster-picker-label">Pilih 5 Pemain dari Skuad:</div>
+          <button 
+            type="button" 
+            class="btn-sync-picker" 
+            onclick={handleSyncMaster} 
+            disabled={isSyncingMaster}
+            title="Muat ulang nama pemain laga ini langsung dari Database Master">
+            <RefreshCw size={12} class={isSyncingMaster ? 'spin text-cyan' : 'text-cyan'} />
+            <span>{isSyncingMaster ? 'Menyinkronkan...' : 'Sinkronkan Master'}</span>
+          </button>
+        </div>
         <div class="roster-picker-grid">
           {#each players as p}
             {@const isSelected = editingPaket.selectedNumbers.includes(p.no)}
@@ -1286,5 +1335,54 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  .btn-sync-master {
+    background: rgba(6, 182, 212, 0.12) !important;
+    border: 1px solid rgba(6, 182, 212, 0.35) !important;
+    color: #38bdf8 !important;
+  }
+  .btn-sync-master:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.25) !important;
+    border-color: #38bdf8 !important;
+    color: #ffffff !important;
+  }
+  .btn-sync-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.35);
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #38bdf8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-sync-picker:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
+  }
+  .roster-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+  .sync-banner-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    color: #34d399;
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 </style>

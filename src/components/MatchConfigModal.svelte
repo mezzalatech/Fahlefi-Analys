@@ -18,7 +18,10 @@
   let timeout2Home = $state<string>('');
   let timeout2Away = $state<string>('');
 
-  $effect(() => {
+  import { onMount } from 'svelte';
+
+  onMount(() => {
+    matchStore.pauseTimer();
     if (match) {
       name = match.name || '';
       competition = match.competition || '';

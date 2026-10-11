@@ -392,6 +392,7 @@ export const app = new Elysia({ prefix: '/api' })
       venue: matchData.venue || 'GOR Sadurengas Paser',
       homeTeam: matchData.homeTeam || '',
       awayTeam: matchData.awayTeam || '',
+      teamId: matchData.teamId || 'team_paser',
       homeScore1st: 0,
       homeScore2nd: 0,
       awayScore1st: 0,
@@ -478,6 +479,7 @@ export const app = new Elysia({ prefix: '/api' })
     const newMatch = db.insert(matches).values({
       name: `${sourceMatch.name} (Copy)`,
       competition: sourceMatch.competition,
+      teamId: sourceMatch.teamId || 'team_paser',
       date: new Date().toISOString().split('T')[0],
       time: sourceMatch.time,
       venue: sourceMatch.venue,
