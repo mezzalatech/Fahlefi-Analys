@@ -137,6 +137,13 @@
   const calc = $derived(matchStore.gkCalculations);
   const concededGoals = $derived(matchStore.currentGkConcededGoals);
 
+  $effect(() => {
+    const list = matchStore.matchGkList;
+    if (list.length > 0 && !list.some(g => g.no === matchStore.activeGkPlayerNo)) {
+      matchStore.activeGkPlayerNo = list[0].no;
+    }
+  });
+
   function handlePrintGkPdf() {
     if (matchStore.data) {
       GkPdfReportGenerator.printReport(matchStore.data, stat, matchStore.currentTeamLogo);
@@ -1503,7 +1510,7 @@
             </div>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="notes-grid-3col">
             <div class="note-item-group">
               <div class="flex items-center justify-between mb-1">
                 <div class="note-item-heading text-sm">1. SHOOTING ANTICIPATION</div>
@@ -1841,7 +1848,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mt-4">
+        <div class="dossier-page3-grid">
           <!-- Conceded Area Pitch -->
           <div class="flex flex-col items-center">
             <span class="dossier-pill-blue">Conceded area</span>
@@ -1849,7 +1856,8 @@
               <img 
                 src={GK_AREA_CONCEDED_IMAGE_DATA_URI} 
                 alt="Conceded Area Diagram" 
-                class="max-h-[250px] w-auto max-w-full object-contain border border-black rounded bg-white block" 
+                class="dossier-diagram-img"
+                style="max-height: 250px; width: auto; max-width: 100%; object-fit: contain;" 
               />
               {#each integratedConcededGoals as cg, idx}
                 {@const pin = getGoalPinCoordinates(cg, idx)}
@@ -1881,7 +1889,8 @@
               <img 
                 src={GK_CONCEDED_IMAGE_DATA_URI} 
                 alt="Conceded Position Diagram" 
-                class="max-h-[250px] w-auto max-w-full object-contain border border-black rounded bg-white block" 
+                class="dossier-diagram-img"
+                style="max-height: 250px; width: auto; max-width: 100%; object-fit: contain;" 
               />
               {#each integratedConcededGoals as cg, idx}
                 {@const pin = getGoalTargetPinCoordinates(cg, idx)}
@@ -3590,6 +3599,45 @@
     border-bottom: 1.5px solid rgba(255, 255, 255, 0.4);
     padding-bottom: 0.5rem;
     margin-bottom: 0.75rem;
+  }
+
+  .dossier-page3-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    margin-top: 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    .dossier-page3-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .dossier-diagram-img {
+    max-height: 250px;
+    height: auto;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    border: 1px solid #000000;
+    border-radius: 4px;
+    background: #ffffff;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .notes-grid-3col {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .notes-grid-3col {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 
   /* ==================================================== */

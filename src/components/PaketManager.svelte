@@ -1,11 +1,24 @@
 <script lang="ts">
-  import { matchStore } from '../lib/store.svelte';
-  import { api } from '../lib/api';
-  import { 
-    Users, Plus, Check, Trash2, ArrowRightLeft, Download, Upload, 
-    FileSpreadsheet, Sparkles, Edit3, X, AlertCircle, CheckCircle2, Shield,
-    Database, RefreshCw
-  } from 'lucide-svelte';
+  import { matchStore } from "../lib/store.svelte";
+  import { api } from "../lib/api";
+  import {
+    Users,
+    Plus,
+    Check,
+    Trash2,
+    ArrowRightLeft,
+    Download,
+    Upload,
+    FileSpreadsheet,
+    Sparkles,
+    Edit3,
+    X,
+    AlertCircle,
+    CheckCircle2,
+    Shield,
+    Database,
+    RefreshCw,
+  } from "lucide-svelte";
 
   let pakets = $derived(matchStore.scopedPakets);
   let players = $derived(matchStore.data?.players || []);
@@ -14,8 +27,8 @@
   let syncFeedbackMsg = $state<string | null>(null);
 
   let showAddPaket = $state<boolean>(false);
-  let newPaketCode = $state<string>('');
-  
+  let newPaketCode = $state<string>("");
+
   // Edit Paket State
   let editingPaket = $state<{
     paketIndex: number;
@@ -33,31 +46,35 @@
 
   function getPlayer(num: number) {
     const matchP = players.find((pl) => pl.no === num);
-    const masterP = matchStore.masterPlayers.find((mp) => mp.noPunggung === num);
+    const masterP = matchStore.masterPlayers.find(
+      (mp) => mp.noPunggung === num,
+    );
     if (masterP) {
       return {
         ...matchP,
         no: num,
         name: masterP.name,
-        isGk: masterP.position === 'GK' ? 1 : (matchP?.isGk ?? 0)
+        isGk: masterP.position === "GK" ? 1 : (matchP?.isGk ?? 0),
       };
     }
     return matchP;
   }
 
   function getPlayerName(num: number): string {
-    const masterP = matchStore.masterPlayers.find((mp) => mp.noPunggung === num);
+    const masterP = matchStore.masterPlayers.find(
+      (mp) => mp.noPunggung === num,
+    );
     if (masterP && masterP.name) return masterP.name;
     const p = getPlayer(num);
     return p && p.name ? p.name : `Pemain #${num}`;
   }
 
-  function getPaketNumbers(pkt: typeof pakets[0]): number[] {
+  function getPaketNumbers(pkt: (typeof pakets)[0]): number[] {
     try {
       const parsed = JSON.parse(pkt.playerNumbers);
       if (Array.isArray(parsed)) return parsed;
     } catch {}
-    return (pkt.code || '')
+    return (pkt.code || "")
       .split(/[-,\s/]+/)
       .map((n) => parseInt(n.trim(), 10))
       .filter((n) => !isNaN(n) && n > 0);
@@ -74,24 +91,29 @@
   // Add Simple Paket
   async function handleAddPaket() {
     if (!newPaketCode.trim() || !matchStore.data) return;
-    const nums = newPaketCode.split(/[-,\s/]+/).map((n) => parseInt(n.trim(), 10)).filter((n) => !isNaN(n) && n > 0);
-    const nextIndex = (pakets.length > 0 ? Math.max(...pakets.map((p) => p.paketIndex)) : 0) + 1;
+    const nums = newPaketCode
+      .split(/[-,\s/]+/)
+      .map((n) => parseInt(n.trim(), 10))
+      .filter((n) => !isNaN(n) && n > 0);
+    const nextIndex =
+      (pakets.length > 0 ? Math.max(...pakets.map((p) => p.paketIndex)) : 0) +
+      1;
 
     const updated = [
       ...pakets.map((p) => ({
         paketIndex: p.paketIndex,
         code: p.code,
-        playerNumbers: p.playerNumbers
+        playerNumbers: p.playerNumbers,
       })),
       {
         paketIndex: nextIndex,
         code: newPaketCode.trim(),
-        playerNumbers: JSON.stringify(nums)
-      }
+        playerNumbers: JSON.stringify(nums),
+      },
     ];
 
     await matchStore.savePakets(updated);
-    newPaketCode = '';
+    newPaketCode = "";
     showAddPaket = false;
   }
 
@@ -103,7 +125,7 @@
       .map((p, idx) => ({
         paketIndex: idx + 1,
         code: p.code,
-        playerNumbers: p.playerNumbers
+        playerNumbers: p.playerNumbers,
       }));
 
     await matchStore.savePakets(remaining);
@@ -113,11 +135,11 @@
   }
 
   // Open Edit Modal
-  function openEditModal(pkt: typeof pakets[0]) {
+  function openEditModal(pkt: (typeof pakets)[0]) {
     editingPaket = {
       paketIndex: pkt.paketIndex,
       code: pkt.code || `Paket #${pkt.paketIndex}`,
-      selectedNumbers: [...getPaketNumbers(pkt)]
+      selectedNumbers: [...getPaketNumbers(pkt)],
     };
   }
 
@@ -125,7 +147,9 @@
     if (!editingPaket) return;
     const exists = editingPaket.selectedNumbers.includes(no);
     if (exists) {
-      editingPaket.selectedNumbers = editingPaket.selectedNumbers.filter(n => n !== no);
+      editingPaket.selectedNumbers = editingPaket.selectedNumbers.filter(
+        (n) => n !== no,
+      );
     } else {
       if (editingPaket.selectedNumbers.length < 5) {
         editingPaket.selectedNumbers = [...editingPaket.selectedNumbers, no];
@@ -136,18 +160,21 @@
   // Save Edited Paket
   async function saveEditedPaket() {
     if (!editingPaket || !matchStore.data) return;
-    const updated = pakets.map(p => {
+    const updated = pakets.map((p) => {
       if (p.paketIndex === editingPaket!.paketIndex) {
         return {
           paketIndex: p.paketIndex,
-          code: editingPaket!.code.trim() || editingPaket!.selectedNumbers.join('-') || `Paket #${p.paketIndex}`,
-          playerNumbers: JSON.stringify(editingPaket!.selectedNumbers)
+          code:
+            editingPaket!.code.trim() ||
+            editingPaket!.selectedNumbers.join("-") ||
+            `Paket #${p.paketIndex}`,
+          playerNumbers: JSON.stringify(editingPaket!.selectedNumbers),
         };
       }
       return {
         paketIndex: p.paketIndex,
         code: p.code,
-        playerNumbers: p.playerNumbers
+        playerNumbers: p.playerNumbers,
       };
     });
 
@@ -158,62 +185,116 @@
   // Auto-Generate 9 Default Presets based on Active Squad Roster
   async function generateAutoPresets() {
     if (!matchStore.data) return;
-    const availableNos = players.map(p => p.no).filter(n => n > 0);
-    const gkNo = players.find(p => p.isGk === 1)?.no || 1;
-    const fieldPlayers = availableNos.filter(n => n !== gkNo);
+    const availableNos = players.map((p) => p.no).filter((n) => n > 0);
+    const gkNo = players.find((p) => p.isGk === 1)?.no || 1;
+    const fieldPlayers = availableNos.filter((n) => n !== gkNo);
 
     const defaultPresets = [
       {
         index: 1,
-        name: 'Paket 1 - Starter Utama',
-        nums: [gkNo, fieldPlayers[0] || 4, fieldPlayers[1] || 7, fieldPlayers[2] || 8, fieldPlayers[3] || 10]
+        name: "Paket 1 - Starter Utama",
+        nums: [
+          gkNo,
+          fieldPlayers[0] || 4,
+          fieldPlayers[1] || 7,
+          fieldPlayers[2] || 8,
+          fieldPlayers[3] || 10,
+        ],
       },
       {
         index: 2,
-        name: 'Paket 2 - Rotasi Unit 2',
-        nums: [gkNo, fieldPlayers[4] || 3, fieldPlayers[5] || 6, fieldPlayers[6] || 9, fieldPlayers[7] || 11]
+        name: "Paket 2 - Rotasi Unit 2",
+        nums: [
+          gkNo,
+          fieldPlayers[4] || 3,
+          fieldPlayers[5] || 6,
+          fieldPlayers[6] || 9,
+          fieldPlayers[7] || 11,
+        ],
       },
       {
         index: 3,
-        name: 'Paket 3 - High Pressing',
-        nums: [gkNo, fieldPlayers[0] || 4, fieldPlayers[1] || 6, fieldPlayers[2] || 7, fieldPlayers[3] || 8]
+        name: "Paket 3 - High Pressing",
+        nums: [
+          gkNo,
+          fieldPlayers[0] || 4,
+          fieldPlayers[1] || 6,
+          fieldPlayers[2] || 7,
+          fieldPlayers[3] || 8,
+        ],
       },
       {
         index: 4,
-        name: 'Paket 4 - Powerplay Attacking',
-        nums: [fieldPlayers[3] || 10, fieldPlayers[0] || 4, fieldPlayers[1] || 7, fieldPlayers[2] || 8, fieldPlayers[4] || 9]
+        name: "Paket 4 - Powerplay Attacking",
+        nums: [
+          fieldPlayers[3] || 10,
+          fieldPlayers[0] || 4,
+          fieldPlayers[1] || 7,
+          fieldPlayers[2] || 8,
+          fieldPlayers[4] || 9,
+        ],
       },
       {
         index: 5,
-        name: 'Paket 5 - Defensive Solid Block',
-        nums: [gkNo, fieldPlayers[4] || 3, fieldPlayers[0] || 4, fieldPlayers[5] || 5, fieldPlayers[2] || 8]
+        name: "Paket 5 - Defensive Solid Block",
+        nums: [
+          gkNo,
+          fieldPlayers[4] || 3,
+          fieldPlayers[0] || 4,
+          fieldPlayers[5] || 5,
+          fieldPlayers[2] || 8,
+        ],
       },
       {
         index: 6,
-        name: 'Paket 6 - Corner Set-Piece',
-        nums: [gkNo, fieldPlayers[0] || 4, fieldPlayers[2] || 8, fieldPlayers[4] || 9, fieldPlayers[3] || 10]
+        name: "Paket 6 - Corner Set-Piece",
+        nums: [
+          gkNo,
+          fieldPlayers[0] || 4,
+          fieldPlayers[2] || 8,
+          fieldPlayers[4] || 9,
+          fieldPlayers[3] || 10,
+        ],
       },
       {
         index: 7,
-        name: 'Paket 7 - Flank Kilat Counter',
-        nums: [gkNo, fieldPlayers[0] || 4, fieldPlayers[5] || 6, fieldPlayers[7] || 11, fieldPlayers[3] || 10]
+        name: "Paket 7 - Flank Kilat Counter",
+        nums: [
+          gkNo,
+          fieldPlayers[0] || 4,
+          fieldPlayers[5] || 6,
+          fieldPlayers[7] || 11,
+          fieldPlayers[3] || 10,
+        ],
       },
       {
         index: 8,
-        name: 'Paket 8 - Dual Pivot Offense',
-        nums: [gkNo, fieldPlayers[4] || 3, fieldPlayers[1] || 7, fieldPlayers[2] || 8, fieldPlayers[4] || 9]
+        name: "Paket 8 - Dual Pivot Offense",
+        nums: [
+          gkNo,
+          fieldPlayers[4] || 3,
+          fieldPlayers[1] || 7,
+          fieldPlayers[2] || 8,
+          fieldPlayers[4] || 9,
+        ],
       },
       {
         index: 9,
-        name: 'Paket 9 - Closing Match Control',
-        nums: [gkNo, fieldPlayers[4] || 3, fieldPlayers[0] || 4, fieldPlayers[5] || 5, fieldPlayers[3] || 10]
-      }
+        name: "Paket 9 - Closing Match Control",
+        nums: [
+          gkNo,
+          fieldPlayers[4] || 3,
+          fieldPlayers[0] || 4,
+          fieldPlayers[5] || 5,
+          fieldPlayers[3] || 10,
+        ],
+      },
     ];
 
-    const payload = defaultPresets.map(dp => ({
+    const payload = defaultPresets.map((dp) => ({
       paketIndex: dp.index,
       code: dp.name,
-      playerNumbers: JSON.stringify(dp.nums.filter(n => n !== undefined))
+      playerNumbers: JSON.stringify(dp.nums.filter((n) => n !== undefined)),
     }));
 
     await matchStore.savePakets(payload);
@@ -236,23 +317,26 @@
     try {
       isImporting = true;
       importErrorMsg = null;
-      const res = await api.importPaketsFromExcel(matchStore.data.match.id, importFile);
+      const res = await api.importPaketsFromExcel(
+        matchStore.data.match.id,
+        importFile,
+      );
       if (res.pakets && Array.isArray(res.pakets)) {
         matchStore.data.pakets = res.pakets;
       } else {
         await matchStore.loadMatch(matchStore.data.match.id);
       }
-      importSuccessMsg = res.message || 'Paket rotasi berhasil diimpor!';
+      importSuccessMsg = res.message || "Paket rotasi berhasil diimpor!";
       setTimeout(() => {
         showImportModal = false;
         importFile = null;
         importSuccessMsg = null;
       }, 1400);
     } catch (err: any) {
-      importErrorMsg = err.message || 'Gagal mengimpor file Excel';
+      importErrorMsg = err.message || "Gagal mengimpor file Excel";
     } finally {
       isImporting = false;
-      if (fileInputRef) fileInputRef.value = '';
+      if (fileInputRef) fileInputRef.value = "";
     }
   }
 
@@ -266,7 +350,7 @@
         syncFeedbackMsg = null;
       }, 4000);
     } catch (err: any) {
-      alert('Gagal menyinkronkan Database Master: ' + err.message);
+      alert("Gagal menyinkronkan Database Master: " + err.message);
     } finally {
       isSyncingMaster = false;
     }
@@ -282,73 +366,87 @@
       </div>
       <div>
         <h2 class="section-title">Manajemen Paket Rotasi 5 Pemain (Lineups)</h2>
-        <p class="section-desc">Atur kombinasi 5 pemain on-pitch, unduh template, dan impor strategi rotasi via Excel</p>
+        <p class="section-desc">
+          Atur kombinasi 5 pemain on-pitch, unduh template, dan impor strategi
+          rotasi via Excel
+        </p>
       </div>
     </div>
 
     <!-- Action Buttons -->
     <div class="actions-toolbar">
       <!-- Download Template Excel -->
-      <button 
+      <button
         type="button"
         onclick={() => api.downloadPaketTemplate()}
         class="tool-btn btn-template"
-        title="Unduh Template Excel Resmi untuk Paket 5-Man">
+        title="Unduh Template Excel Resmi untuk Paket 5-Man"
+      >
         <Download size={15} />
         <span>Download Template</span>
       </button>
 
       <!-- Import Excel -->
-      <button 
-        class="tool-btn btn-import" 
+      <button
+        class="tool-btn btn-import"
         onclick={() => fileInputRef?.click()}
-        title="Impor susunan paket rotasi dari file Excel">
+        title="Impor susunan paket rotasi dari file Excel"
+      >
         <Upload size={15} />
         <span>Import Excel</span>
       </button>
-      <input 
-        type="file" 
-        accept=".xlsx, .xls" 
-        bind:this={fileInputRef} 
-        onchange={onFileSelected} 
-        style="display: none;" />
+      <input
+        type="file"
+        accept=".xlsx, .xls"
+        bind:this={fileInputRef}
+        onchange={onFileSelected}
+        style="display: none;"
+      />
 
       <!-- Export Current Match Pakets -->
       {#if matchStore.data}
-        <a 
-          href={api.getMatchPaketsExportUrl(matchStore.data.match.id)} 
-          download="Paket_Rotasi.xlsx" 
+        <a
+          href={api.getMatchPaketsExportUrl(matchStore.data.match.id)}
+          download="Paket_Rotasi.xlsx"
           class="tool-btn btn-export"
-          title="Ekspor paket pertandingan ini ke Excel">
+          title="Ekspor paket pertandingan ini ke Excel"
+        >
           <FileSpreadsheet size={15} />
           <span>Export Excel</span>
         </a>
       {/if}
 
       <!-- Auto Presets from Roster -->
-      <button 
-        class="tool-btn btn-preset" 
+      <button
+        class="tool-btn btn-preset"
         onclick={generateAutoPresets}
-        title="Buat otomatis 9 preset standar dari skuad pemain aktif">
+        title="Buat otomatis 9 preset standar dari skuad pemain aktif"
+      >
         <Sparkles size={15} />
         <span>Auto-Preset</span>
       </button>
 
       <!-- Sync Master Squad Button -->
-      <button 
-        type="button" 
-        class="tool-btn btn-sync-master" 
+      <button
+        type="button"
+        class="tool-btn btn-sync-master"
         onclick={handleSyncMaster}
         disabled={isSyncingMaster}
-        title="Sinkronkan nama dan nomor punggung skuad dari Database Master ke Laga ini">
-        <RefreshCw size={14} class={isSyncingMaster ? 'spin text-cyan' : 'text-cyan'} />
-        <span>{isSyncingMaster ? 'Menyinkronkan...' : 'Sinkronkan Master'}</span>
+        title="Sinkronkan nama dan nomor punggung skuad dari Database Master ke Laga ini"
+      >
+        <RefreshCw
+          size={14}
+          class={isSyncingMaster ? "spin text-cyan" : "text-cyan"}
+        />
+        <span>{isSyncingMaster ? "Menyinkronkan..." : "Sinkronkan Master"}</span
+        >
       </button>
 
       <!-- Add New Paket -->
-      <button 
-        class="tool-btn btn-add-pkt" 
-        onclick={() => (showAddPaket = !showAddPaket)}>
+      <button
+        class="tool-btn btn-add-pkt"
+        onclick={() => (showAddPaket = !showAddPaket)}
+      >
         <Plus size={15} />
         <span>Tambah Paket</span>
       </button>
@@ -366,16 +464,23 @@
   {#if showAddPaket}
     <div class="add-pkt-box">
       <div class="box-title">Tambah Paket Baru:</div>
-      <label for="new-pkt-input">Format: Masukkan nomor punggung dipisah tanda hubung (cth. <code>1-4-7-8-10</code>) atau Nama Paket:</label>
+      <label for="new-pkt-input"
+        >Format: Masukkan nomor punggung dipisah tanda hubung (cth. <code
+          >1-4-7-8-10</code
+        >) atau Nama Paket:</label
+      >
       <div class="input-row">
-        <input 
+        <input
           id="new-pkt-input"
-          type="text" 
-          bind:value={newPaketCode} 
-          placeholder="cth. 1-4-7-8-10 atau Paket Pressing" 
-          class="pkt-input" />
+          type="text"
+          bind:value={newPaketCode}
+          placeholder="cth. 1-4-7-8-10 atau Paket Pressing"
+          class="pkt-input"
+        />
         <button class="btn-save-pkt" onclick={handleAddPaket}>Simpan</button>
-        <button class="btn-cancel-pkt" onclick={() => (showAddPaket = false)}>Batal</button>
+        <button class="btn-cancel-pkt" onclick={() => (showAddPaket = false)}
+          >Batal</button
+        >
       </div>
     </div>
   {/if}
@@ -385,42 +490,55 @@
     {#each pakets as pkt, pktIdx (pkt.id ? `pkt_${pkt.id}` : `pkt_idx_${pktIdx}`)}
       {@const nums = getPaketNumbers(pkt)}
       {@const isActive = matchStore.activePaketIndex === pkt.paketIndex}
-      
-      <div 
-        class="paket-card {isActive ? 'active-card' : ''}" 
+
+      <div
+        class="paket-card {isActive ? 'active-card' : ''}"
         onclick={() => selectActivePaket(pkt.paketIndex)}
         role="button"
         tabindex="0"
-        onkeydown={(e) => e.key === 'Enter' && selectActivePaket(pkt.paketIndex)}>
-        
+        onkeydown={(e) =>
+          e.key === "Enter" && selectActivePaket(pkt.paketIndex)}
+      >
         <div class="card-top">
           <div class="badge-index">Paket #{pkt.paketIndex}</div>
           {#if isActive}
             <span class="active-tag"><Check size={12} /> ON PITCH</span>
           {/if}
-          
+
           <div class="card-actions">
             <!-- Edit Button -->
-            <button 
-              class="icon-action-btn edit-btn" 
-              onclick={(e) => { e.stopPropagation(); openEditModal(pkt); }} 
-              title="Edit Susunan Pemain">
+            <button
+              class="icon-action-btn edit-btn"
+              onclick={(e) => {
+                e.stopPropagation();
+                openEditModal(pkt);
+              }}
+              title="Edit Susunan Pemain"
+            >
               <Edit3 size={13} />
             </button>
-            
+
             <!-- Delete Button -->
-            <button 
-              class="icon-action-btn del-btn" 
-              onclick={(e) => { e.stopPropagation(); handleDeletePaket(pkt.paketIndex); }} 
-              title="Hapus Paket">
+            <button
+              class="icon-action-btn del-btn"
+              onclick={(e) => {
+                e.stopPropagation();
+                handleDeletePaket(pkt.paketIndex);
+              }}
+              title="Hapus Paket"
+            >
               <Trash2 size={13} />
             </button>
           </div>
         </div>
 
         <!-- Paket Code / Name -->
-        <div class="pkt-code-display" title={pkt.code || `Paket #${pkt.paketIndex}`}>
-          {pkt.code || (nums.length > 0 ? nums.join('-') : `Paket #${pkt.paketIndex}`)}
+        <div
+          class="pkt-code-display"
+          title={pkt.code || `Paket #${pkt.paketIndex}`}
+        >
+          {pkt.code ||
+            (nums.length > 0 ? nums.join("-") : `Paket #${pkt.paketIndex}`)}
         </div>
 
         <!-- Players List (5-Man Lineup) -->
@@ -447,7 +565,11 @@
         <div class="card-footer">
           <button class="deploy-btn {isActive ? 'btn-active-deploy' : ''}">
             <ArrowRightLeft size={13} />
-            <span>{isActive ? 'Sedang Aktif di Lapangan' : 'Pasang di Lapangan'}</span>
+            <span
+              >{isActive
+                ? "Sedang Aktif di Lapangan"
+                : "Pasang di Lapangan"}</span
+            >
           </button>
         </div>
       </div>
@@ -459,8 +581,17 @@
 <!-- MODAL: EDIT SUSUNAN PAKET 5 PEMAIN         -->
 <!-- ========================================== -->
 {#if editingPaket}
-  <div class="modal-backdrop" onclick={() => (editingPaket = null)} role="presentation">
-    <div class="modal-dialog" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1">
+  <div
+    class="modal-backdrop"
+    onclick={() => (editingPaket = null)}
+    role="presentation"
+  >
+    <div
+      class="modal-dialog"
+      onclick={(e) => e.stopPropagation()}
+      role="dialog"
+      tabindex="-1"
+    >
       <div class="modal-header">
         <div class="modal-title-group">
           <Edit3 size={18} class="text-emerald" />
@@ -475,27 +606,36 @@
         <!-- Paket Name / Label -->
         <div class="form-group">
           <label for="edit-pkt-name">Nama / Kode Strategi Paket:</label>
-          <input 
+          <input
             id="edit-pkt-name"
-            type="text" 
-            class="form-input" 
-            bind:value={editingPaket.code} 
-            placeholder="cth. Paket 1 - Starter Utama, Powerplay, dll" />
+            type="text"
+            class="form-input"
+            bind:value={editingPaket.code}
+            placeholder="cth. Paket 1 - Starter Utama, Powerplay, dll"
+          />
         </div>
 
         <!-- Selected Summary -->
         <div class="selected-summary-bar">
           <div class="summary-label">
             <span>Pemain Terpilih:</span>
-            <span class="count-pill {editingPaket.selectedNumbers.length === 5 ? 'complete' : ''}">
+            <span
+              class="count-pill {editingPaket.selectedNumbers.length === 5
+                ? 'complete'
+                : ''}"
+            >
               {editingPaket.selectedNumbers.length} / 5 Pemain
             </span>
           </div>
           <div class="selected-tags-row">
             {#each editingPaket.selectedNumbers as num}
               <span class="selected-tag">
-                #{num} {getPlayerName(num)}
-                <button class="tag-remove" onclick={() => togglePlayerSelection(num)}>×</button>
+                #{num}
+                {getPlayerName(num)}
+                <button
+                  class="tag-remove"
+                  onclick={() => togglePlayerSelection(num)}>×</button
+                >
               </span>
             {/each}
             {#if editingPaket.selectedNumbers.length === 0}
@@ -507,29 +647,42 @@
         <!-- Roster Player Picker -->
         <div class="roster-picker-header">
           <div class="roster-picker-label">Pilih 5 Pemain dari Skuad:</div>
-          <button 
-            type="button" 
-            class="btn-sync-picker" 
-            onclick={handleSyncMaster} 
+          <button
+            type="button"
+            class="btn-sync-picker"
+            onclick={handleSyncMaster}
             disabled={isSyncingMaster}
-            title="Muat ulang nama pemain laga ini langsung dari Database Master">
-            <RefreshCw size={12} class={isSyncingMaster ? 'spin text-cyan' : 'text-cyan'} />
-            <span>{isSyncingMaster ? 'Menyinkronkan...' : 'Sinkronkan Master'}</span>
+            title="Muat ulang nama pemain laga ini langsung dari Database Master"
+          >
+            <RefreshCw
+              size={12}
+              class={isSyncingMaster ? "spin text-cyan" : "text-cyan"}
+            />
+            <span
+              >{isSyncingMaster
+                ? "Menyinkronkan..."
+                : "Sinkronkan Master"}</span
+            >
           </button>
         </div>
         <div class="roster-picker-grid">
           {#each players as p}
             {@const isSelected = editingPaket.selectedNumbers.includes(p.no)}
-            <button 
-              type="button" 
-              class="roster-card {isSelected ? 'selected-card' : ''} {p.isGk ? 'gk-card' : ''}"
-              onclick={() => togglePlayerSelection(p.no)}>
+            <button
+              type="button"
+              class="roster-card {isSelected ? 'selected-card' : ''} {p.isGk
+                ? 'gk-card'
+                : ''}"
+              onclick={() => togglePlayerSelection(p.no)}
+            >
               <div class="jersey-circle">
                 {p.no}
               </div>
               <div class="player-info">
                 <div class="player-name">{p.name || `Pemain #${p.no}`}</div>
-                <div class="player-role">{p.isGk ? 'Goalkeeper' : 'Outfield Player'}</div>
+                <div class="player-role">
+                  {p.isGk ? "Goalkeeper" : "Outfield Player"}
+                </div>
               </div>
               {#if isSelected}
                 <div class="check-icon"><Check size={14} /></div>
@@ -540,7 +693,9 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn-secondary" onclick={() => (editingPaket = null)}>Batal</button>
+        <button class="btn-secondary" onclick={() => (editingPaket = null)}
+          >Batal</button
+        >
         <button class="btn-primary" onclick={saveEditedPaket}>
           <Check size={15} />
           <span>Simpan Susunan Paket</span>
@@ -554,14 +709,26 @@
 <!-- MODAL: IMPORT EXCEL PAKET ROTASI           -->
 <!-- ========================================== -->
 {#if showImportModal}
-  <div class="modal-backdrop" onclick={() => (showImportModal = false)} role="presentation">
-    <div class="modal-dialog import-dialog" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1">
+  <div
+    class="modal-backdrop"
+    onclick={() => (showImportModal = false)}
+    role="presentation"
+  >
+    <div
+      class="modal-dialog import-dialog"
+      onclick={(e) => e.stopPropagation()}
+      role="dialog"
+      tabindex="-1"
+    >
       <div class="modal-header">
         <div class="modal-title-group">
           <Upload size={18} class="text-emerald" />
           <h3>Import Paket Rotasi 5-Man dari Excel</h3>
         </div>
-        <button class="btn-close-modal" onclick={() => (showImportModal = false)}>
+        <button
+          class="btn-close-modal"
+          onclick={() => (showImportModal = false)}
+        >
           <X size={18} />
         </button>
       </div>
@@ -584,19 +751,30 @@
             <FileSpreadsheet size={36} class="text-emerald" />
           </div>
           <div class="file-details">
-            <div class="file-name">{importFile?.name || 'File Excel'}</div>
-            <div class="file-size">{Math.round((importFile?.size || 0) / 1024)} KB</div>
+            <div class="file-name">{importFile?.name || "File Excel"}</div>
+            <div class="file-size">
+              {Math.round((importFile?.size || 0) / 1024)} KB
+            </div>
           </div>
         </div>
 
         <p class="import-hint">
-          Sistem akan membaca susunan paket rotasi 5 pemain dari file Excel dan menggantikan data paket di pertandingan ini.
+          Sistem akan membaca susunan paket rotasi 5 pemain dari file Excel dan
+          menggantikan data paket di pertandingan ini.
         </p>
       </div>
 
       <div class="modal-footer">
-        <button class="btn-secondary" onclick={() => (showImportModal = false)} disabled={isImporting}>Batal</button>
-        <button class="btn-primary btn-confirm-import" onclick={handleImportExcel} disabled={isImporting}>
+        <button
+          class="btn-secondary"
+          onclick={() => (showImportModal = false)}
+          disabled={isImporting}>Batal</button
+        >
+        <button
+          class="btn-primary btn-confirm-import"
+          onclick={handleImportExcel}
+          disabled={isImporting}
+        >
           {#if isImporting}
             <div class="spinner"></div>
             <span>Mengimpor Data...</span>
@@ -781,7 +959,7 @@
     border-radius: 6px;
     padding: 0.45rem 0.75rem;
     color: #ffffff;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-size: 0.85rem;
   }
 
@@ -896,7 +1074,7 @@
   }
 
   .pkt-code-display {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-size: 1.05rem;
     font-weight: 700;
     color: #38bdf8;
@@ -933,7 +1111,7 @@
   }
 
   .num-tag {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-weight: 700;
     color: #10b981;
     width: 28px;
@@ -1214,7 +1392,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-weight: 800;
     font-size: 0.78rem;
     color: #38bdf8;
@@ -1346,7 +1524,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .btn-sync-master {

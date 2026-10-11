@@ -114,7 +114,7 @@ export const INITIAL_MASTER_PLAYERS: MasterPlayer[] = [
   { id: 'mp_1789522351690_r3r6', teamId: 'team_paser', noPunggung: 7, name: 'Bintang Yakusa Sugiarto', nickname: 'Bintang', position: 'FLANK_RIGHT', dominantFoot: 'KIRI', height: 168, weight: 60, status: 'ACTIVE' },
   { id: 'mp_1789522351852_yxqs', teamId: 'team_paser', noPunggung: 8, name: 'Arya Alfiansyah', nickname: 'Arya Pivot', position: 'PIVOT', dominantFoot: 'KIRI', height: 163, weight: 65, status: 'ACTIVE' },
   { id: 'mp_1789522355201_3lgl', teamId: 'team_paser', noPunggung: 9, name: 'Muhammad Arya Firjatullah Al Malik', nickname: 'Arya', position: 'FLANK_RIGHT', dominantFoot: 'KIRI', height: 161, weight: 52, status: 'ACTIVE' },
-  { id: 'mp_1789522352172_uc1h', teamId: 'team_paser', noPunggung: 10, name: 'Muhammad Arifin Nurcahyo', nickname: 'Arifin', position: 'GK', dominantFoot: 'KANAN', height: 173, weight: 64, status: 'ACTIVE' },
+  { id: 'mp_1789522352172_uc1h', teamId: 'team_paser', noPunggung: 10, name: 'Muhammad Arifin Nurcahyo', nickname: 'Arifin', position: 'FLANK_LEFT', dominantFoot: 'KANAN', height: 173, weight: 64, status: 'ACTIVE' },
   { id: 'mp_1789522352338_2mic', teamId: 'team_paser', noPunggung: 11, name: 'Zevano Adelio Wibowo', nickname: 'Zevano', position: 'GK', dominantFoot: 'KANAN', height: 177, weight: 80, status: 'ACTIVE' },
   { id: 'mp_1789522352500_blhc', teamId: 'team_paser', noPunggung: 12, name: 'Muhammad Pahrul Zaini', nickname: 'Pahrul', position: 'FLANK_LEFT', dominantFoot: 'KANAN', height: 165, weight: 65, status: 'ACTIVE' },
   { id: 'mp_1789522352662_jvnb', teamId: 'team_paser', noPunggung: 13, name: 'Dwi Maulana Muhammad Ibrahim Rumy', nickname: 'Ibra', position: 'PIVOT', dominantFoot: 'KANAN', height: 177, weight: 61, status: 'ACTIVE' },
@@ -249,11 +249,23 @@ class LocalDatabase {
       try {
         let mps: MasterPlayer[] = JSON.parse(existingMpRaw);
         let updated = false;
-        // Tag legacy players with team_paser
+        // Tag legacy players with team_paser & auto-heal misassigned positions
         mps = mps.map(p => {
           if (!p.teamId) {
             updated = true;
-            return { ...p, teamId: 'team_paser' };
+            p = { ...p, teamId: 'team_paser' };
+          }
+          if (p.teamId === 'team_paser' && p.noPunggung === 10 && p.position === 'GK') {
+            updated = true;
+            p = { ...p, position: 'FLANK_LEFT' };
+          }
+          if (p.teamId === 'team_paser' && p.noPunggung === 1 && p.position === 'GK') {
+            updated = true;
+            p = { ...p, position: 'ANCHOR' };
+          }
+          if (p.teamId === 'team_paser' && p.noPunggung === 2 && p.position === 'GK') {
+            updated = true;
+            p = { ...p, position: 'FLANK_RIGHT' };
           }
           return p;
         });

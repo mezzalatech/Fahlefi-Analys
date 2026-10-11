@@ -1514,9 +1514,15 @@ class MatchStore {
   get matchGkList(): Array<{ no: number; name: string; position: string; isGk: number; photoUrl?: string }> {
     if (!this.data) return [];
     
-    // 1. Get from match players marked as isGk or GK position
+    // 1. Get from match players marked as isGk or GK position in master
     const gkInMatch = this.data.players
-      .filter(p => p.isGk === 1 || p.no === 1 || p.no === 2 || p.no === 22)
+      .filter(p => {
+        const mp = this.masterPlayers.find(m => m.noPunggung === p.no);
+        if (mp) {
+          return mp.position === 'GK';
+        }
+        return p.isGk === 1;
+      })
       .map(p => {
         const mp = this.masterPlayers.find(m => m.noPunggung === p.no);
         return {
@@ -1541,11 +1547,11 @@ class MatchStore {
 
     const combined = [...gkInMatch, ...extraGks];
     if (combined.length === 0) {
-      return [
-        { no: 1, name: 'M. Rizky Pratama', position: 'GK', isGk: 1 },
-        { no: 2, name: 'Dimas Aldi Setiawan', position: 'GK', isGk: 1 },
-        { no: 22, name: 'Eko Prasetya', position: 'GK', isGk: 1 }
-      ];
+      const firstGk = this.data.players.find(p => p.isGk === 1);
+      if (firstGk) {
+        return [{ no: firstGk.no, name: firstGk.name || `Kiper #${firstGk.no}`, position: 'GK', isGk: 1 }];
+      }
+      return [];
     }
     return combined.sort((a, b) => a.no - b.no);
   }
